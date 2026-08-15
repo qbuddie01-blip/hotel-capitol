@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#08121e">
+  <meta name="description" content="Hotel Capitol — AI-Powered Guest & Hotel Operations Web Portal (6 Animashaun Close, Ikeja, Lagos)">
+  <title>Hotel Capitol — AI-Powered Guest & Hotel Operations</title>
+  
+  <!-- Google Fonts: Luxury Serif & Clean Modern Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <!-- CSS Design System with Cache-Buster -->
+  <link rel="stylesheet" href="./src/styles/index.css?v=3.8">
+</head>
+<body class="bg-navy-950 text-slate-100 antialiased selection:bg-gold-500 selection:text-navy-950">
+  <!-- Top Navigation & Role Switcher Bar -->
+  <div id="navbar-root"></div>
+
+  <!-- Main Content Viewport (Clean 1-swipe bottom clearance so bottom cards never overlap navigation) -->
+  <main id="app-root" class="min-h-screen relative pb-28 sm:pb-24"></main>
+
+  <!-- Omnipresent Hotel Capitol AI Assistant Modal & Floating Trigger -->
+  <div id="ai-assistant-root"></div>
+
+  <!-- Staff Intercom Modal -->
+  <div id="intercom-root"></div>
+
+  <!-- Central Notification Toast Container -->
+  <div id="toast-root" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- AI Automation Demo Bar & Time Machine (Bottom Controls) -->
+  <div id="demo-controls-root"></div>
+
+  <!-- Mobile Bottom Navigation (Visible on Guest Portal on Mobile) -->
+  <div id="mobile-nav-root"></div>
+
+  <!-- Main Application Entry with Cache-Buster -->
+  <script type="module" src="./src/main.js?v=3.8"></script>
+</body>
+</html>

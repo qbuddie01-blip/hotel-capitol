@@ -1,0 +1,535 @@
+/**
+ * HOTEL CAPITOL — HOTEL STAFF PORTAL
+ * 6 Animashaun Close, Ikeja, Lagos
+ * Tasks, Rooms, Attendance, Schedule, Shift Swap & AI Performance
+ */
+
+import { getIcon, renderIntercomRoundBadge } from '../assets/icons.js';
+import { store } from '../store/state.js';
+import { automationEngine } from '../services/automationRules.js';
+
+let activeStaffTab = 'tasks'; // 'tasks' | 'rooms' | 'requests' | 'schedule' | 'performance'
+
+export function initStaffPortal() {
+  window.navigateStaffTab = (tab) => {
+    activeStaffTab = tab;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.toggleTaskStatus = (taskId) => {
+    const state = store.getState();
+    const task = state.staffTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    let nextStatus = 'IN PROGRESS';
+    if (task.status === 'PENDING') nextStatus = 'IN PROGRESS';
+    else if (task.status === 'IN PROGRESS') nextStatus = 'COMPLETED';
+    else if (task.status === 'COMPLETED') nextStatus = 'PENDING';
+
+    const completedAt = nextStatus === 'COMPLETED' ? new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : null;
+
+    store.setState(s => ({
+      ...s,
+      staffTasks: s.staffTasks.map(t => t.id === taskId ? { ...t, status: nextStatus, completedAt } : t)
+    }));
+
+    automationEngine.playChime(nextStatus === 'COMPLETED' ? 'success' : 'bell');
+    automationEngine.showToast('Task Updated', `Task ${taskId} updated to ${nextStatus}`, 'success');
+    store.addAudit('Task Progression', `${taskId} (${nextStatus})`, `Updated by ${store.getActiveStaff().name}`);
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.updateRoomCondition = (roomNumber, condition, status) => {
+    store.setState(s => ({
+      ...s,
+      rooms: s.rooms.map(r => r.number === roomNumber ? { ...r, condition, status: status || r.status } : r)
+    }));
+    automationEngine.playChime('bell');
+    automationEngine.showToast('Room Status Updated', `Room ${roomNumber} set to: ${condition}`, 'info');
+    store.addAudit('Room Condition Updated', `Room ${roomNumber}`, `Status changed to ${condition} by ${store.getActiveStaff().name}`);
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.submitShiftSwap = () => {
+    const targetStaffId = document.getElementById('swap-target-staff')?.value;
+    const swapDate = document.getElementById('swap-date')?.value || '2026-08-18';
+    const reason = document.getElementById('swap-reason')?.value || 'Personal emergency';
+
+    const staff = store.getActiveStaff();
+    const targetStaff = store.getState().staffMembers.find(s => s.id === targetStaffId) || store.getState().staffMembers[1];
+
+    const newSwap = {
+      id: 'SWP-' + (store.getState().shiftSwapRequests.length + 101),
+      requesterId: staff.id,
+      requesterName: staff.name,
+      targetStaffId: targetStaff.id,
+      targetStaffName: targetStaff.name,
+      date: swapDate,
+      reason,
+      status: 'PENDING_APPROVAL',
+      supervisorNote: 'Awaiting Supervisor Tariq Alabi approval'
+    };
+
+    store.setState(s => ({
+      ...s,
+      shiftSwapRequests: [newSwap, ...s.shiftSwapRequests]
+    }));
+
+    automationEngine.playChime('bell');
+    automationEngine.showToast('Swap Request Submitted', `Submitted shift swap request with ${targetStaff.name}. Sent to supervisor for review.`, 'success');
+    store.addAudit('Shift Swap Requested', newSwap.id, `${staff.name} requested swap with ${targetStaff.name}`);
+    if (window.renderApp) window.renderApp();
+  };
+}
+
+export function renderStaffPortal() {
+  const state = store.getState();
+  const staff = store.getActiveStaff();
+  const myTasks = state.staffTasks.filter(t => t.staffId === staff.id || t.staffName === staff.name);
+  const myPendingCount = myTasks.filter(t => t.status !== 'COMPLETED').length;
+
+  let tabContent = '';
+  if (activeStaffTab === 'tasks') {
+    tabContent = renderStaffTasksTab(myTasks, staff);
+  } else if (activeStaffTab === 'rooms') {
+    tabContent = renderStaffRoomsTab(state.rooms);
+  } else if (activeStaffTab === 'requests') {
+    tabContent = renderStaffRequestsTab(state.serviceRequests);
+  } else if (activeStaffTab === 'schedule') {
+    tabContent = renderStaffScheduleTab(state.schedule, state.shiftSwapRequests, staff);
+  } else if (activeStaffTab === 'performance') {
+    tabContent = renderStaffPerformanceTab(staff);
+  }
+
+  return `
+    <div class="container-custom py-6">
+      
+      <!-- REAL-TIME VOICE REQUEST CONFIRMATION PROMPT BANNER -->
+      ${state.serviceRequests.filter(r => r.status === 'AWAITING_STAFF_CONFIRMATION').map(pendingReq => `
+        <div class="glass-panel-gold p-4 sm:p-5 rounded-2xl mb-6 border-2 border-gold flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in" style="background: linear-gradient(135deg, rgba(32, 18, 4, 0.95) 0%, rgba(10, 22, 38, 0.95) 100%); box-shadow: 0 0 25px rgba(220, 173, 84, 0.35);">
+          <div class="flex items-start gap-3.5">
+            <div class="p-2.5 rounded-2xl bg-amber-500/20 text-gold border border-gold/60 text-2xl">
+              🛎️
+            </div>
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-bold uppercase tracking-luxury text-amber-400 flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> 
+                  ${pendingReq.assignedStaffName === staff.name ? '🎯 Designated Room Attendant Alert (You)' : `🎙️ Dispatched to ${pendingReq.assignedStaffName}`}
+                </span>
+                <span class="badge-gold text-[10px] py-0.5">Suite #${pendingReq.roomNumber}</span>
+              </div>
+              <h3 class="text-sm sm:text-base font-bold text-white font-serif">"${pendingReq.title}"</h3>
+              <p class="text-xs text-slate-300 mt-0.5">${pendingReq.details} · Designated Attendant: <strong class="text-gold">${pendingReq.assignedStaffName}</strong> (${pendingReq.department})</p>
+              <div class="text-[11px] text-amber-200 mt-1">AI Voice Prompt: <em>"Attention ${pendingReq.assignedStaffName}, you have a guest request for Suite #${pendingReq.roomNumber}. Please confirm request."</em></div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <button 
+              class="btn-primary py-2.5 px-5 text-xs font-bold flex items-center gap-2 shadow-lg cursor-pointer"
+              onclick="window.hotelCapitolAutomation.confirmStaffVoiceRequest('${pendingReq.id}', '${staff.name}')"
+              title="Confirm receipt of guest request"
+            >
+              <span>🎙️</span>
+              <span>Say "Request Confirmed"</span>
+            </button>
+          </div>
+        </div>
+      `).join('')}
+
+      <!-- STAFF HEADER & TIMECLOCK CARD (Spec #23 & #26) -->
+      <div class="glass-panel p-6 rounded-2xl mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-gold/30">
+        
+        <div class="flex items-center gap-4">
+          <img src="${staff.avatar}" class="w-16 h-16 rounded-2xl object-cover border-2 border-gold shadow-lg" alt="${staff.name}" />
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">${staff.name}</h1>
+              <span class="badge-gold text-xs">${staff.role}</span>
+            </div>
+            <p class="text-xs text-slate-300 mt-1">
+              Department: <strong class="text-gold uppercase">${staff.department}</strong> · Shift: <strong>${staff.shift}</strong>
+            </p>
+          </div>
+        </div>
+
+        <!-- Attendance & Timeclock Box -->
+        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <div class="text-left md:text-right">
+            <div class="text-xs text-slate-400">Attendance Status:</div>
+            <div class="flex items-center gap-1 text-xs font-bold text-emerald-400">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              ${staff.clockedIn ? `Signed In (${staff.clockInTime}) · ${staff.clockStatus}` : 'Signed Out'}
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button 
+              class="glass-panel text-xs py-1.5 px-3 flex items-center gap-2 border border-gold/40 hover:border-gold cursor-pointer transition-all rounded-xl"
+              onclick="window.toggleIntercomModal(true)"
+              title="Open Staff Intercom & Radio"
+            >
+              ${renderIntercomRoundBadge(22)} <span class="text-slate-200 font-semibold hide-mobile">Intercom</span>
+            </button>
+            <button 
+              class="${staff.clockedIn ? 'btn-danger' : 'btn-primary'} text-xs py-2 px-4 font-bold"
+              onclick="window.hotelCapitolStore.toggleClockIn('${staff.id}'); renderStaffPortal();"
+            >
+              ${staff.clockedIn ? 'Clock Out' : 'Clock In'}
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- NAVIGATION TABS with Golden Outlay & Glowing Borders (Horizontal Smooth Scroll on Mobile) -->
+      <div class="category-tabs-scroll">
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'tasks' ? 'active' : ''}"
+          onclick="window.navigateStaffTab('tasks')"
+        >
+          <span>📋</span>
+          <span>My Tasks (${myPendingCount} Pending)</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'rooms' ? 'active' : ''}"
+          onclick="window.navigateStaffTab('rooms')"
+        >
+          <span>🛏</span>
+          <span>My Rooms & Turnover</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'requests' ? 'active' : ''}"
+          onclick="window.navigateStaffTab('requests')"
+        >
+          <span>🛎</span>
+          <span>Live Service Requests</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'schedule' ? 'active' : ''}"
+          onclick="window.navigateStaffTab('schedule')"
+        >
+          <span>📅</span>
+          <span>Roster & Shift Swap</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'performance' ? 'active' : ''}"
+          onclick="window.navigateStaffTab('performance')"
+        >
+          <span>📊</span>
+          <span>AI Performance (${staff.performanceScore}%)</span>
+        </button>
+      </div>
+
+      <!-- TAB VIEW -->
+      ${tabContent}
+
+    </div>
+  `;
+}
+
+// 1. MY TASKS TAB (Spec #24)
+function renderStaffTasksTab(myTasks, staff) {
+  return `
+    <div class="max-w-4xl mx-auto glass-panel p-6 rounded-2xl">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+        <div>
+          <h2 class="text-lg font-serif text-white font-bold">Today's Assigned Tasks</h2>
+          <p class="text-xs text-slate-300">Tap status button to progress from PENDING → IN PROGRESS → COMPLETED.</p>
+        </div>
+        <button class="btn-secondary text-xs py-1.5 px-3" onclick="window.toggleIntercomModal(true)">
+          📻 Call Supervisor
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        ${myTasks.map(t => `
+          <div class="p-4 rounded-xl bg-navy-950 border ${t.status === 'COMPLETED' ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-white/10'} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-${t.priority === 'HIGH' ? 'critical' : 'gold'} text-[10px] py-0.5">
+                  ${t.priority} PRIORITY
+                </span>
+                <strong class="text-white text-sm">Suite #${t.room} (${t.guestName})</strong>
+              </div>
+              <div class="text-slate-200 text-xs font-medium mb-1">${t.title}</div>
+              
+              <div class="flex items-center gap-3 text-[11px] text-slate-400 mt-1 flex-wrap">
+                <span>Assigned: ${t.assignedTime}</span>
+                ${t.completedAt ? `
+                  <span class="text-emerald-400 font-semibold">· Completed at ${t.completedAt}</span>
+                ` : `
+                  <span class="flex items-center gap-1">
+                    <span>⏱️ Prompt SLA (${t.targetMinutes || 15}m):</span>
+                    <span 
+                      class="badge-normal font-mono text-[10px] px-2 py-0.5" 
+                      data-sla-deadline="${t.deadlineTimestamp || (Date.now() + (t.targetMinutes || 15)*60*1000)}"
+                    >
+                      ${t.targetMinutes || 15}:00 Remaining
+                    </span>
+                  </span>
+                `}
+              </div>
+            </div>
+
+            <button 
+              class="${t.status === 'COMPLETED' ? 'badge-normal' : t.status === 'IN PROGRESS' ? 'badge-attention' : 'badge-pending'} px-4 py-2 rounded-xl text-xs font-bold border cursor-pointer uppercase transition-all"
+              onclick="window.toggleTaskStatus('${t.id}')"
+              title="Click to advance status"
+            >
+              ${t.status === 'COMPLETED' ? '✓ COMPLETED' : t.status === 'IN PROGRESS' ? '⏳ IN PROGRESS' : '● PENDING'}
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// 2. ROOMS CHECKLIST TAB
+function renderStaffRoomsTab(rooms) {
+  return `
+    <div class="max-w-4xl mx-auto glass-panel p-6 rounded-2xl">
+      <div class="mb-4 pb-3 border-b border-white/10">
+        <h2 class="text-lg font-serif text-white font-bold">Room Turnover & Cleanliness Log</h2>
+        <p class="text-xs text-slate-300">Update suite condition directly after housekeeping.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${rooms.map(r => `
+          <div class="p-4 rounded-xl bg-navy-950 border border-white/10 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <strong class="text-white text-base font-serif">Suite #${r.number}</strong>
+                <span class="text-xs text-slate-400 ml-1">· ${r.type}</span>
+              </div>
+              <span class="badge-${r.status === 'OCCUPIED' ? 'gold' : r.status === 'VACANT_CLEAN' ? 'normal' : 'attention'} text-[10px]">
+                ${r.status}
+              </span>
+            </div>
+
+            <div class="text-xs text-slate-300 mb-3">
+              Condition: <strong class="text-gold-light">${r.condition}</strong> ${r.guest ? `(${r.guest})` : ''}
+            </div>
+
+            <div class="flex items-center gap-2 pt-2 border-t border-white/5">
+              <button 
+                class="btn-secondary text-[11px] py-1 px-2.5 flex-1"
+                onclick="window.updateRoomCondition('${r.number}', 'Clean & Inspected', 'VACANT_CLEAN')"
+              >
+                Mark Cleaned
+              </button>
+              <button 
+                class="btn-secondary text-[11px] py-1 px-2.5 flex-1"
+                onclick="window.updateRoomCondition('${r.number}', 'Cleaning in Progress', 'IN_SERVICE')"
+              >
+                Mark In-Service
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// 3. LIVE SERVICE REQUESTS QUEUE
+function renderStaffRequestsTab(requests) {
+  return `
+    <div class="max-w-4xl mx-auto glass-panel p-6 rounded-2xl">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+        <div>
+          <h2 class="text-lg font-serif text-white font-bold">Department Service Requests</h2>
+          <p class="text-xs text-slate-300">Live requests generated from Hotel Capitol AI & guest interactions.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        ${requests.map(req => `
+          <div class="p-4 rounded-xl bg-navy-950 border ${req.status === 'AWAITING_STAFF_CONFIRMATION' ? 'border-amber-400 bg-amber-950/20 shadow-lg' : 'border-white/10'} flex flex-col gap-3 text-xs">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="badge-gold text-[10px]">${req.department || req.type}</span>
+                  <span class="badge-${req.status === 'COMPLETED' ? 'normal' : req.status === 'AWAITING_STAFF_CONFIRMATION' ? 'attention' : 'pending'} text-[10px]">
+                    ${req.status === 'AWAITING_STAFF_CONFIRMATION' ? '⏳ Awaiting Voice Confirmation' : req.status}
+                  </span>
+                  <strong class="text-white text-sm">Suite #${req.roomNumber} - ${req.title}</strong>
+                </div>
+                <div class="text-slate-300 text-xs mb-1">${req.details}</div>
+                <div class="flex items-center gap-3 text-slate-400 text-[11px] flex-wrap mt-1">
+                  <span>Logged at ${req.requestedAt}</span>
+                  <span>Guest: ${req.guestName}</span>
+                  <span>Assigned: <strong class="text-gold-light">${req.assignedStaffName}</strong></span>
+                  ${req.status !== 'COMPLETED' ? `
+                    <span class="flex items-center gap-1">
+                      <span>⏱️ SLA (${req.targetMinutes || 15}m):</span>
+                      <span 
+                        class="badge-normal font-mono text-[10px] px-2 py-0.5" 
+                        data-sla-deadline="${req.deadlineTimestamp || (Date.now() + (req.targetMinutes || 15)*60*1000)}"
+                      >
+                        ${req.targetMinutes || 15}:00 Remaining
+                      </span>
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                ${req.status === 'AWAITING_STAFF_CONFIRMATION' ? `
+                  <button 
+                    class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 font-bold shadow-md"
+                    onclick="window.hotelCapitolAutomation.confirmStaffVoiceRequest('${req.id}');"
+                  >
+                    <span>🎙️</span>
+                    <span>Confirm Receipt</span>
+                  </button>
+                ` : req.status !== 'COMPLETED' ? `
+                  <button 
+                    class="btn-primary text-xs py-1.5 px-3 font-bold"
+                    onclick="window.hotelCapitolStore.updateServiceRequestStatus('${req.id}', 'COMPLETED'); renderStaffPortal();"
+                  >
+                    Mark Complete
+                  </button>
+                ` : '<span class="text-emerald-400 font-bold text-xs">✓ Resolved</span>'}
+              </div>
+            </div>
+
+            <!-- Voice & AI Exchange Audit Trail -->
+            ${req.voiceExchangeTrail && req.voiceExchangeTrail.length > 0 ? `
+              <div class="mt-1 p-3 bg-navy-900/90 rounded-xl border border-gold/25 text-[11px]">
+                <div class="font-bold text-gold mb-1.5 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                  <span>🎙️ Voice AI & Dispatch Exchange Trail:</span>
+                </div>
+                <div class="flex flex-col gap-1 text-slate-300">
+                  ${req.voiceExchangeTrail.map(t => `
+                    <div class="flex items-start gap-2">
+                      <span class="text-slate-500 font-mono text-[10px]">${t.time}</span>
+                      <span><strong class="text-white">${t.actor}:</strong> "${t.text}"</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// 4. ROSTER & SHIFT SWAP (Spec #27 & #28)
+function renderStaffScheduleTab(schedule, shiftSwaps, staff) {
+  const colleagues = store.getState().staffMembers.filter(s => s.id !== staff.id);
+
+  return `
+    <div class="max-w-4xl mx-auto flex flex-col gap-8">
+      
+      <!-- Weekly Schedule -->
+      <div class="glass-panel p-6 rounded-2xl">
+        <div class="mb-4 pb-3 border-b border-white/10">
+          <span class="text-xs font-bold uppercase tracking-luxury text-gold">AI-Generated Weekly Roster</span>
+          <h2 class="text-lg font-serif text-white font-bold mt-1">My Weekly Shifts</h2>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          ${schedule.filter(s => s.staffId === staff.id).map(sch => `
+            <div class="p-3.5 rounded-xl bg-navy-950 border border-white/10 text-xs">
+              <div class="font-serif font-bold text-gold text-sm mb-1">${sch.day}</div>
+              <div class="text-white font-semibold mb-1">${sch.shift}</div>
+              <span class="badge-normal text-[10px] py-0.2">${sch.status}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Shift Swap Request Workflow (Spec #28) -->
+      <div class="glass-panel-gold p-6 rounded-2xl">
+        <h3 class="font-serif text-base font-bold text-white mb-2">Request Shift Swap</h3>
+        <p class="text-xs text-slate-300 mb-4">Select a colleague to swap shifts with. Once submitted, the shift swap will route to Supervisor Tariq Alabi for approval.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+          <div>
+            <label class="block text-[11px] text-gold font-bold mb-1">Swap With Colleague:</label>
+            <select id="swap-target-staff" class="input-custom text-xs py-2">
+              ${colleagues.map(c => `
+                <option value="${c.id}">${c.name} (${c.role})</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-gold font-bold mb-1">Target Shift Date:</label>
+            <input id="swap-date" type="date" value="2026-08-18" class="input-custom text-xs py-2" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-gold font-bold mb-1">Reason for Swap:</label>
+            <input id="swap-reason" type="text" placeholder="e.g. Medical or family duty" class="input-custom text-xs py-2" />
+          </div>
+        </div>
+
+        <button class="btn-primary text-xs py-2 px-5 font-bold" onclick="window.submitShiftSwap()">
+          Submit Swap Request →
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+// 5. AI PERFORMANCE DASHBOARD (Spec #29)
+function renderStaffPerformanceTab(staff) {
+  return `
+    <div class="max-w-3xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl">
+      <div class="flex items-center justify-between pb-4 border-b border-gold/30 mb-6">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-luxury text-gold">AI Operational Appraisal</span>
+          <h2 class="text-2xl font-serif text-white mt-1">Weekly Performance Summary</h2>
+          <div class="text-xs text-slate-300 mt-0.5">Staff Member: <strong class="text-white">${staff.name}</strong> (${staff.role})</div>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-400">Score</span>
+          <div class="text-3xl font-serif font-bold text-gold">${staff.performanceScore}%</div>
+        </div>
+      </div>
+
+      <!-- KPI Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
+          <div class="text-xs text-slate-400 mb-1">Tasks Completed</div>
+          <div class="text-xl font-bold text-white">${staff.tasksCompleted} / ${staff.totalTasks}</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
+          <div class="text-xs text-slate-400 mb-1">On-Time Rate</div>
+          <div class="text-xl font-bold text-emerald-400">${staff.onTimeRate}</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
+          <div class="text-xs text-slate-400 mb-1">Attendance</div>
+          <div class="text-xl font-bold text-emerald-400">100%</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
+          <div class="text-xs text-slate-400 mb-1">Guest Feedback</div>
+          <div class="text-xl font-bold text-gold">${staff.feedback}</div>
+        </div>
+      </div>
+
+      <!-- AI Recommendation -->
+      <div class="glass-panel-gold p-4 rounded-xl">
+        <div class="font-bold text-gold text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
+          ${getIcon('sparkles', 16)} AI Operational Coaching Note:
+        </div>
+        <p class="text-xs text-slate-200 leading-relaxed">${staff.aiNotes}</p>
+      </div>
+    </div>
+  `;
+}

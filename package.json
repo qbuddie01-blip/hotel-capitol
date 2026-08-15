@@ -1,0 +1,12 @@
+{
+  "name": "hotel-capitol-ai-portal",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "serve": "node server.js"
+  },
+  "description": "Hotel Capitol AI-Powered Guest & Hotel Operations Web Portal MVP"
+}
