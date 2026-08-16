@@ -342,6 +342,15 @@ export class HotelCapitolAI {
       return { intent: 'ORDER_BREAKFAST', service: SERVICES.BREAKFAST, department: 'KITCHEN' };
     }
 
+    // 3b. Order Status / Food Tracking
+    if (
+      q.includes('where is my food') || q.includes('order status') || q.includes('check my order') ||
+      q.includes('is my food ready') || q.includes('when is my food coming') || q.includes('when is my meal') ||
+      q.includes('status of my order') || q.includes('track my order') || q.includes('kitchen status')
+    ) {
+      return { intent: 'CHECK_ORDER_STATUS', service: SERVICES.RESTAURANT, department: 'KITCHEN' };
+    }
+
     // 4. Restaurant & Dining / Food Request (Comprehensive matching)
     if (
       q.includes('food') || q.includes('dining') || q.includes('dinner') || q.includes('lunch') ||
@@ -439,6 +448,44 @@ export class HotelCapitolAI {
       const msg = `Of course, ${guestName}. Your current request will remain unchanged. Please let me know whenever you need assistance.`;
       response.text = msg;
       response.voiceText = msg;
+      return response;
+    }
+
+    // --- 0. ORDER STATUS & LIVE TRACKING INQUIRY ---
+    if (intent === 'CHECK_ORDER_STATUS') {
+      const activeOrders = store.getState().orders.filter(o => o.guestId === (guest ? guest.id : '') && o.status !== 'DELIVERED');
+      if (activeOrders.length === 0) {
+        const msg = `You currently have no active restaurant orders for Suite #${roomNumber}, ${guestName}. Would you like me to open the dining menu?`;
+        response.text = msg;
+        response.voiceText = msg;
+        response.actionType = AMARA_ACTIONS.OPEN_RESTAURANT_MENU;
+        return response;
+      }
+
+      const active = activeOrders[0];
+      const now = Date.now();
+      const status = active.status;
+      const targetDelivery = active.revisedDeliveryAt || active.estimatedDeliveryAt || (now + 15 * 60000);
+      const deliveryFormatted = new Date(targetDelivery).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      let voiceMsg = '';
+      if (status === 'SUBMITTED' || status === 'ACCEPTED') {
+        voiceMsg = `${guestName}, your order for ${active.items.map(i => i.name).join(', ')} has been received by Executive Chef Babatunde and is awaiting kitchen station start. It is scheduled for delivery around ${deliveryFormatted}.`;
+      } else if (status === 'PREPARING') {
+        const remPrep = Math.max(1, Math.round(((active.estimatedReadyAt || (now + 20 * 60000)) - now) / 60000));
+        voiceMsg = `${guestName}, your order is currently being prepared fresh in the kitchen. It is estimated to be ready in approximately ${remPrep} minutes and delivered to your suite by ${deliveryFormatted}.`;
+      } else if (status === 'READY') {
+        voiceMsg = `${guestName}, your meal is freshly prepared and is staged for in-room delivery to Suite #${roomNumber}.`;
+      } else if (status === 'OUT_FOR_DELIVERY') {
+        const remDel = Math.max(1, Math.round((targetDelivery - now) / 60000));
+        voiceMsg = `${guestName}, your order is out for delivery to Suite #${roomNumber}. Your attendant is en route and will arrive in approximately ${remDel} minutes.`;
+      } else {
+        voiceMsg = `${guestName}, your order status is currently ${status.replace(/_/g, ' ')}. Delivery is scheduled for ${deliveryFormatted}.`;
+      }
+
+      response.text = voiceMsg;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_RESTAURANT_MENU;
       return response;
     }
 

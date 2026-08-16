@@ -15,15 +15,88 @@ let cart = []; // Cart items for restaurant ordering
 let orderDraftExtras = {};
 let isVoiceActiveForService = false;
 let showPorterLocationModal = false;
+let restaurantFlowStep = 'MENU'; // 'MENU' | 'UPSELL' | 'REVIEW' | 'TRACKER'
+let activeTrackedOrderId = null;
 
 export function initGuestPortal() {
   window.getActiveGuestTab = () => activeGuestTab;
 
+  // Master Order Tracker Live Countdown Engine (Spec #10, #11, #16, #17, #18)
+  if (window.hotelCapitolTimerInterval) {
+    clearInterval(window.hotelCapitolTimerInterval);
+  }
+
+  window.hotelCapitolTimerInterval = setInterval(() => {
+    const state = store.getState();
+    const guest = store.getActiveGuest();
+    if (!guest) return;
+
+    const activeOrders = state.orders.filter(o => o.guestId === guest.id && o.status !== 'DELIVERED');
+    if (activeOrders.length === 0) return;
+
+    const currentOrder = activeOrders[0];
+    const now = Date.now();
+
+    // 1. Update PREPARING countdown
+    if (currentOrder.status === 'PREPARING') {
+      const remainingPrepMs = Math.max(0, (currentOrder.estimatedReadyAt || (now + 20 * 60000)) - now);
+      const pMins = Math.floor(remainingPrepMs / 60000);
+      const pSecs = Math.floor((remainingPrepMs % 60000) / 1000);
+      const str = `${pMins.toString().padStart(2, '0')}:${pSecs.toString().padStart(2, '0')} remaining`;
+      const el = document.getElementById('prep-countdown-value');
+      if (el) el.innerText = str;
+    }
+
+    // 2. Update DELIVERY countdown
+    if (currentOrder.status === 'OUT_FOR_DELIVERY') {
+      const targetDelivery = currentOrder.revisedDeliveryAt || currentOrder.estimatedDeliveryAt || (now + 15 * 60000);
+      const remainingDeliveryMs = targetDelivery - now;
+      const el = document.getElementById('delivery-countdown-value');
+
+      if (remainingDeliveryMs > 0) {
+        const dMins = Math.floor(remainingDeliveryMs / 60000);
+        const dSecs = Math.floor((remainingDeliveryMs % 60000) / 1000);
+        const str = `${dMins.toString().padStart(2, '0')}:${dSecs.toString().padStart(2, '0')} remaining`;
+        if (el) el.innerText = str;
+      }
+
+      // Check 5-minute notification (Spec #17: Triggers ONCE only)
+      const diffMins = remainingDeliveryMs / 60000;
+      if (diffMins <= 5 && diffMins > 0 && !currentOrder.fiveMinuteDeliveryNotificationSent) {
+        store.setState(s => ({
+          ...s,
+          orders: s.orders.map(o => o.id === currentOrder.id ? { ...o, fiveMinuteDeliveryNotificationSent: true } : o)
+        }));
+        aiEngine.speak(`Good day, ${guest.name}. Just a quick update — your order is approximately five minutes away. We hope you enjoy your meal.`);
+        automationEngine.showToast('🔔 Order 5 Mins Away', `Your meal is arriving in ~5 minutes to Suite #${guest.roomNumber}.`, 'info');
+      }
+
+      // Check Delay notification (Spec #18 & #19: Triggers ONCE only when target expires)
+      if (remainingDeliveryMs <= 0 && !currentOrder.delayNotificationSent) {
+        store.setState(s => ({
+          ...s,
+          orders: s.orders.map(o => o.id === currentOrder.id ? { ...o, delayNotificationSent: true } : o)
+        }));
+        aiEngine.speak(`${guest.name}, I sincerely apologize for the delay. Your order is taking a little longer than expected. We are following up with our team and I'll keep you updated.`);
+        automationEngine.showToast('⚠️ Delivery Delay', `Concierge is actively following up on Suite #${guest.roomNumber} order.`, 'critical');
+        if (window.renderApp) window.renderApp();
+      }
+    }
+  }, 1000);
+
   // 1. ABSOLUTE EXPLORE ACTION: Opens UI without triggering voice, drafts, or requests
   window.navigateGuestTab = (tab) => {
     activeGuestTab = tab;
+    if (tab === 'restaurant') {
+      restaurantFlowStep = 'MENU';
+    }
     if (window.renderApp) window.renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.setRestaurantFlowStep = (step) => {
+    restaurantFlowStep = step;
+    if (window.renderApp) window.renderApp();
   };
 
   // 2. INTERCOM ACTION: Explicitly activates Amara with isolated card context
@@ -38,6 +111,7 @@ export function initGuestPortal() {
 
     if (actionType === AMARA_ACTIONS.OPEN_RESTAURANT_MENU) {
       activeGuestTab = 'restaurant';
+      restaurantFlowStep = 'MENU';
       if (payload && payload.preselectItem) {
         const item = store.getState().menu.find(m => m.name.toLowerCase().includes(payload.preselectItem.toLowerCase()));
         if (item) {
@@ -112,7 +186,8 @@ export function initGuestPortal() {
       basePrice: item.price,
       quantity: 1,
       extras: chosenAddons,
-      specialInstructions: specialNotes
+      specialInstructions: specialNotes,
+      prepTimeMinutes: item.prepTimeMinutes || 20
     });
 
     orderDraftExtras[menuId] = [];
@@ -121,34 +196,89 @@ export function initGuestPortal() {
     if (window.renderApp) window.renderApp();
   };
 
-  window.submitGuestRestaurantOrder = () => {
+  // Section 2: Restaurant Selection -> Amara Follow-Up (Offer Drinks/Snacks/Desserts)
+  window.proceedToRestaurantUpsellOrReview = () => {
     if (cart.length === 0) {
       alert('Your order tray is currently empty. Please select an item from the menu.');
       return;
     }
 
+    const guest = store.getActiveGuest();
+    
+    // Check if cart already has drinks or desserts
+    const state = store.getState();
+    const hasDrinksOrDessert = cart.some(c => {
+      const item = state.menu.find(m => m.id === c.menuId);
+      return item && (item.category === 'Drinks' || item.category === 'Desserts' || item.category === 'Snacks');
+    });
+
+    // Amara immediately acknowledges selection
+    aiEngine.speak(`Thank you, ${guest.name}. I've received your selection. Would you like to add a drink, snack or dessert to your order?`);
+
+    if (!hasDrinksOrDessert) {
+      restaurantFlowStep = 'UPSELL';
+    } else {
+      restaurantFlowStep = 'REVIEW';
+    }
+
+    if (window.renderApp) window.renderApp();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Section 3: Open Order Review
+  window.openRestaurantOrderReview = () => {
+    if (cart.length === 0) return;
+    const guest = store.getActiveGuest();
+    restaurantFlowStep = 'REVIEW';
+
+    aiEngine.speak(`Please review your order, ${guest.name}. Once you're happy with your selection, I'll send it to our kitchen.`);
+
+    if (window.renderApp) window.renderApp();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Section 4, 5, 6, 7, 8: Final Order Confirmation & Kitchen Routing
+  window.confirmAndDispatchRestaurantOrder = () => {
+    if (cart.length === 0) return;
+
+    const guest = store.getActiveGuest();
     const totalAmount = cart.reduce((sum, item) => {
       const extrasSum = item.extras.reduce((es, e) => es + e.price, 0);
       return sum + (item.basePrice + extrasSum) * item.quantity;
     }, 0);
 
-    const guest = store.getActiveGuest();
+    const maxPrepTime = Math.max(...cart.map(c => c.prepTimeMinutes || 20), 20);
+
+    // Create Genuine Order with STATUS = SUBMITTED
     const newOrder = store.createOrder({
       items: [...cart],
       totalAmount,
-      estimatedMinutes: 25
+      prepTimeMinutes: maxPrepTime,
+      deliveryMinutes: 15,
+      estimatedMinutes: maxPrepTime + 15
     });
 
     cart = [];
-    automationEngine.playChime('order');
-    automationEngine.showToast('Order Submitted to Kitchen', `Order ${newOrder.id} dispatched to Executive Chef Babatunde.`, 'success');
+    restaurantFlowStep = 'TRACKER';
+    activeTrackedOrderId = newOrder.id;
 
-    // Section 11: Kitchen receives alert
+    // Kitchen receives order alert
+    automationEngine.playChime('order');
     automationEngine.showToast('👨‍🍳 Kitchen Alert', `Attention: New restaurant order from Room ${guest.roomNumber}.`, 'info');
-    aiEngine.speak(`New restaurant order from Room ${guest.roomNumber}.`);
+
+    const formattedDeliveryTime = new Date(newOrder.estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    // Amara speaks configured preparation and delivery timing (Spec #6)
+    aiEngine.speak(`Thank you, ${guest.name}. Your order has been confirmed and sent to our kitchen. Your order is expected to be prepared in approximately ${newOrder.preparationMinutes} minutes and delivered to your room by approximately ${formattedDeliveryTime}.`);
+
+    // Section 7: Ask if guest needs anything else
+    setTimeout(() => {
+      aiEngine.speak(`Is there anything else I can assist you with while we prepare your order?`);
+    }, 3800);
 
     activeGuestTab = 'restaurant';
     if (window.renderApp) window.renderApp();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Breakfast selection submission
@@ -443,16 +573,16 @@ export function renderGuestPortal() {
 
       <!-- ACTIVE ORDERS ALERT BAR (If any) -->
       ${activeOrders.length > 0 ? `
-        <div class="glass-panel p-4 rounded-xl mb-6 border border-gold flex items-center justify-between gap-4 bg-navy-850">
+        <div class="glass-panel p-4 rounded-xl mb-6 border-2 border-gold/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-navy-950/90 shadow-lg">
           <div class="flex items-center gap-3">
-            <div class="w-3 h-3 rounded-full bg-gold animate-pulse"></div>
+            <div class="w-3 h-3 rounded-full bg-gold animate-ping"></div>
             <div>
-              <div class="text-xs font-bold text-white">Active Culinary Order: ${activeOrders[0].id}</div>
-              <div class="text-xs text-gold-light">Status: <strong class="uppercase">${activeOrders[0].status}</strong> (Est. 25 mins)</div>
+              <div class="text-xs font-bold text-white">Active Culinary Order: ${activeOrders[0].id} (${activeOrders[0].items.map(i => `${i.quantity}x ${i.name}`).join(', ')})</div>
+              <div class="text-xs text-gold mt-0.5">Status: <strong class="uppercase">${activeOrders[0].status.replace(/_/g, ' ')}</strong> · Est. Room Arrival: <strong>${new Date(activeOrders[0].revisedDeliveryAt || activeOrders[0].estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong></div>
             </div>
           </div>
-          <button class="btn-secondary text-xs py-1.5 px-3" onclick="window.navigateGuestTab('restaurant')">
-            Track Order →
+          <button class="btn-primary text-xs py-1.5 px-4 font-bold whitespace-nowrap shadow-md" onclick="window.navigateGuestTab('restaurant')">
+            Live Order Tracker →
           </button>
         </div>
       ` : ''}
@@ -590,206 +720,613 @@ function renderRestaurantSection(guest, activeOrders) {
     return sum + (item.basePrice + extrasSum) * item.quantity;
   }, 0);
 
+  // If currently in UPSELL step
+  if (restaurantFlowStep === 'UPSELL') {
+    return renderRestaurantUpsellStep(guest, cart, cartTotal);
+  }
+
+  // If currently in REVIEW step
+  if (restaurantFlowStep === 'REVIEW') {
+    return renderRestaurantReviewStep(guest, cart, cartTotal);
+  }
+
   return `
-    <div class="flex flex-col lg:flex-row gap-8">
+    <div class="flex flex-col gap-8">
       
-      <!-- Left: Menu Browser -->
-      <div class="flex-1">
+      <!-- AUTOMATIC LIVE ORDER TRACKER (Spec #8 & #9: Automatically opens when order is active) -->
+      ${activeOrders.length > 0 ? renderLiveOrderTracker(activeOrders[0], guest) : ''}
+
+      <div class="flex flex-col lg:flex-row gap-8">
         
-        <div class="flex items-center justify-between mb-4 gap-4 flex-wrap">
-          <div>
-            <h2 class="text-xl sm:text-2xl font-serif text-white">Hotel Capitol Restaurant</h2>
-            <p class="text-xs text-slate-300">Gourmet culinary experiences prepared fresh by Executive Chef Babatunde.</p>
-          </div>
-          <button 
-            class="intercom-pill-btn"
-            onclick="window.openDirectIntercomCall('kitchen-fb', 'Kitchen & Dining', 'Chef Babatunde');"
-            title="Direct intercom to Executive Chef Babatunde & Kitchen"
-          >
-            ${renderIntercomRoundBadge(18)}
-            <span>Intercom Kitchen</span>
-          </button>
-        </div>
-
-        <!-- Category Selector with Golden Outlay & Glowing Borders (Horizontal Smooth Scroll on Mobile) -->
-        <div class="category-tabs-scroll">
-          ${categories.map(cat => `
+        <!-- Left: Menu Browser -->
+        <div class="flex-1">
+          
+          <div class="flex items-center justify-between mb-4 gap-4 flex-wrap">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-serif text-white font-bold">Hotel Capitol Restaurant</h2>
+              <p class="text-xs text-slate-300">Gourmet culinary experiences prepared fresh by Executive Chef Babatunde.</p>
+            </div>
             <button 
-              class="menu-btn-gold ${selectedCategory === cat ? 'active' : ''}"
-              onclick="window.setMenuCategory('${cat}')"
+              class="intercom-pill-btn"
+              onclick="window.activateAmaraIntercom('RESTAURANT', 'Kitchen & Dining');"
+              title="Direct intercom to Executive Chef Babatunde & Kitchen"
             >
-              <span>${cat === 'Food' ? '🍲' : cat === 'Drinks' ? '🍹' : cat === 'Breakfast' ? '🍳' : cat === 'Desserts' ? '🍰' : '🥨'}</span>
-              <span>${cat}</span>
+              ${renderIntercomRoundBadge(18)}
+              <span>Intercom Kitchen</span>
             </button>
-          `).join('')}
+          </div>
+
+          <!-- Category Selector -->
+          <div class="category-tabs-scroll">
+            ${categories.map(cat => `
+              <button 
+                class="menu-btn-gold ${selectedCategory === cat ? 'active' : ''}"
+                onclick="window.setMenuCategory('${cat}')"
+              >
+                <span>${cat === 'Food' ? '🍲' : cat === 'Drinks' ? '🍹' : cat === 'Breakfast' ? '🍳' : cat === 'Desserts' ? '🍰' : '🥨'}</span>
+                <span>${cat}</span>
+              </button>
+            `).join('')}
+          </div>
+
+          <!-- Menu Items List -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            ${filteredMenu.map(item => {
+              const selectedAddonIds = orderDraftExtras[item.id] || [];
+              return `
+                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col justify-between border-2 border-gold/30 hover:border-gold transition-all" style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(220, 173, 84, 0.15);">
+                  
+                  <div class="h-44 w-full relative overflow-hidden bg-navy-950 rounded-t-2xl">
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" />
+                    <div class="absolute top-2.5 left-2.5 bg-navy-950/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-200 border border-white/10">
+                      ${item.category || 'Specialty'}
+                    </div>
+                  </div>
+
+                  <div class="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <!-- Title & Price Row -->
+                      <div class="flex items-start justify-between gap-2 mb-1.5 flex-wrap">
+                        <h3 class="font-serif text-base text-white font-bold flex-1 min-w-[140px]">${item.name}</h3>
+                        <div class="bg-amber-500/15 border border-gold/40 px-2.5 py-1 rounded-full text-xs font-bold text-gold whitespace-nowrap shadow-sm">
+                          ₦${item.price.toLocaleString()}
+                        </div>
+                      </div>
+
+                      <!-- Preparation Time Metadata -->
+                      <div class="flex items-center gap-2 mb-2 text-xs text-slate-300">
+                        <span class="inline-flex items-center gap-1.5 bg-navy-950/90 px-2.5 py-0.5 rounded-md border border-white/10 text-[11px] text-slate-300 font-medium">
+                          ${getIcon('clock', 12)} <span>~${item.prepTimeMinutes || 20} mins prep</span>
+                        </span>
+                      </div>
+
+                      <p class="text-xs text-slate-200 leading-relaxed mb-4">${item.desc}</p>
+                      
+                      <!-- Configurable Add-ons / Extras -->
+                      ${item.addons && item.addons.length > 0 ? `
+                        <div class="mb-4 bg-navy-950/70 p-3 rounded-xl border border-white/5">
+                          <div class="text-xs font-bold text-gold mb-2 flex items-center justify-between">
+                            <span>Optional Extras & Add-ons:</span>
+                            <span class="text-slate-400 font-normal">Select below</span>
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            ${item.addons.map(addon => {
+                              const isChecked = selectedAddonIds.includes(addon.id);
+                              return `
+                                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white p-1 rounded hover:bg-white/5">
+                                  <span class="flex items-center gap-2">
+                                    <input 
+                                      type="checkbox" 
+                                      ${isChecked ? 'checked' : ''} 
+                                      onchange="window.toggleAddonSelection('${item.id}', '${addon.id}')"
+                                      class="accent-gold-500"
+                                    />
+                                    <span>${addon.name}</span>
+                                  </span>
+                                  <span class="text-gold font-medium">+₦${addon.price.toLocaleString()}</span>
+                                </label>
+                              `;
+                            }).join('')}
+                          </div>
+                        </div>
+                      ` : ''}
+
+                      <!-- Special instructions input -->
+                      <input 
+                        id="notes-${item.id}"
+                        type="text" 
+                        placeholder="Special instructions (e.g. less pepper, extra lime)..." 
+                        class="input-custom text-xs py-1.5 mb-3"
+                      />
+                    </div>
+
+                    <button class="btn-primary w-full py-2 text-xs font-bold mt-2" onclick="window.addToCart('${item.id}')">
+                      Add to Tray (${item.addons && selectedAddonIds.length > 0 ? `${selectedAddonIds.length} extras` : 'Standard'})
+                    </button>
+
+                  </div>
+
+                </div>
+              `;
+            }).join('')}
+          </div>
+
         </div>
 
-        <!-- Menu Items List -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          ${filteredMenu.map(item => {
-            const selectedAddonIds = orderDraftExtras[item.id] || [];
-            return `
-              <div class="glass-panel rounded-2xl overflow-hidden flex flex-col justify-between border-2 border-gold/30 hover:border-gold transition-all" style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(220, 173, 84, 0.15);">
-                
-                <div class="h-44 w-full relative overflow-hidden bg-navy-950 rounded-t-2xl">
-                  <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" />
-                  <div class="absolute top-2.5 left-2.5 bg-navy-950/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-200 border border-white/10">
-                    ${item.category || 'Specialty'}
-                  </div>
-                </div>
+        <!-- Right: Active Cart Tray & Live Orders -->
+        <div class="w-full lg:w-80 flex flex-col gap-6">
+          
+          <!-- Cart Tray -->
+          <div class="glass-panel-gold p-5 rounded-2xl border border-gold/40 shadow-xl">
+            <div class="flex items-center justify-between pb-3 border-b border-gold/30 mb-3">
+              <h3 class="font-serif text-sm font-bold text-white tracking-luxury">YOUR ORDER TRAY</h3>
+              <span class="badge-gold text-xs">${cart.length} items</span>
+            </div>
 
-                <div class="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <!-- Title & Price Row (Fluid Flexbox - No Absolute Overlap) -->
-                    <div class="flex items-start justify-between gap-2 mb-1.5 flex-wrap">
-                      <h3 class="font-serif text-base text-white font-bold flex-1 min-w-[140px]">${item.name}</h3>
-                      <div class="bg-amber-500/15 border border-gold/40 px-2.5 py-1 rounded-full text-xs font-bold text-gold whitespace-nowrap shadow-sm">
-                        ₦${item.price.toLocaleString()}
-                      </div>
+            ${cart.length === 0 ? `
+              <div class="text-center py-8 text-xs text-slate-400">
+                Your tray is currently empty.<br/>Select menu items to customize your order.
+              </div>
+            ` : `
+              <div class="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 pr-1">
+                ${cart.map((c, idx) => `
+                  <div class="p-2.5 rounded-lg bg-navy-950 border border-white/5 text-xs">
+                    <div class="flex items-center justify-between font-semibold text-white">
+                      <span>${c.quantity}x ${c.name}</span>
+                      <span class="text-gold">₦${c.basePrice.toLocaleString()}</span>
                     </div>
-
-                    <!-- Preparation Time Metadata -->
-                    <div class="flex items-center gap-2 mb-2 text-xs text-slate-300">
-                      <span class="inline-flex items-center gap-1.5 bg-navy-950/90 px-2.5 py-0.5 rounded-md border border-white/10 text-[11px] text-slate-300 font-medium">
-                        ${getIcon('clock', 12)} <span>~${item.prepTimeMinutes} mins prep</span>
-                      </span>
-                    </div>
-
-                    <p class="text-xs text-slate-200 leading-relaxed mb-4">${item.desc}</p>
-                    
-                    <!-- Configurable Add-ons / Extras (Spec #10) -->
-                    ${item.addons && item.addons.length > 0 ? `
-                      <div class="mb-4 bg-navy-950/70 p-3 rounded-xl border border-white/5">
-                        <div class="text-xs font-bold text-gold mb-2 flex items-center justify-between">
-                          <span>Optional Extras & Add-ons:</span>
-                          <span class="text-slate-400 font-normal">Select below</span>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                          ${item.addons.map(addon => {
-                            const isChecked = selectedAddonIds.includes(addon.id);
-                            return `
-                              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white p-1 rounded hover:bg-white/5">
-                                <span class="flex items-center gap-2">
-                                  <input 
-                                    type="checkbox" 
-                                    ${isChecked ? 'checked' : ''} 
-                                    onchange="window.toggleAddonSelection('${item.id}', '${addon.id}')"
-                                    class="accent-gold-500"
-                                  />
-                                  <span>${addon.name}</span>
-                                </span>
-                                <span class="text-gold font-medium">+₦${addon.price.toLocaleString()}</span>
-                              </label>
-                            `;
-                          }).join('')}
-                        </div>
+                    ${c.extras.length > 0 ? `
+                      <div class="text-slate-400 text-xs mt-1 pl-2 border-l border-gold/40">
+                        ${c.extras.map(e => `+ ${e.name} (₦${e.price.toLocaleString()})`).join('<br/>')}
                       </div>
                     ` : ''}
-
-                    <!-- Special instructions input -->
-                    <input 
-                      id="notes-${item.id}"
-                      type="text" 
-                      placeholder="Special instructions (e.g. less pepper, extra lime)..." 
-                      class="input-custom text-xs py-1.5 mb-3"
-                    />
+                    ${c.specialInstructions ? `
+                      <div class="text-slate-400 italic text-xs mt-1">Note: "${c.specialInstructions}"</div>
+                    ` : ''}
+                    <button class="text-red-400 text-xs mt-1 bg-transparent border-none cursor-pointer" onclick="window.cart.splice(${idx}, 1); renderGuestPortal();">
+                      Remove
+                    </button>
                   </div>
-
-                  <button class="btn-primary w-full py-2 text-xs font-bold mt-2" onclick="window.addToCart('${item.id}')">
-                    Add to Tray (${item.addons && selectedAddonIds.length > 0 ? `${selectedAddonIds.length} extras` : 'Standard'})
-                  </button>
-
-                </div>
-
+                `).join('')}
               </div>
-            `;
-          }).join('')}
+
+              <div class="pt-3 border-t border-gold/30 flex items-center justify-between text-sm font-bold text-white mb-4">
+                <span>Total Bill:</span>
+                <span class="text-gold text-base">₦${cartTotal.toLocaleString()}</span>
+              </div>
+
+              <!-- Spec #2: Proceed to Upsell / Order Review -->
+              <button class="btn-primary w-full py-2.5 text-xs font-bold shadow-lg" onclick="window.proceedToRestaurantUpsellOrReview()">
+                Proceed with Order Selection →
+              </button>
+            `}
+          </div>
+
+          <!-- Active Orders List -->
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <h3 class="font-serif text-sm font-bold text-white tracking-luxury mb-3">RECENT SUITE ORDERS</h3>
+            ${state.orders.filter(o => o.guestId === guest.id).length === 0 ? `
+              <div class="text-xs text-slate-400">No recent orders for Suite ${guest.roomNumber}.</div>
+            ` : `
+              <div class="flex flex-col gap-3">
+                ${state.orders.filter(o => o.guestId === guest.id).map(o => `
+                  <div class="p-3 rounded-xl bg-navy-950 border border-gold/30 text-xs">
+                    <div class="flex items-center justify-between mb-1">
+                      <strong class="text-white">${o.id}</strong>
+                      <span class="badge-${o.status === 'DELIVERED' ? 'normal' : o.status === 'PREPARING' ? 'attention' : 'gold'} text-xs uppercase font-bold">
+                        ${o.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div class="text-slate-300 mb-2">${o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</div>
+                    
+                    <div class="flex items-center justify-between text-slate-400 text-xs pt-2 border-t border-white/5">
+                      <span>${o.createdAt}</span>
+                      <span class="text-gold font-semibold">₦${o.totalAmount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+// Section 2: Complementary Pairings / Upsell Step (Spec #2)
+function renderRestaurantUpsellStep(guest, cart, cartTotal) {
+  const state = store.getState();
+  const upsellItems = state.menu.filter(m => m.category === 'Drinks' || m.category === 'Desserts' || m.category === 'Snacks').slice(0, 4);
+
+  return `
+    <div class="max-w-3xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl border border-gold/40 shadow-2xl animate-fade-in">
+      <div class="text-center mb-6 pb-4 border-b border-gold/20">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold text-xs font-bold mb-2">
+          <span>🍹</span> <span>Amara's Complementary Pairings</span>
+        </div>
+        <h2 class="text-2xl font-serif text-white font-bold">Would You Like to Add a Drink, Snack or Dessert?</h2>
+        <p class="text-xs text-slate-300 mt-1 max-w-lg mx-auto">
+          Elevate your in-suite dining experience with Chef Babatunde's signature refreshments and artisan sweets.
+        </p>
+      </div>
+
+      <!-- Quick Add-ons Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        ${upsellItems.map(item => `
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10 flex items-center justify-between gap-3 hover:border-gold transition-all">
+            <div class="flex items-center gap-3">
+              <img src="${item.image}" alt="${item.name}" class="w-14 h-14 rounded-xl object-cover border border-white/10" />
+              <div>
+                <div class="font-serif font-bold text-white text-xs">${item.name}</div>
+                <div class="text-gold font-bold text-xs mt-0.5">₦${item.price.toLocaleString()}</div>
+                <div class="text-[10px] text-slate-400">${item.category}</div>
+              </div>
+            </div>
+            <button 
+              class="btn-primary text-xs py-1.5 px-3 font-bold whitespace-nowrap"
+              onclick="window.addToCart('${item.id}');"
+            >
+              + Add
+            </button>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Tray Status & Navigation Buttons -->
+      <div class="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <button 
+          class="btn-secondary py-2.5 px-5 text-xs font-semibold w-full sm:w-auto"
+          onclick="window.setRestaurantFlowStep('MENU');"
+        >
+          ← Back to Menu
+        </button>
+
+        <div class="text-center sm:text-right w-full sm:w-auto">
+          <div class="text-xs text-slate-300 mb-1.5">Current Tray: <strong class="text-white">${cart.length} items</strong> (₦${cartTotal.toLocaleString()})</div>
+          <button 
+            class="btn-primary py-2.5 px-6 text-xs font-bold w-full sm:w-auto shadow-lg"
+            onclick="window.openRestaurantOrderReview();"
+          >
+            Continue to Order Review →
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Section 3: Order Review Summary Step (Spec #3)
+function renderRestaurantReviewStep(guest, cart, cartTotal) {
+  const maxPrepTime = Math.max(...cart.map(c => {
+    const item = store.getState().menu.find(m => m.id === c.menuId);
+    return item?.prepTimeMinutes || 20;
+  }), 20);
+
+  const deliveryTimeEst = new Date(Date.now() + (maxPrepTime + 15) * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  return `
+    <div class="max-w-2xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl border-2 border-gold/50 shadow-2xl animate-fade-in">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-gold/30 mb-6 gap-2 flex-wrap">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-luxury text-gold">Order Review & Kitchen Dispatch</span>
+          <h2 class="text-2xl font-serif text-white font-bold mt-1">Restaurant Order Summary</h2>
+          <p class="text-xs text-slate-300">Review your culinary selection before sending to Executive Chef Babatunde.</p>
+        </div>
+        <span class="badge-gold text-xs">Suite #${guest.roomNumber}</span>
+      </div>
+
+      <!-- Guest & Timing Metadata Card -->
+      <div class="p-4 rounded-xl bg-navy-950/80 border border-gold/30 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+        <div>
+          <div class="text-slate-400">Resident Guest:</div>
+          <div class="font-bold text-white text-sm font-serif">${guest.name} · Suite #${guest.roomNumber}</div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div>
+            <div class="text-slate-400">Preparation Time:</div>
+            <div class="font-bold text-amber-400">~${maxPrepTime} mins</div>
+          </div>
+          <div>
+            <div class="text-slate-400">Est. Room Delivery:</div>
+            <div class="font-bold text-gold">~${maxPrepTime + 15} mins (${deliveryTimeEst})</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Itemized Bill Table -->
+      <div class="flex flex-col gap-3 mb-6">
+        ${cart.map((item, idx) => {
+          const extrasTotal = item.extras.reduce((sum, e) => sum + e.price, 0);
+          const itemSubtotal = (item.basePrice + extrasTotal) * item.quantity;
+          return `
+            <div class="p-3.5 rounded-xl bg-navy-950 border border-white/10 flex items-start justify-between gap-3 text-xs">
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <strong class="text-white text-sm">${item.quantity}x ${item.name}</strong>
+                  <span class="text-gold font-bold">₦${itemSubtotal.toLocaleString()}</span>
+                </div>
+                ${item.extras.length > 0 ? `
+                  <div class="text-slate-400 text-xs mt-1 pl-2 border-l border-gold/40">
+                    ${item.extras.map(e => `+ ${e.name} (₦${e.price.toLocaleString()})`).join('<br/>')}
+                  </div>
+                ` : ''}
+                ${item.specialInstructions ? `
+                  <div class="text-slate-400 italic text-[11px] mt-1">Special note: "${item.specialInstructions}"</div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Bill Total -->
+      <div class="pt-4 border-t border-gold/30 flex items-center justify-between text-base font-bold text-white mb-6">
+        <span>Total Amount (Posted to Folio):</span>
+        <span class="text-gold text-xl font-serif">₦${cartTotal.toLocaleString()}</span>
+      </div>
+
+      <!-- Amara Review Prompt Note -->
+      <div class="p-3 rounded-xl bg-gold/10 border border-gold/30 text-xs text-slate-200 mb-6 flex items-center gap-2.5">
+        <span class="text-lg">🤖</span>
+        <span>Amara: <em>"Please review your order, ${guest.name}. Once you're happy with your selection, I'll send it to our kitchen."</em></span>
+      </div>
+
+      <!-- Review Action Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <button 
+          class="btn-secondary py-3 px-5 text-xs font-semibold w-full sm:w-auto"
+          onclick="window.setRestaurantFlowStep('MENU');"
+        >
+          ✏️ Edit Order
+        </button>
+
+        <button 
+          class="btn-primary py-3 px-8 text-xs font-bold w-full sm:w-auto shadow-xl"
+          onclick="window.confirmAndDispatchRestaurantOrder();"
+        >
+          ✓ Confirm & Send to Kitchen →
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+// Section 9-22: Live Order Tracker Component
+function renderLiveOrderTracker(order, guest) {
+  if (!order) return '';
+
+  const now = Date.now();
+  const isSubmitted = order.status === 'SUBMITTED' || order.status === 'ACCEPTED';
+  const isPreparing = order.status === 'PREPARING';
+  const isReady = order.status === 'READY';
+  const isOutForDelivery = order.status === 'OUT_FOR_DELIVERY';
+  const isDelivered = order.status === 'DELIVERED';
+
+  // Step indices
+  const stepIdx = isDelivered ? 5 : isOutForDelivery ? 4 : isReady ? 3 : isPreparing ? 2 : 1;
+
+  // Timestamps
+  const prepStartedAt = order.preparationStartedAt || (order.createdTimestamp || now);
+  const estimatedReadyAt = order.estimatedReadyAt || (prepStartedAt + (order.preparationMinutes || 20) * 60 * 1000);
+  const readyFormatted = new Date(estimatedReadyAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const targetDeliveryAt = order.revisedDeliveryAt || order.estimatedDeliveryAt || (estimatedReadyAt + (order.deliveryMinutes || 15) * 60 * 1000);
+  const deliveryFormatted = new Date(targetDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const isDelayed = now > targetDeliveryAt && !isDelivered;
+
+  // Countdown calculations
+  const remainingPrepMs = Math.max(0, estimatedReadyAt - now);
+  const pMins = Math.floor(remainingPrepMs / 60000);
+  const pSecs = Math.floor((remainingPrepMs % 60000) / 1000);
+  const prepCountdownStr = `${pMins.toString().padStart(2, '0')}:${pSecs.toString().padStart(2, '0')}`;
+
+  const remainingDeliveryMs = Math.max(0, targetDeliveryAt - now);
+  const dMins = Math.floor(remainingDeliveryMs / 60000);
+  const dSecs = Math.floor((remainingDeliveryMs % 60000) / 1000);
+  const deliveryCountdownStr = `${dMins.toString().padStart(2, '0')}:${dSecs.toString().padStart(2, '0')}`;
+
+  return `
+    <div class="glass-panel-gold p-6 sm:p-8 rounded-2xl mb-6 border-2 border-gold/60 shadow-2xl animate-fade-in" style="box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 35px rgba(220, 173, 84, 0.25);">
+      
+      <!-- Top Title & Badge -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-gold/30 mb-6 gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">Live Preparation & Delivery Tracking</span>
+            <span class="badge-gold text-xs">Room ${order.roomNumber}</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-serif text-white font-bold mt-1">
+            YOUR RESTAURANT ORDER (${order.id})
+          </h2>
+          <div class="text-xs text-slate-300 mt-0.5">
+            ${order.items.map(i => `${i.quantity}x ${i.name}`).join(' · ')}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="badge-${isDelivered ? 'normal' : isDelayed ? 'critical' : isPreparing || isOutForDelivery ? 'attention' : 'gold'} text-xs uppercase font-bold py-1 px-3">
+            ${isDelivered ? '✓ DELIVERED' : isDelayed ? '⚠️ DELIVERY DELAY' : order.status.replace(/_/g, ' ')}
+          </span>
+        </div>
+      </div>
+
+      <!-- 5-Stage Stepper Component (Spec #9 & #12) -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-6 text-xs font-bold">
+        
+        <!-- Step 1: Confirmed -->
+        <div class="p-3 rounded-xl ${stepIdx >= 1 ? 'bg-emerald-950/70 border border-emerald-500/60 text-emerald-300' : 'bg-navy-950 border border-white/10 text-slate-400'} flex items-center gap-2">
+          <span>${stepIdx >= 1 ? '✓' : '○'}</span>
+          <span>Order Confirmed</span>
+        </div>
+
+        <!-- Step 2: Preparing -->
+        <div class="p-3 rounded-xl ${stepIdx > 2 ? 'bg-emerald-950/70 border border-emerald-500/60 text-emerald-300' : stepIdx === 2 ? 'bg-amber-950/80 border-2 border-amber-400 text-amber-300 animate-pulse' : 'bg-navy-950 border border-white/10 text-slate-400'} flex items-center gap-2">
+          <span>${stepIdx > 2 ? '✓' : stepIdx === 2 ? '●' : '○'}</span>
+          <span>Preparing</span>
+        </div>
+
+        <!-- Step 3: Ready -->
+        <div class="p-3 rounded-xl ${stepIdx > 3 ? 'bg-emerald-950/70 border border-emerald-500/60 text-emerald-300' : stepIdx === 3 ? 'bg-amber-950/80 border-2 border-amber-400 text-amber-300 animate-pulse' : 'bg-navy-950 border border-white/10 text-slate-400'} flex items-center gap-2">
+          <span>${stepIdx > 3 ? '✓' : stepIdx === 3 ? '●' : '○'}</span>
+          <span>Ready</span>
+        </div>
+
+        <!-- Step 4: Out for Delivery -->
+        <div class="p-3 rounded-xl ${stepIdx > 4 ? 'bg-emerald-950/70 border border-emerald-500/60 text-emerald-300' : stepIdx === 4 ? 'bg-amber-950/80 border-2 border-amber-400 text-amber-300 animate-pulse' : 'bg-navy-950 border border-white/10 text-slate-400'} flex items-center gap-2">
+          <span>${stepIdx > 4 ? '✓' : stepIdx === 4 ? '●' : '○'}</span>
+          <span>Out for Delivery</span>
+        </div>
+
+        <!-- Step 5: Delivered -->
+        <div class="p-3 rounded-xl ${isDelivered ? 'bg-emerald-950/70 border border-emerald-500/60 text-emerald-300' : 'bg-navy-950 border border-white/10 text-slate-400'} flex items-center gap-2 col-span-2 sm:col-span-1">
+          <span>${isDelivered ? '✓' : '○'}</span>
+          <span>Delivered</span>
         </div>
 
       </div>
 
-      <!-- Right: Active Cart Tray & Live Orders -->
-      <div class="w-full lg:w-80 flex flex-col gap-6">
+      <!-- Real Countdown & Status Display Matrix (Spec #9, #10, #16, #18) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         
-        <!-- Cart Tray -->
-        <div class="glass-panel-gold p-5 rounded-2xl">
-          <div class="flex items-center justify-between pb-3 border-b border-gold/30 mb-3">
-            <h3 class="font-serif text-sm font-bold text-white tracking-luxury">YOUR ORDER TRAY</h3>
-            <span class="badge-gold text-xs">${cart.length} items</span>
+        <!-- PREPARATION CARD -->
+        <div class="p-5 rounded-2xl bg-navy-950/90 border ${isPreparing ? 'border-amber-400/80 shadow-lg' : 'border-white/10'} flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span>👨‍🍳</span> <span>PREPARATION STATUS</span>
+              </span>
+              <span class="text-xs font-semibold ${isReady || isOutForDelivery || isDelivered ? 'text-emerald-400' : isPreparing ? 'text-amber-400' : 'text-slate-400'}">
+                ${isReady || isOutForDelivery || isDelivered ? '✓ Preparation Complete' : isPreparing ? 'In Kitchen Progress' : 'Awaiting Kitchen'}
+              </span>
+            </div>
+
+            <div class="my-3">
+              ${isPreparing ? `
+                <div class="font-mono text-3xl sm:text-4xl font-black text-amber-300 tracking-wider" id="prep-countdown-value">
+                  ${prepCountdownStr} remaining
+                </div>
+                <div class="text-xs text-slate-300 mt-1">
+                  Estimated Ready: <strong class="text-white">${readyFormatted}</strong>
+                </div>
+              ` : isReady || isOutForDelivery || isDelivered ? `
+                <div class="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                  <span>✓ Prepared & Checked by Chef Babatunde</span>
+                </div>
+                <div class="text-xs text-slate-300 mt-1">Staged in kitchen pass at ${order.createdAt}</div>
+              ` : `
+                <div class="text-sm font-semibold text-slate-300">
+                  Order received by Executive Chef Babatunde. Awaiting prep station start.
+                </div>
+              `}
+            </div>
           </div>
 
-          ${cart.length === 0 ? `
-            <div class="text-center py-8 text-xs text-slate-400">
-              Your tray is currently empty.<br/>Select menu items to customize your order.
+          <!-- Prep Progress Bar -->
+          <div class="w-full bg-navy-900 h-2 rounded-full overflow-hidden mt-2">
+            <div 
+              id="prep-progress-bar"
+              class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full transition-all duration-1000"
+              style="width: ${isReady || isOutForDelivery || isDelivered ? '100%' : isPreparing ? '65%' : '15%'};"
+            ></div>
+          </div>
+        </div>
+
+        <!-- DELIVERY CARD -->
+        <div class="p-5 rounded-2xl bg-navy-950/90 border ${isOutForDelivery ? 'border-gold shadow-lg' : isDelayed ? 'border-red-500' : 'border-white/10'} flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span>🚀</span> <span>DELIVERY TO SUITE</span>
+              </span>
+              <span class="text-xs font-semibold ${isDelivered ? 'text-emerald-400' : isDelayed ? 'text-red-400 font-bold' : isOutForDelivery ? 'text-gold' : 'text-slate-400'}">
+                ${isDelivered ? '✓ Delivered' : isDelayed ? '⚠️ Delay Detected' : isOutForDelivery ? 'Attendant In Transit' : 'Scheduled Delivery'}
+              </span>
             </div>
-          ` : `
-            <div class="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 pr-1">
-              ${cart.map((c, idx) => `
-                <div class="p-2.5 rounded-lg bg-navy-950 border border-white/5 text-xs">
-                  <div class="flex items-center justify-between font-semibold text-white">
-                    <span>${c.quantity}x ${c.name}</span>
-                    <span class="text-gold">₦${c.basePrice.toLocaleString()}</span>
-                  </div>
-                  ${c.extras.length > 0 ? `
-                    <div class="text-slate-400 text-xs mt-1 pl-2 border-l border-gold/40">
-                      ${c.extras.map(e => `+ ${e.name} (₦${e.price.toLocaleString()})`).join('<br/>')}
-                    </div>
-                  ` : ''}
-                  ${c.specialInstructions ? `
-                    <div class="text-slate-400 italic text-xs mt-1">Note: "${c.specialInstructions}"</div>
-                  ` : ''}
-                  <button class="text-red-400 text-xs mt-1 bg-transparent border-none cursor-pointer" onclick="window.cart.splice(${idx}, 1); renderGuestPortal();">
-                    Remove
-                  </button>
+
+            <div class="my-3">
+              ${isDelivered ? `
+                <div class="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                  <span>✓ Delivered to Suite #${order.roomNumber}</span>
                 </div>
-              `).join('')}
+                <div class="text-xs text-slate-300 mt-1">Thank you for dining with Hotel Capitol.</div>
+              ` : isDelayed ? `
+                <div class="text-xl font-bold text-red-400 flex items-center gap-2">
+                  <span>⚠️ DELIVERY DELAY</span>
+                </div>
+                <div class="text-xs text-slate-200 mt-1">
+                  We are following up with our service team. ${order.revisedDeliveryAt ? `Revised Arrival: <strong class="text-gold">${deliveryFormatted}</strong>` : 'Arriving shortly.'}
+                </div>
+              ` : isOutForDelivery ? `
+                <div class="font-mono text-3xl sm:text-4xl font-black text-gold tracking-wider" id="delivery-countdown-value">
+                  ${deliveryCountdownStr} remaining
+                </div>
+                <div class="text-xs text-slate-300 mt-1">
+                  Estimated Arrival: <strong class="text-white">${deliveryFormatted}</strong>
+                </div>
+              ` : `
+                <div class="text-sm font-semibold text-slate-300">
+                  Estimated Delivery: <strong class="text-gold">${deliveryFormatted}</strong>
+                </div>
+                <div class="text-xs text-slate-400 mt-1">Assigned attendant: Amara Nwosu</div>
+              `}
             </div>
+          </div>
 
-            <div class="pt-3 border-t border-gold/30 flex items-center justify-between text-sm font-bold text-white mb-4">
-              <span>Total Bill:</span>
-              <span class="text-gold text-base">₦${cartTotal.toLocaleString()}</span>
-            </div>
+          <!-- Delivery Progress Bar -->
+          <div class="w-full bg-navy-900 h-2 rounded-full overflow-hidden mt-2">
+            <div 
+              id="delivery-progress-bar"
+              class="bg-gradient-to-r from-gold to-emerald-400 h-full transition-all duration-1000"
+              style="width: ${isDelivered ? '100%' : isOutForDelivery ? '75%' : isReady ? '50%' : '10%'};"
+            ></div>
+          </div>
+        </div>
 
-            <button class="btn-primary w-full py-2.5 text-xs font-bold" onclick="window.submitGuestRestaurantOrder()">
-              Confirm & Dispatch Order →
+      </div>
+
+      <!-- Quick Staff & Testing Simulation Controls (Enables instant testing of all stages) -->
+      <div class="p-3.5 rounded-xl bg-black/40 border border-gold/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        <div class="text-slate-400 flex items-center gap-2">
+          <span>⚡ Kitchen & Delivery Stage Controls:</span>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          ${isSubmitted ? `
+            <button class="btn-primary text-xs py-1 px-3 font-bold" onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'PREPARING'); renderGuestPortal();">
+              👨‍🍳 Kitchen Accept (Start Prep)
             </button>
-          `}
+          ` : ''}
+
+          ${isPreparing ? `
+            <button class="btn-primary text-xs py-1 px-3 font-bold" onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'READY'); renderGuestPortal();">
+              🍽️ Mark Ready
+            </button>
+          ` : ''}
+
+          ${isReady ? `
+            <button class="btn-primary text-xs py-1 px-3 font-bold" onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'OUT_FOR_DELIVERY'); renderGuestPortal();">
+              🚀 Dispatch Out for Delivery
+            </button>
+          ` : ''}
+
+          ${isOutForDelivery || isDelayed ? `
+            <button class="btn-secondary text-xs py-1 px-2.5" onclick="window.hotelCapitolStore.setOrderRevisedTime('${order.id}', 10); renderGuestPortal();">
+              ⏱️ +10m Revised Delay
+            </button>
+            <button class="btn-primary text-xs py-1 px-3 font-bold" onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'DELIVERED'); renderGuestPortal();">
+              ✓ Mark Delivered
+            </button>
+          ` : ''}
+
+          ${isDelivered ? `
+            <span class="text-emerald-400 font-bold text-xs">✓ Order Completed</span>
+          ` : ''}
         </div>
-
-        <!-- Real-Time Order Tracking List (Spec #11 & #12) -->
-        <div class="glass-panel p-5 rounded-2xl">
-          <h3 class="font-serif text-sm font-bold text-white tracking-luxury mb-3">ACTIVE ORDERS & STATUS</h3>
-          ${state.orders.filter(o => o.guestId === guest.id).length === 0 ? `
-            <div class="text-xs text-slate-400">No recent orders for Suite ${guest.roomNumber}.</div>
-          ` : `
-            <div class="flex flex-col gap-3">
-              ${state.orders.filter(o => o.guestId === guest.id).map(o => `
-                <div class="p-3 rounded-xl bg-navy-950 border border-gold/30 text-xs">
-                  <div class="flex items-center justify-between mb-1">
-                    <strong class="text-white">${o.id}</strong>
-                    <span class="badge-${o.status === 'DELIVERED' ? 'normal' : o.status === 'PREPARING' ? 'attention' : 'gold'} text-xs uppercase font-bold">
-                      ${o.status}
-                    </span>
-                  </div>
-                  <div class="text-slate-300 mb-2">${o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</div>
-                  
-                  <!-- Progress Bar -->
-                  <div class="w-full bg-navy-800 h-1.5 rounded-full overflow-hidden mb-2">
-                    <div class="bg-gold h-full transition-all duration-500" style="width: ${
-                      o.status === 'PENDING' ? '25%' : o.status === 'PREPARING' ? '60%' : o.status === 'OUT FOR DELIVERY' ? '85%' : '100%'
-                    };"></div>
-                  </div>
-
-                  <div class="flex items-center justify-between text-slate-400 text-xs">
-                    <span>Placed: ${o.createdAt}</span>
-                    <span class="text-gold font-semibold">₦${o.totalAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          `}
-        </div>
-
       </div>
 
     </div>
@@ -1182,45 +1719,77 @@ function renderConciergeSection(guest) {
           </button>
         </div>
 
-        <!-- PORTER LUGGAGE ASSISTANCE OPTIONS WIDGET (Sections 18 & 19: In Room & Main Lobby Only) -->
-        <div class="glass-panel-gold p-5 rounded-xl mb-6">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="text-2xl">🧳</span>
-              <div>
-                <h3 class="font-serif text-base text-white font-bold">Luggage & Porter Assistance</h3>
-                <p class="text-xs text-slate-200">Where would you like our porter team to assist you?</p>
-              </div>
-            </div>
-            <span class="badge-gold text-xs">Porter Service</span>
+        <!-- REDESIGNED LUXURY PORTER SERVICE CARDS (Spec #23 - #27) -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3.5">
+            <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase flex items-center gap-2">
+              <span>🧳</span> <span>Select Luggage Assistance Location</span>
+            </h3>
+            <span class="badge-gold text-[10px]">24/7 Porter Dispatch</span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 my-3">
-            <button 
-              class="p-4 rounded-xl bg-navy-950 border border-gold/40 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- Card 1: REQUEST IN ROOM -->
+            <div 
+              class="glass-panel p-5 rounded-2xl border-2 border-gold/30 hover:border-gold transition-all duration-300 flex flex-col justify-between cursor-pointer group"
+              style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 0 15px rgba(220, 173, 84, 0.08);"
               onclick="window.submitPorterRequest('In Room (Suite #' + '${guest.roomNumber}' + ')')"
             >
-              <div class="font-bold text-sm text-white flex items-center gap-2">
-                <span>🛎️</span> <span>In Room</span>
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                  <div class="w-10 h-10 rounded-xl bg-gold/10 border border-gold/40 flex items-center justify-center text-xl text-gold group-hover:scale-110 transition-transform">
+                    🛎️
+                  </div>
+                  <span class="badge-gold text-[10px]">Suite #${guest.roomNumber}</span>
+                </div>
+                <h4 class="font-serif text-base text-white font-bold tracking-wide mb-1">REQUEST IN ROOM</h4>
+                <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                  Request porter assistance directly at your room.
+                </p>
+                <div class="text-[11px] text-slate-400">
+                  Our porter team will arrive at Suite #${guest.roomNumber} for luggage collection and handling.
+                </div>
               </div>
-              <div class="text-xs text-slate-300 mt-1.5">Pick up luggage directly inside Suite #${guest.roomNumber}</div>
-              <div class="text-gold font-semibold text-xs mt-3 flex items-center gap-1">
-                <span>Request In Room</span> <span>→</span>
-              </div>
-            </button>
 
-            <button 
-              class="p-4 rounded-xl bg-navy-950 border border-white/10 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
+              <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+                <span class="text-gold font-bold flex items-center gap-1 group-hover:text-white transition-colors">
+                  <span>Dispatch to Room</span> <span>→</span>
+                </span>
+                <span class="text-[11px] text-emerald-400 font-medium">✓ Immediate Attendant</span>
+              </div>
+            </div>
+
+            <!-- Card 2: REQUEST IN LOBBY -->
+            <div 
+              class="glass-panel p-5 rounded-2xl border-2 border-white/10 hover:border-gold transition-all duration-300 flex flex-col justify-between cursor-pointer group"
+              style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 0 15px rgba(220, 173, 84, 0.04);"
               onclick="window.submitPorterRequest('Main Lobby Reception')"
             >
-              <div class="font-bold text-sm text-white flex items-center gap-2">
-                <span>🏛️</span> <span>Main Lobby</span>
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                  <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/20 flex items-center justify-center text-xl text-white group-hover:scale-110 transition-transform">
+                    🏛️
+                  </div>
+                  <span class="badge-normal text-[10px]">Ground Floor</span>
+                </div>
+                <h4 class="font-serif text-base text-white font-bold tracking-wide mb-1">REQUEST IN LOBBY</h4>
+                <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                  Request porter assistance at the Main Lobby.
+                </p>
+                <div class="text-[11px] text-slate-400">
+                  Our porter team will meet you at the ground floor entrance and reception desk for luggage handling.
+                </div>
               </div>
-              <div class="text-xs text-slate-300 mt-1.5">Ground floor main lobby & reception entrance</div>
-              <div class="text-gold font-semibold text-xs mt-3 flex items-center gap-1">
-                <span>Request at Lobby</span> <span>→</span>
+
+              <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+                <span class="text-gold font-bold flex items-center gap-1 group-hover:text-white transition-colors">
+                  <span>Dispatch to Lobby</span> <span>→</span>
+                </span>
+                <span class="text-[11px] text-emerald-400 font-medium">✓ Main Entrance Standby</span>
               </div>
-            </button>
+            </div>
+
           </div>
         </div>
 

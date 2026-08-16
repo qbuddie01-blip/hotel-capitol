@@ -3,7 +3,7 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V5';
+const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V6';
 
 // Initial seed demo state
 const defaultState = {
@@ -929,6 +929,7 @@ class StateStore {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V2');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V3');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V4');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V5');
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           return JSON.parse(saved);
@@ -1021,27 +1022,43 @@ class StateStore {
     this.setState(s => ({ ...s, activeStaffId: id }));
   }
 
-  // Add Restaurant Order
+  // Add Restaurant Order (Genuine SUBMITTED state with exact timestamps)
   createOrder(orderData) {
     const orderId = 'ORD-' + (this.state.orders.length + 101);
     const guest = this.getActiveGuest();
+    const now = Date.now();
+    const prepMins = orderData.prepTimeMinutes || orderData.estimatedMinutes || 20;
+    const deliveryMins = orderData.deliveryMinutes || 15;
+    const totalMins = prepMins + deliveryMins;
+
     const newOrder = {
       id: orderId,
       guestId: guest.id,
       guestName: guest.name,
       roomNumber: guest.roomNumber,
-      items: orderData.items,
-      totalAmount: orderData.totalAmount,
-      status: 'PENDING',
-      createdAt: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-      estimatedMinutes: orderData.estimatedMinutes || 25,
-      elapsedMinutes: 0,
-      fiveMinWarningTriggered: false,
+      items: orderData.items || [],
+      totalAmount: orderData.totalAmount || 0,
+      status: 'SUBMITTED', // Initial genuine FSM state
+      createdTimestamp: now,
+      createdAt: new Date(now).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      preparationMinutes: prepMins,
+      deliveryMinutes: deliveryMins,
+      totalMinutes: totalMins,
+      preparationStartedAt: null,
+      estimatedReadyAt: null,
+      readyAt: null,
+      deliveryStartedAt: null,
+      estimatedDeliveryAt: now + totalMins * 60 * 1000,
+      revisedDeliveryAt: null,
+      deliveredAt: null,
+      fiveMinuteDeliveryNotificationSent: false,
+      delayNotificationSent: false,
       assignedStaff: 'Chef Babatunde Adele',
-      roomDeliveryStaff: 'Amara Nwosu'
+      roomDeliveryStaff: 'Amara Nwosu',
+      specialInstructions: orderData.specialInstructions || ''
     };
 
-    // Add to folio
+    // Add to guest folio
     const folioItem = {
       id: 'FOL-' + Date.now().toString().slice(-4),
       date: new Date().toISOString().split('T')[0],
@@ -1061,13 +1078,55 @@ class StateStore {
     return newOrder;
   }
 
-  // Update order status
-  updateOrderStatus(orderId, nextStatus) {
+  // Update order status with realistic timestamp triggers
+  updateOrderStatus(orderId, nextStatus, extraData = {}) {
+    const now = Date.now();
     this.setState(s => ({
       ...s,
-      orders: s.orders.map(o => o.id === orderId ? { ...o, status: nextStatus } : o)
+      orders: s.orders.map(o => {
+        if (o.id !== orderId) return o;
+
+        const updated = { ...o, status: nextStatus, ...extraData };
+
+        if (nextStatus === 'PREPARING') {
+          updated.preparationStartedAt = updated.preparationStartedAt || now;
+          const prepMins = updated.preparationMinutes || 20;
+          const deliveryMins = updated.deliveryMinutes || 15;
+          updated.estimatedReadyAt = updated.preparationStartedAt + prepMins * 60 * 1000;
+          updated.estimatedDeliveryAt = updated.estimatedReadyAt + deliveryMins * 60 * 1000;
+        } else if (nextStatus === 'READY') {
+          updated.readyAt = updated.readyAt || now;
+        } else if (nextStatus === 'OUT_FOR_DELIVERY') {
+          updated.deliveryStartedAt = updated.deliveryStartedAt || now;
+          const deliveryMins = updated.deliveryMinutes || 15;
+          updated.estimatedDeliveryAt = updated.deliveryStartedAt + deliveryMins * 60 * 1000;
+        } else if (nextStatus === 'DELIVERED') {
+          updated.deliveredAt = updated.deliveredAt || now;
+        }
+
+        return updated;
+      })
     }));
     this.addAudit('Order Status Transition', orderId, `Status updated to ${nextStatus}`);
+  }
+
+  // Set revised delivery time from authorized staff action
+  setOrderRevisedTime(orderId, additionalMinutes = 10) {
+    const now = Date.now();
+    this.setState(s => ({
+      ...s,
+      orders: s.orders.map(o => {
+        if (o.id !== orderId) return o;
+        const currentTarget = o.estimatedDeliveryAt || (now + 15 * 60 * 1000);
+        const newTarget = currentTarget + additionalMinutes * 60 * 1000;
+        return {
+          ...o,
+          revisedDeliveryAt: newTarget,
+          delayNotificationSent: true
+        };
+      })
+    }));
+    this.addAudit('Order Delivery Time Revised', orderId, `Added +${additionalMinutes} mins`);
   }
 
   // Lookup designated staff member assigned to specific room and service area

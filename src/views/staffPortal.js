@@ -338,19 +338,116 @@ function renderStaffRoomsTab(rooms) {
   `;
 }
 
-// 3. LIVE SERVICE REQUESTS QUEUE
+// 3. LIVE SERVICE REQUESTS & KITCHEN ORDERS QUEUE
 function renderStaffRequestsTab(requests) {
+  const orders = store.getState().orders || [];
+
   return `
-    <div class="max-w-4xl mx-auto glass-panel p-6 rounded-2xl">
-      <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
-        <div>
-          <h2 class="text-lg font-serif text-white font-bold">Department Service Requests</h2>
-          <p class="text-xs text-slate-300">Live requests generated from Hotel Capitol AI & guest interactions.</p>
+    <div class="max-w-4xl mx-auto flex flex-col gap-6">
+
+      <!-- KITCHEN & CULINARY ORDERS SECTION -->
+      <div class="glass-panel p-6 rounded-2xl border border-gold/30">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-luxury text-gold">Kitchen Pass Station</span>
+              <span class="badge-gold text-xs">${orders.filter(o => o.status !== 'DELIVERED').length} Active</span>
+            </div>
+            <h2 class="text-lg font-serif text-white font-bold mt-1">Live Restaurant & In-Suite Orders</h2>
+          </div>
         </div>
+
+        ${orders.length === 0 ? `
+          <div class="text-xs text-slate-400">No active kitchen orders.</div>
+        ` : `
+          <div class="flex flex-col gap-3">
+            ${orders.map(order => `
+              <div class="p-4 rounded-xl bg-navy-950 border ${order.status === 'PREPARING' ? 'border-amber-400/80 shadow-md' : 'border-white/10'} flex flex-col gap-3 text-xs">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="badge-gold text-[10px]">Room ${order.roomNumber}</span>
+                      <span class="badge-${order.status === 'DELIVERED' ? 'normal' : order.status === 'PREPARING' ? 'attention' : 'gold'} text-[10px]">
+                        ${order.status.replace(/_/g, ' ')}
+                      </span>
+                      <strong class="text-white text-sm">${order.id} · ${order.guestName}</strong>
+                    </div>
+                    <div class="text-slate-300 font-semibold mb-1">
+                      ${order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                    </div>
+                    <div class="flex items-center gap-3 text-slate-400 text-[11px] flex-wrap">
+                      <span>Placed: ${order.createdAt}</span>
+                      <span>Total: <strong class="text-gold">₦${order.totalAmount.toLocaleString()}</strong></span>
+                      <span>Est. Ready: ${order.estimatedReadyAt ? new Date(order.estimatedReadyAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : `~${order.preparationMinutes || 20}m`}</span>
+                      <span>Est. Delivery: ${order.revisedDeliveryAt || order.estimatedDeliveryAt ? new Date(order.revisedDeliveryAt || order.estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : `~${order.totalMinutes || 35}m`}</span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${order.status === 'SUBMITTED' || order.status === 'ACCEPTED' ? `
+                      <button 
+                        class="btn-primary text-xs py-1.5 px-3 font-bold"
+                        onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'PREPARING'); renderStaffPortal();"
+                      >
+                        👨‍🍳 Accept & Start Prep
+                      </button>
+                    ` : ''}
+
+                    ${order.status === 'PREPARING' ? `
+                      <button 
+                        class="btn-primary text-xs py-1.5 px-3 font-bold"
+                        onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'READY'); renderStaffPortal();"
+                      >
+                        🍽️ Mark Ready
+                      </button>
+                    ` : ''}
+
+                    ${order.status === 'READY' ? `
+                      <button 
+                        class="btn-primary text-xs py-1.5 px-3 font-bold"
+                        onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'OUT_FOR_DELIVERY'); renderStaffPortal();"
+                      >
+                        🚀 Dispatch Out for Delivery
+                      </button>
+                    ` : ''}
+
+                    ${order.status === 'OUT_FOR_DELIVERY' ? `
+                      <button 
+                        class="btn-secondary text-xs py-1.5 px-2.5"
+                        onclick="window.hotelCapitolStore.setOrderRevisedTime('${order.id}', 10); renderStaffPortal();"
+                      >
+                        ⏱️ +10m Revised Delay
+                      </button>
+                      <button 
+                        class="btn-primary text-xs py-1.5 px-3 font-bold"
+                        onclick="window.hotelCapitolStore.updateOrderStatus('${order.id}', 'DELIVERED'); renderStaffPortal();"
+                      >
+                        ✓ Mark Delivered
+                      </button>
+                    ` : ''}
+
+                    ${order.status === 'DELIVERED' ? `
+                      <span class="text-emerald-400 font-bold text-xs">✓ Delivered</span>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
       </div>
 
-      <div class="flex flex-col gap-3">
-        ${requests.map(req => `
+      <!-- GENERAL SERVICE REQUESTS -->
+      <div class="glass-panel p-6 rounded-2xl">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+          <div>
+            <h2 class="text-lg font-serif text-white font-bold">Department Service Requests</h2>
+            <p class="text-xs text-slate-300">Live requests generated from Hotel Capitol AI & guest interactions.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          ${requests.map(req => `
           <div class="p-4 rounded-xl bg-navy-950 border ${req.status === 'AWAITING_STAFF_CONFIRMATION' ? 'border-amber-400 bg-amber-950/20 shadow-lg' : 'border-white/10'} flex flex-col gap-3 text-xs">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
