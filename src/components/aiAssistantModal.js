@@ -1,5 +1,5 @@
 /**
- * HOTEL CAPITOL AI — AMARA: GUEST VOICE CONCIERGE & MODAL
+ * HOTEL CAPITOL AI — TOLANI: GUEST VOICE CONCIERGE & MODAL
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
@@ -27,7 +27,7 @@ export function initAIAssistant() {
         scrollChatToBottom();
       }, 100);
 
-      // Automated Amara Voice Greeting (Waits for guest)
+      // Automated Tolani Voice Greeting (Waits for guest)
       if (triggerVoiceWelcome) {
         const greeting = aiEngine.getGreetingForContext(serviceKey);
         const guest = store.getActiveGuest();
@@ -58,16 +58,16 @@ export function initAIAssistant() {
     }
   };
 
-  // 1-Click Amara Voice Concierge End-to-End Demo Runner
+  // 1-Click Tolani Voice Concierge End-to-End Demo Runner
   window.runFullAIVoiceConciergeDemo = () => {
     window.toggleAIAssistant(true, false, SERVICES.GENERAL);
     
     const guest = store.getActiveGuest();
     const guestName = guest ? guest.name : 'Valued Guest';
-    const welcome = `Good day, ${guestName}. Welcome to Hotel Capitol. I am Amara, your personal concierge. It is my pleasure to assist you. How may I make your stay more comfortable today?`;
+    const welcome = `Good day, ${guestName}. Welcome to Hotel Capitol. I am Tolani, your personal concierge. It is my pleasure to assist you. How may I make your stay more comfortable today?`;
     
     aiEngine.speak(welcome);
-    automationEngine.showToast('🎙️ Amara Voice Concierge', welcome, 'info');
+    automationEngine.showToast('🎙️ Tolani Voice Concierge', welcome, 'info');
 
     // Guest makes request after 3.2s
     setTimeout(() => {
@@ -123,7 +123,7 @@ export function initAIAssistant() {
       renderAIAssistant();
       scrollChatToBottom();
 
-      // Speak Amara's concise spoken response
+      // Speak Tolani's concise spoken response
       const spokenText = response.voiceText || response.text;
       aiEngine.speak(spokenText);
 
@@ -190,13 +190,13 @@ export function renderAIAssistant() {
   ];
 
   root.innerHTML = `
-    <!-- Floating AI Trigger Button (Spherical Glowy Golden Lines, Modern AI Icon, Lemon Green Pulsing Dot) -->
+    <!-- Floating AI Trigger Button -->
     <button 
       class="floating-ai-btn" 
       onclick="window.toggleAIAssistant()"
-      title="Ask Hotel Capitol AI (Amara)"
+      title="Ask Hotel Capitol AI (Tolani)"
     >
-      <span class="floating-ai-pulse" aria-label="Amara Online"></span>
+      <span class="floating-ai-pulse" aria-label="Tolani Online"></span>
       <!-- Modern Polished AI Neural Core Icon -->
       <div class="floating-ai-icon-wrapper">
         <svg width="22" height="22" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" class="modern-ai-icon">
@@ -212,12 +212,9 @@ export function renderAIAssistant() {
               <stop offset="100%" stop-color="#ffd700"/>
             </linearGradient>
           </defs>
-          <!-- Central Diamond Neural Core -->
           <path d="M14 2.5 L16.8 10.2 L24.5 13 L16.8 15.8 L14 23.5 L11.2 15.8 L3.5 13 L11.2 10.2 Z" 
                 fill="url(#aiIconGoldLuster)" stroke="#ffffff" stroke-width="0.8"/>
-          <!-- Core Light Center -->
           <circle cx="14" cy="13" r="2.2" fill="#ffffff"/>
-          <!-- Satellite Sparkles -->
           <path d="M21.5 4.5 L22.6 7.4 L25.5 8.5 L22.6 9.6 L21.5 12.5 L20.4 9.6 L17.5 8.5 L20.4 7.4 Z" fill="url(#aiSparkCore)"/>
           <path d="M6.5 16.5 L7.4 18.9 L9.8 19.8 L7.4 20.7 L6.5 23.1 L5.6 20.7 L3.2 19.8 L5.6 18.9 Z" fill="url(#aiSparkCore)"/>
         </svg>
@@ -225,21 +222,21 @@ export function renderAIAssistant() {
       <span class="floating-ai-text">Ask Hotel Capitol AI</span>
     </button>
 
-    <!-- Amara AI Modal / Drawer -->
+    <!-- Tolani AI Modal / Drawer -->
     ${isAssistantOpen ? `
       <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style="background: rgba(4, 9, 15, 0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
         
         <div class="w-full sm:max-w-lg bg-navy-900 border border-gold rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden" style="height: 90vh; max-height: 680px; box-shadow: 0 10px 40px rgba(0,0,0,0.9), 0 0 35px rgba(197, 160, 89, 0.35);">
           
-          <!-- Header (Amara Branding & Live Status) -->
+          <!-- Header (Tolani Branding & Live Status) -->
           <div class="p-4 bg-navy-950 border-b border-gold flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-400 flex items-center justify-center text-navy-950 font-black text-base shadow-md border border-white/30">
-                A
+                T
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 class="font-serif text-sm font-bold text-white tracking-luxury">AMARA · CONCIERGE</h3>
+                  <h3 class="font-serif text-sm font-bold text-white tracking-luxury">TOLANI · CONCIERGE</h3>
                   <span class="badge-gold text-xs py-0.5 px-1.5 font-mono">Suite #${guest.roomNumber}</span>
                 </div>
                 <div class="text-xs text-gold-light opacity-90 flex items-center gap-1.5 mt-0.5">
@@ -354,7 +351,7 @@ export function renderAIAssistant() {
                   </div>
                   <div>
                     <div class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <span>🎙️ AMARA IS LISTENING — SPEAK NOW</span>
+                      <span>🎙️ TOLANI IS LISTENING — SPEAK NOW</span>
                     </div>
                     <div class="text-[11px] text-emerald-200 mt-0.5">Speak naturally in Nigerian English...</div>
                   </div>
@@ -386,7 +383,7 @@ export function renderAIAssistant() {
               class="btn-icon ${isRecording ? 'border-2 border-emerald-400 bg-emerald-950 text-emerald-400 shadow-lg' : ''}" 
               style="${isRecording ? 'box-shadow: 0 0 20px rgba(52, 211, 153, 0.7);' : ''}"
               onclick="window.toggleAIVoiceInput()"
-              title="${isRecording ? 'Listening active — click to stop' : 'Speak to Amara'}"
+              title="${isRecording ? 'Listening active — click to stop' : 'Speak to Tolani'}"
             >
               ${getIcon('mic', 18)}
             </button>
@@ -396,7 +393,7 @@ export function renderAIAssistant() {
               id="ai-chat-input"
               type="text" 
               class="input-custom flex-1 text-sm py-2.5"
-              placeholder="${isRecording ? '🔴 Listening to your voice... Speak now' : 'Ask Amara anything or request a service...'}"
+              placeholder="${isRecording ? '🔴 Listening to your voice... Speak now' : 'Ask Tolani anything or request a service...'}"
               onkeydown="if (event.key === 'Enter') window.sendAIMessage();"
             />
 

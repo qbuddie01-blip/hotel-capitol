@@ -230,7 +230,7 @@ export class AutomationEngine {
     const guestName = guest ? guest.name : 'Valued Guest';
     const isFree = guest?.breakfastEntitlement === 'Complimentary';
     const title = '☀️ 06:00 AM — Breakfast Service Available';
-    const message = `Good morning, ${guestName}. This is Amara from Hotel Capitol. Breakfast service is now available. Would you like to select your breakfast and preferred delivery time?`;
+    const message = `Good morning, ${guestName}. This is Tolani from Hotel Capitol. Breakfast service is now available. Would you like to select your breakfast and preferred delivery time?`;
 
     this.showToast(title, message, 'info');
     store.addAudit('Breakfast Outreach Fired', `06:00 AM Rule for Suite ${guest?.roomNumber || '402'}`, message, 'AI Automation Engine');
@@ -248,7 +248,7 @@ export class AutomationEngine {
     const guest = store.getActiveGuest();
     const guestName = guest ? guest.name : 'Valued Guest';
     const title = '🛎 08:00 AM — Hotel Capitol Housekeeping Outreach';
-    const message = `Good morning, ${guestName}. I am Amara from Hotel Capitol. Would you like to request housekeeping, fresh towels, or room cleaning for Suite ${guest?.roomNumber || '402'} today?`;
+    const message = `Good morning, ${guestName}. I am Tolani from Hotel Capitol. Would you like to request housekeeping, fresh towels, or room cleaning for Suite ${guest?.roomNumber || '402'} today?`;
 
     this.showToast(title, message, 'info');
     store.addAudit('Room Service Outreach', `08:00 AM Rule for Suite ${guest?.roomNumber || '402'}`, message, 'AI Automation Engine');
@@ -266,7 +266,7 @@ export class AutomationEngine {
     const guest = store.getActiveGuest();
     const guestName = guest ? guest.name : 'Valued Guest';
     const title = '🛫 Departure Outreach (45 Min to Checkout)';
-    const message = `Good day, ${guestName}. This is Amara. Your scheduled checkout is at ${guest?.checkoutHour || '12:00 PM'}. Would you like to extend your stay, request luggage assistance, or book airport transit?`;
+    const message = `Good day, ${guestName}. This is Tolani. Your scheduled checkout is at ${guest?.checkoutHour || '12:00 PM'}. Would you like to extend your stay, request luggage assistance, or book airport transit?`;
 
     this.showToast(title, message, 'info');
     store.addAudit('Departure Outreach Fired', `45-min Checkout Rule for Suite ${guest?.roomNumber || '402'}`, message, 'AI Automation Engine');

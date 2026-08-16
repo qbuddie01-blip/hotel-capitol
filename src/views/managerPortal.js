@@ -8,8 +8,9 @@ import { getIcon, renderIntercomRoundBadge } from '../assets/icons.js';
 import { store } from '../store/state.js';
 import { aiEngine } from '../services/aiEngine.js';
 import { automationEngine } from '../services/automationRules.js';
+import { learningEngine } from '../services/learningEngine.js';
 
-let managerActiveTab = 'overview'; // 'overview' | 'approvals' | 'inventory' | 'automations' | 'audit'
+let managerActiveTab = 'overview'; // 'overview' | 'learning' | 'approvals' | 'inventory' | 'automations' | 'audit'
 
 export function initManagerPortal() {
   window.navigateManagerTab = (tab) => {
@@ -21,6 +22,59 @@ export function initManagerPortal() {
     store.approveStockRequest(srId);
     automationEngine.playChime('success');
     automationEngine.showToast('Purchase Order Approved', `Stock request ${srId} approved. Vendor PO generated.`, 'success');
+    if (window.renderApp) window.renderApp();
+  };
+
+  // Tolani Learning Engine Approval & Governance
+  window.approveLearningSuggestion = (sugId) => {
+    const res = learningEngine.approveSuggestion(sugId, 'Seyi Adeyemi (General Manager)');
+    if (res.success) {
+      automationEngine.playChime('success');
+      automationEngine.showToast('Knowledge Update Approved', `${res.knowledgeUpdate.updateNumber} activated: "${res.knowledgeUpdate.title}"`, 'success');
+      if (window.renderApp) window.renderApp();
+    }
+  };
+
+  window.rejectLearningSuggestion = (sugId) => {
+    learningEngine.rejectSuggestion(sugId, 'Seyi Adeyemi (General Manager)');
+    automationEngine.showToast('Suggestion Rejected', `Learning proposal ${sugId} dismissed.`, 'info');
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.rollbackKnowledgeUpdate = (updateId) => {
+    const proceed = confirm(`Are you sure you want to rollback ${updateId}? This will remove the learned intent mapping from production AI.`);
+    if (!proceed) return;
+    const res = learningEngine.rollbackKnowledgeUpdate(updateId, 'Seyi Adeyemi (General Manager)');
+    if (res.success) {
+      automationEngine.showToast('Knowledge Rolled Back', `Update ${updateId} reverted.`, 'warning');
+      if (window.renderApp) window.renderApp();
+    }
+  };
+
+  window.clearLearningData = () => {
+    const proceed = confirm('Are you sure you want to clear all guest interaction logs and reset learning metrics? Approved production rules will remain intact.');
+    if (!proceed) return;
+    learningEngine.clearAllData('Seyi Adeyemi');
+    automationEngine.showToast('Data Cleared', 'Guest interaction logs wiped clean.', 'info');
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.exportLearningAnalytics = () => {
+    const data = learningEngine.exportData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hotel-capitol-tolani-learning-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    automationEngine.showToast('Export Complete', 'Learning analytics JSON downloaded.', 'success');
+  };
+
+  window.toggleLearningActive = () => {
+    const state = store.getState();
+    const current = state.learningSettings?.learningActive ?? true;
+    store.updateLearningSettings({ learningActive: !current });
+    automationEngine.showToast('Settings Updated', `Tolani guest learning is now ${!current ? 'ACTIVE' : 'PAUSED'}.`, 'info');
     if (window.renderApp) window.renderApp();
   };
 
@@ -57,6 +111,7 @@ export function renderManagerPortal() {
   const insights = aiEngine.getManagerInsights();
   
   const pendingApprovals = state.stockRequests.filter(sr => sr.status === 'PENDING_APPROVAL');
+  const pendingSuggestions = (state.learningSuggestions || []).filter(s => s.status === 'PENDING_REVIEW');
   const lowStockItems = state.inventory.filter(i => i.status !== 'NORMAL');
   const criticalStockItems = state.inventory.filter(i => i.status === 'CRITICAL');
   const activeOrders = state.orders.filter(o => o.status !== 'DELIVERED');
@@ -66,6 +121,8 @@ export function renderManagerPortal() {
   let tabContent = '';
   if (managerActiveTab === 'overview') {
     tabContent = renderManagerOverviewTab(state, insights, criticalStockItems, pendingApprovals, activeOrders, staffOnDuty, totalRevenue);
+  } else if (managerActiveTab === 'learning') {
+    tabContent = renderManagerLearningTab(state);
   } else if (managerActiveTab === 'approvals') {
     tabContent = renderManagerApprovalsTab(state.stockRequests, state.shiftSwapRequests);
   } else if (managerActiveTab === 'inventory') {
@@ -100,7 +157,7 @@ export function renderManagerPortal() {
         </div>
       </div>
 
-      <!-- 4 PRIORITY HEALTH INDICATORS (Spec #45) -->
+      <!-- 4 PRIORITY HEALTH INDICATORS -->
       <div class="mb-8">
         <h2 class="text-xs font-bold uppercase tracking-luxury text-slate-400 mb-3">What Needs Attention Right Now:</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -139,10 +196,10 @@ export function renderManagerPortal() {
               <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
               <div>
                 <div class="text-xs font-bold text-white uppercase">🟡 Pending Actions</div>
-                <div class="text-xs text-yellow-300">${pendingApprovals.length} Purchase Orders</div>
+                <div class="text-xs text-yellow-300">${pendingApprovals.length} POs · ${pendingSuggestions.length} AI Suggestions</div>
               </div>
             </div>
-            <button class="text-xs text-yellow-300 underline font-semibold bg-transparent border-none cursor-pointer" onclick="window.navigateManagerTab('approvals')">
+            <button class="text-xs text-yellow-300 underline font-semibold bg-transparent border-none cursor-pointer" onclick="window.navigateManagerTab('learning')">
               Authorize →
             </button>
           </div>
@@ -162,14 +219,22 @@ export function renderManagerPortal() {
         </div>
       </div>
 
-      <!-- MANAGER NAVIGATION TABS with Golden Outlay & Glowing Borders -->
+      <!-- MANAGER NAVIGATION TABS -->
       <div class="flex items-center gap-2.5 overflow-x-auto pb-3 mb-6">
         <button 
           class="menu-btn-gold ${managerActiveTab === 'overview' ? 'active' : ''}"
           onclick="window.navigateManagerTab('overview')"
         >
-          <span>🤖</span>
-          <span>Operations & AI Insights</span>
+          <span>📊</span>
+          <span>Operations Overview</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${managerActiveTab === 'learning' ? 'active' : ''}"
+          onclick="window.navigateManagerTab('learning')"
+        >
+          <span>🧠</span>
+          <span>Tolani Learning Centre ${pendingSuggestions.length > 0 ? `(${pendingSuggestions.length})` : ''}</span>
         </button>
 
         <button 
@@ -177,7 +242,7 @@ export function renderManagerPortal() {
           onclick="window.navigateManagerTab('approvals')"
         >
           <span>✍️</span>
-          <span>Approvals & Sign-off (${pendingApprovals.length})</span>
+          <span>Procurement Sign-off (${pendingApprovals.length})</span>
         </button>
 
         <button 
@@ -193,7 +258,7 @@ export function renderManagerPortal() {
           onclick="window.navigateManagerTab('automations')"
         >
           <span>⚙️</span>
-          <span>AI Automation Rules Config</span>
+          <span>AI Automation Rules</span>
         </button>
 
         <button 
@@ -201,7 +266,7 @@ export function renderManagerPortal() {
           onclick="window.navigateManagerTab('audit')"
         >
           <span>📜</span>
-          <span>Audit Records & Trail</span>
+          <span>Audit Trail</span>
         </button>
       </div>
 
@@ -518,6 +583,246 @@ function renderManagerAuditTab(auditLog) {
           </div>
         `).join('')}
       </div>
+    </div>
+  `;
+}
+
+// 6. TOLANI LEARNING CENTRE & CONTINUOUS IMPROVEMENT (Interaction Analytics, Suggestions, Human Review & Privacy)
+function renderManagerLearningTab(state) {
+  const summary = learningEngine.getAnalyticsSummary();
+  const suggestions = state.learningSuggestions || [];
+  const pendingSuggestions = suggestions.filter(s => s.status === 'PENDING_REVIEW');
+  const pastUpdates = state.approvedKnowledgeUpdates || [];
+  const interactionLogs = state.interactionLogs || [];
+  const settings = state.learningSettings || { learningActive: true, retentionDays: 90 };
+
+  return `
+    <div class="max-w-5xl mx-auto flex flex-col gap-8 animate-fade-in">
+      
+      <!-- Top Title & Controls Header -->
+      <div class="glass-panel-gold p-6 sm:p-8 rounded-2xl border-2 border-gold/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">Continuous Intelligence System</span>
+            <span class="badge-${settings.learningActive ? 'normal' : 'attention'} text-xs">
+              ${settings.learningActive ? '● LEARNING ENGINE ACTIVE' : '○ LEARNING PAUSED'}
+            </span>
+          </div>
+          <h2 class="text-2xl font-serif text-white font-bold">Tolani Guest Response Learning Centre</h2>
+          <p class="text-xs text-slate-300 mt-1 max-w-xl">
+            Human-in-the-loop AI improvement engine. Analyzes guest corrections, intent misclassifications, and vocabulary evolution. Strict guardrails prevent unauthorized production modifications.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <button 
+            class="btn-secondary text-xs py-2 px-3.5 font-semibold"
+            onclick="window.toggleLearningActive()"
+          >
+            ${settings.learningActive ? '⏸ Pause Learning' : '▶ Resume Learning'}
+          </button>
+
+          <button 
+            class="btn-secondary text-xs py-2 px-3.5 font-semibold"
+            onclick="window.exportLearningAnalytics()"
+          >
+            📥 Export Data (JSON)
+          </button>
+
+          <button 
+            class="btn-secondary text-xs py-2 px-3 font-semibold text-red-400 border-red-500/30 hover:bg-red-950/40"
+            onclick="window.clearLearningData()"
+            title="Privacy action: Clear guest logs"
+          >
+            🗑 Clear Logs
+          </button>
+        </div>
+      </div>
+
+      <!-- High-Level Metric Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
+          <div class="text-xs text-slate-400 mb-1">Total Interactions</div>
+          <div class="text-2xl font-serif font-bold text-white">${summary.totalLogs}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Logged Across Workflows</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-navy-950 border border-emerald-500/40 text-center">
+          <div class="text-xs text-slate-400 mb-1">Success Rate</div>
+          <div class="text-2xl font-serif font-bold text-emerald-400">${summary.successRate}%</div>
+          <div class="text-[10px] text-slate-400 mt-1">Direct Guest Fulfillment</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-navy-950 border border-amber-500/40 text-center">
+          <div class="text-xs text-slate-400 mb-1">Corrections Logged</div>
+          <div class="text-2xl font-serif font-bold text-amber-300">${summary.totalCorrections}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Guest Clarifications</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-navy-950 border border-gold/40 text-center">
+          <div class="text-xs text-slate-400 mb-1">Pending Proposals</div>
+          <div class="text-2xl font-serif font-bold text-gold">${pendingSuggestions.length}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Awaiting Review</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-navy-950 border border-blue-500/40 text-center col-span-2 sm:col-span-1">
+          <div class="text-xs text-slate-400 mb-1">Approved Updates</div>
+          <div class="text-2xl font-serif font-bold text-blue-400">${pastUpdates.length}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Active in Production</div>
+        </div>
+      </div>
+
+      <!-- Service Category Breakdown Matrix -->
+      <div class="glass-panel p-6 rounded-2xl border border-white/10">
+        <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase mb-4">
+          INTERACTION VOLUME & RESOLUTION BY SERVICE AREA
+        </h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          ${Object.entries(summary.serviceBreakdown).map(([service, count]) => `
+            <div class="p-3.5 rounded-xl bg-navy-950 border border-white/5 flex flex-col justify-between">
+              <span class="text-[11px] text-slate-400 uppercase font-semibold">${service}</span>
+              <div class="text-xl font-bold font-serif text-gold mt-1">${count}</div>
+              <div class="text-[10px] text-emerald-400 mt-0.5">● Operational</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- AI IMPROVEMENT SUGGESTIONS QUEUE (Pending Human Review) -->
+      <div class="glass-panel-gold p-6 sm:p-8 rounded-2xl border-2 border-gold/40 shadow-2xl">
+        <div class="flex items-center justify-between pb-4 border-b border-gold/30 mb-6 flex-wrap gap-2">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">Human-in-the-Loop Governance</span>
+            <h3 class="text-xl font-serif text-white font-bold mt-0.5">Pending AI Improvement Suggestions</h3>
+            <p class="text-xs text-slate-300">Tolani identified these opportunities for knowledge refinement based on actual guest dialogue.</p>
+          </div>
+          <span class="badge-gold text-xs">${pendingSuggestions.length} Pending Review</span>
+        </div>
+
+        ${pendingSuggestions.length === 0 ? `
+          <div class="p-8 rounded-2xl bg-navy-950/70 border border-white/5 text-center text-xs text-slate-400">
+            <span class="text-3xl block mb-2">✨</span>
+            All AI learning proposals have been processed. Tolani is operating smoothly across all 10 service workflows.
+          </div>
+        ` : `
+          <div class="flex flex-col gap-4">
+            ${pendingSuggestions.map(sug => `
+              <div class="p-5 rounded-2xl bg-navy-950 border-2 border-gold/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <strong class="text-white text-base font-serif">${sug.title}</strong>
+                    <span class="badge-attention text-[10px] uppercase font-bold">${sug.serviceArea}</span>
+                    <span class="badge-normal text-[10px]">Confidence: ${Math.round(sug.confidenceScore * 100)}%</span>
+                  </div>
+
+                  <p class="text-xs text-slate-300 leading-relaxed mb-3">${sug.explanation}</p>
+
+                  <!-- Evidence Snippet -->
+                  <div class="p-3 rounded-xl bg-navy-900 border border-white/5 text-xs text-slate-300 flex flex-col gap-1">
+                    <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                      <span><strong>Observed Input:</strong> "${sug.evidenceSnippet}"</span>
+                      <span>From: Suite #${sug.roomNumber || '204'}</span>
+                    </div>
+                    <div class="flex items-center gap-4 text-[11px] mt-1 pt-1 border-t border-white/5">
+                      <span>Previous: <del class="text-red-400">${sug.currentClassification}</del></span>
+                      <span>Proposed Target: <strong class="text-emerald-400">${sug.proposedTargetIntent}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Controls: APPROVE vs REJECT -->
+                <div class="flex flex-col sm:flex-row md:flex-col items-stretch gap-2.5 w-full md:w-48">
+                  <button 
+                    class="btn-primary py-2.5 px-4 text-xs font-bold shadow-lg flex items-center justify-center gap-1.5"
+                    onclick="window.approveLearningSuggestion('${sug.id}')"
+                  >
+                    <span>✓</span> <span>APPROVE & ACTIVATE</span>
+                  </button>
+
+                  <button 
+                    class="btn-secondary py-2 px-4 text-xs font-semibold flex items-center justify-center gap-1.5 text-slate-300 hover:text-white"
+                    onclick="window.rejectLearningSuggestion('${sug.id}')"
+                  >
+                    <span>✗</span> <span>REJECT / DISMISS</span>
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+
+      <!-- APPROVED PRODUCTION KNOWLEDGE UPDATES & AUDIT TRAIL -->
+      <div class="glass-panel p-6 rounded-2xl border border-white/10">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+          <div>
+            <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase">
+              APPROVED KNOWLEDGE UPDATES & ROLLBACK HISTORY
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">Immutable record of all changes promoted to production Tolani voice engine.</p>
+          </div>
+          <span class="badge-gold text-xs">${pastUpdates.length} Updates</span>
+        </div>
+
+        ${pastUpdates.length === 0 ? `
+          <div class="text-xs text-slate-400 py-6 text-center">No knowledge updates have been approved yet.</div>
+        ` : `
+          <div class="flex flex-col gap-3">
+            ${pastUpdates.map(upd => `
+              <div class="p-4 rounded-xl bg-navy-950 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                <div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <strong class="text-gold font-mono font-bold">${upd.updateNumber}</strong>
+                    <span class="text-white font-bold font-serif text-sm">${upd.title}</span>
+                    <span class="badge-normal text-[10px]">${upd.serviceArea}</span>
+                  </div>
+                  <div class="text-slate-300 text-[11px]">${upd.appliedChangesSummary}</div>
+                  <div class="text-slate-400 text-[10px] mt-1">Approved by: <strong class="text-white">${upd.approvedBy}</strong> at ${upd.timestamp}</div>
+                </div>
+
+                <button 
+                  class="btn-secondary text-xs py-1.5 px-3 font-semibold text-amber-300 border-amber-500/30 hover:bg-amber-950/30 whitespace-nowrap"
+                  onclick="window.rollbackKnowledgeUpdate('${upd.id}')"
+                  title="Revert this learning update from production"
+                >
+                  ↩ Rollback
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+
+      <!-- RECENT INTERACTION LOGS TABLE (Tamper-Evident Preview) -->
+      <div class="glass-panel p-6 rounded-2xl border border-white/10">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+          <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase">
+            LIVE GUEST INTERACTION LOG STREAM (${interactionLogs.length} Records)
+          </h3>
+          <span class="text-xs text-slate-400">90-Day Retention</span>
+        </div>
+
+        <div class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+          ${interactionLogs.slice(0, 15).map(log => `
+            <div class="p-3 rounded-xl bg-navy-950 border border-white/5 flex items-center justify-between text-xs">
+              <div class="flex-1 pr-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-gold font-mono text-[10px]">${log.serviceContext}</span>
+                  <strong class="text-white font-mono text-[11px]">${log.guestInput}</strong>
+                  <span class="badge-${log.successful ? 'normal' : 'attention'} text-[9px] py-0.2 px-1">
+                    ${log.resolvedIntent}
+                  </span>
+                </div>
+                <div class="text-slate-400 text-[10px] mt-0.5">Suite #${log.roomNumber || '204'} (${log.guestName}) · ${log.timestamp}</div>
+              </div>
+              <div class="text-right">
+                <span class="text-emerald-400 text-[10px] font-bold">✓ Processed</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
     </div>
   `;
 }

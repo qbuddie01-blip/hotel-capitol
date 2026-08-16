@@ -80,6 +80,26 @@ export function initStaffPortal() {
     store.addAudit('Shift Swap Requested', newSwap.id, `${staff.name} requested swap with ${targetStaff.name}`);
     if (window.renderApp) window.renderApp();
   };
+
+  // Driver & VIP Chauffeur Actions
+  window.driverAcceptTransport = (bookingId) => {
+    store.driverAcceptTransport(bookingId, store.getActiveStaff().name);
+    automationEngine.playChime('success');
+    automationEngine.showToast('Dispatch Accepted', `Chauffeur transfer ${bookingId} accepted.`, 'success');
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.driverConfirmDestination = (bookingId) => {
+    store.driverConfirmDestination(bookingId);
+    automationEngine.showToast('Route Verified', `Destination verified for ${bookingId}.`, 'info');
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.driverConfirmSchedule = (bookingId) => {
+    store.driverConfirmSchedule(bookingId);
+    automationEngine.showToast('Schedule Confirmed', `Pickup schedule confirmed for ${bookingId}.`, 'success');
+    if (window.renderApp) window.renderApp();
+  };
 }
 
 export function renderStaffPortal() {
@@ -517,6 +537,81 @@ function renderStaffRequestsTab(requests) {
           </div>
         `).join('')}
       </div>
+
+      <!-- VIP CHAUFFEUR & TRANSPORTATION DISPATCH STATION -->
+      <div class="glass-panel p-6 rounded-2xl border border-gold/30">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-luxury text-gold">Chauffeur Transport Station</span>
+              <span class="badge-gold text-xs">${(store.getState().transportBookings || []).filter(b => b.status === 'CONFIRMED').length} Active Bookings</span>
+            </div>
+            <h2 class="text-lg font-serif text-white font-bold mt-1">VIP Transportation Dispatches</h2>
+            <p class="text-xs text-slate-300">Live driver assignments, route confirmations, and schedule checks for Lagos zones.</p>
+          </div>
+        </div>
+
+        ${(store.getState().transportBookings || []).length === 0 ? `
+          <div class="text-xs text-slate-400 py-4 text-center">No active transport bookings.</div>
+        ` : `
+          <div class="flex flex-col gap-3">
+            ${(store.getState().transportBookings || []).map(tbk => `
+              <div class="p-4 rounded-xl bg-navy-950 border ${tbk.status === 'CONFIRMED' ? 'border-gold/50' : 'border-white/10'} flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs">
+                <div>
+                  <div class="flex items-center gap-2 mb-1 flex-wrap">
+                    <span class="badge-gold text-[10px]">Room ${tbk.roomNumber}</span>
+                    <strong class="text-white text-sm font-serif">${tbk.destination}</strong>
+                    <span class="badge-normal text-[10px]">${tbk.vehicle}</span>
+                    ${tbk.rescheduled ? '<span class="badge-attention text-[10px]">Rescheduled Schedule</span>' : ''}
+                  </div>
+                  
+                  <div class="text-slate-300">
+                    Departure: <strong>${tbk.departureDate} at ${tbk.departureTime}</strong> (${tbk.passengers} Pax) · Fare: <strong class="text-gold">₦${tbk.price.toLocaleString()}</strong>
+                  </div>
+
+                  <div class="text-[11px] text-slate-400 mt-1">
+                    Resident: <strong class="text-white">${tbk.guestName}</strong> · Driver: <strong class="text-gold-light">${tbk.driverName || 'Lead Driver Ibrahim Bello'}</strong>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 flex-wrap">
+                  ${!tbk.driverAccepted ? `
+                    <button 
+                      class="btn-primary text-xs py-1.5 px-3 font-bold"
+                      onclick="window.driverAcceptTransport('${tbk.id}')"
+                    >
+                      🚗 Accept Dispatch
+                    </button>
+                  ` : ''}
+
+                  ${!tbk.routeConfirmed ? `
+                    <button 
+                      class="btn-secondary text-xs py-1.5 px-3 font-semibold"
+                      onclick="window.driverConfirmDestination('${tbk.id}')"
+                    >
+                      🗺️ Confirm Route
+                    </button>
+                  ` : `
+                    <span class="text-emerald-400 text-xs font-bold">✓ Route Verified</span>
+                  `}
+
+                  ${!tbk.scheduleConfirmed ? `
+                    <button 
+                      class="btn-secondary text-xs py-1.5 px-3 font-semibold"
+                      onclick="window.driverConfirmSchedule('${tbk.id}')"
+                    >
+                      ⏰ Confirm Schedule
+                    </button>
+                  ` : `
+                    <span class="text-emerald-400 text-xs font-bold">✓ Ready</span>
+                  `}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+
     </div>
   `;
 }

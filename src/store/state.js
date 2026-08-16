@@ -3,14 +3,14 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V6';
+const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V8';
 
 // Initial seed demo state
 const defaultState = {
   hotel: {
     name: 'Hotel Capitol',
     tagline: 'Experience Hotel Capitol, Smarter.',
-    subTagline: 'Your stay, your services, your requests — powered by Hotel Capitol AI.',
+    subTagline: 'Your stay, your services, your requests — powered by Hotel Capitol AI (Tolani).',
     address: '6 Animashaun Close, Ikeja, Lagos, Nigeria',
     phone: '+234 1 890 2200',
     mobile: '+234 803 555 4020',
@@ -47,7 +47,7 @@ const defaultState = {
         { id: 'FOL-02', date: '2026-08-15', desc: 'Airport VIP Chauffeur Transfer (MMA2 to Hotel Capitol)', amount: 25000, category: 'Transportation', status: 'Posted' },
       ],
       aiConversations: [
-        { id: 'C-1', sender: 'ai', time: '12:30 PM', text: 'Good day, Chief Adeleke. Welcome to Hotel Capitol. I am Amara, your personal Hotel Capitol concierge. It is my pleasure to assist you. How may I make your stay more comfortable today?' }
+        { id: 'C-1', sender: 'ai', time: '12:30 PM', text: 'Good day, Chief Adeleke. Welcome to Hotel Capitol. I am Tolani, your personal Hotel Capitol concierge. It is my pleasure to assist you. How may I make your stay more comfortable today?' }
       ]
     },
     {
@@ -70,7 +70,7 @@ const defaultState = {
         { id: 'FOL-11', date: '2026-08-15', desc: 'Room Service: Jollof Fiesta & Chapman', amount: 13000, category: 'Restaurant', status: 'Posted' }
       ],
       aiConversations: [
-        { id: 'C-2', sender: 'ai', time: '08:00 AM', text: 'Good morning, Mrs. Davies. I am Amara, your personal Hotel Capitol concierge. Your complimentary breakfast is scheduled for 8:00 AM. Please let me know if there is anything else I may arrange for your stay.' }
+        { id: 'C-2', sender: 'ai', time: '08:00 AM', text: 'Good morning, Mrs. Davies. I am Tolani, your personal Hotel Capitol concierge. Your complimentary breakfast is scheduled for 8:00 AM. Please let me know if there is anything else I may arrange for your stay.' }
       ]
     },
     {
@@ -412,44 +412,146 @@ const defaultState = {
     }
   ],
 
-  transportOptions: [
+  // --- LAGOS ZONAL TRANSPORTATION CONFIGURATION (Hotel Configurable) ---
+  lagosZones: [
+    // Lagos Island Zones
     {
-      id: 'TR-01',
-      destination: 'Murtala Muhammed Int\'l Airport (MMA2 / Terminal 1)',
-      distanceEst: '15 - 20 mins',
-      vehicles: [
-        { type: 'Luxury Executive Sedan (Mercedes / Lexus ES)', price: 25000, seats: 3 },
-        { type: 'VIP Armored SUV (Prado / GX460)', price: 45000, seats: 4 }
-      ]
+      id: 'I-1',
+      region: 'ISLAND',
+      name: 'ZONE I-1 — Core Island',
+      locations: 'Victoria Island (VI), Ikoyi, Lagos Island, Idumota, Balogun, Marina, Obalende, Oniru',
+      baseFare: 25000,
+      estimatedMinutes: 45
     },
     {
-      id: 'TR-02',
-      destination: 'Victoria Island / Ikoyi Business District',
-      distanceEst: '35 - 55 mins',
-      vehicles: [
-        { type: 'Luxury Executive Sedan', price: 35000, seats: 3 },
-        { type: 'VIP Executive SUV', price: 55000, seats: 4 }
-      ]
+      id: 'I-2',
+      region: 'ISLAND',
+      name: 'ZONE I-2 — Lekki Phase 1 / Marwa Axis',
+      locations: 'Lekki Phase 1, Jakande, Lekki-Epe Expressway Corridor, Osapa London, Agungi, Igbo Efon, Ikate',
+      baseFare: 30000,
+      estimatedMinutes: 55
     },
     {
-      id: 'TR-03',
-      destination: 'Ikeja City Mall (ICM) & Alausa Secretariat',
-      distanceEst: '8 - 12 mins',
-      vehicles: [
-        { type: 'Standard Premium Sedan', price: 8000, seats: 3 },
-        { type: 'Luxury Executive SUV', price: 15000, seats: 4 }
-      ]
+      id: 'I-3',
+      region: 'ISLAND',
+      name: 'ZONE I-3 — Extended Lekki / Ajah Axis',
+      locations: 'Chevron, VGC, Ajah, Sangotedo, Badore, Orchid Road, Abraham Adesanya',
+      baseFare: 35000,
+      estimatedMinutes: 70
     },
     {
-      id: 'TR-04',
-      destination: 'Lekki Phase 1 & Admiralty Way',
-      distanceEst: '45 - 65 mins',
-      vehicles: [
-        { type: 'Luxury Executive Sedan', price: 40000, seats: 3 },
-        { type: 'VIP Executive SUV', price: 65000, seats: 4 }
-      ]
+      id: 'I-4',
+      region: 'ISLAND',
+      name: 'ZONE I-4 — Remote Island / East',
+      locations: 'Lakowe, Epe, Ibeju-Lekki, Free Trade Zone, Areas beyond Sangotedo',
+      baseFare: 50000,
+      estimatedMinutes: 90
+    },
+    // Lagos Mainland Zones
+    {
+      id: 'M-1',
+      region: 'MAINLAND',
+      name: 'ZONE M-1 — Central Mainland',
+      locations: 'Yaba, Surulere, Ebute Metta, Jibowu, Shomolu, Bariga, Akoka, Gbagada, Ilupeju, Palmgrove, Onipan',
+      baseFare: 22000,
+      estimatedMinutes: 30
+    },
+    {
+      id: 'M-2',
+      region: 'MAINLAND',
+      name: 'ZONE M-2 — Ikeja Hub / North',
+      locations: 'Ikeja, Ikeja GRA, Allen Avenue, Opebi, Ogba, Magodo, Maryland, Ojota, Ketu, Alausa, Ojodu Berger',
+      baseFare: 25000,
+      estimatedMinutes: 20
+    },
+    {
+      id: 'M-3',
+      region: 'MAINLAND',
+      name: 'ZONE M-3 — Industrial / West Axis',
+      locations: 'Isolo, Okota, Amuwo Odofin, Festac Town, Ago Palace, Apapa, Mile 2, Ajao Estate',
+      baseFare: 28000,
+      estimatedMinutes: 40
+    },
+    {
+      id: 'M-4',
+      region: 'MAINLAND',
+      name: 'ZONE M-4 — Outskirts / Deep Mainland',
+      locations: 'Agege, Iyana Ipaja, Egbeda, Ikotun, Igando, Alagbado, Ikorodu, Sango Ota, Badagry',
+      baseFare: 35000,
+      estimatedMinutes: 60
+    },
+    // Airport Transfer Hubs
+    {
+      id: 'AIR-1',
+      region: 'AIRPORT',
+      name: 'Murtala Muhammed Domestic Terminal 1 (MMA1)',
+      locations: 'MMA1 General Aviation Terminal, Ikeja',
+      baseFare: 20000,
+      estimatedMinutes: 15
+    },
+    {
+      id: 'AIR-2',
+      region: 'AIRPORT',
+      name: 'Murtala Muhammed Domestic Terminal 2 (MMA2)',
+      locations: 'MMA2 Bi-Courtney Aviation Terminal, Ikeja',
+      baseFare: 22000,
+      estimatedMinutes: 15
+    },
+    {
+      id: 'AIR-3',
+      region: 'AIRPORT',
+      name: 'Murtala Muhammed International Airport (MMIA)',
+      locations: 'MMIA International Departures & Arrivals, Ikeja',
+      baseFare: 25000,
+      estimatedMinutes: 20
     }
   ],
+
+  vehicleClasses: [
+    {
+      id: 'VEH-SEDAN',
+      name: 'Executive Sedan',
+      models: 'Mercedes-Benz E-Class / Lexus ES350',
+      multiplier: 1.00,
+      charterDailyRate: 120000,
+      capacity: 3,
+      luggageCapacity: '2 Large + 2 Small'
+    },
+    {
+      id: 'VEH-SUV',
+      name: 'Executive SUV',
+      models: 'Toyota Land Cruiser Prado / Lexus GX460',
+      multiplier: 1.35,
+      charterDailyRate: 160000,
+      capacity: 4,
+      luggageCapacity: '4 Large + 3 Small'
+    },
+    {
+      id: 'VEH-PREMIUM-SUV',
+      name: 'Premium SUV',
+      models: 'Range Rover Vogue / Mercedes-Benz GLS',
+      multiplier: 1.50,
+      charterDailyRate: 180000,
+      capacity: 4,
+      luggageCapacity: '4 Large + 4 Small'
+    },
+    {
+      id: 'VEH-SPRINTER',
+      name: 'Executive Sprinter',
+      models: 'Mercedes-Benz VIP Sprinter Luxury Van',
+      multiplier: 2.00,
+      charterDailyRate: 250000,
+      capacity: 10,
+      luggageCapacity: '10 Large Suitcases'
+    }
+  ],
+
+  pricingConfig: {
+    airportSurcharge: 0,
+    nightSurcharge: 0,
+    waitingChargePerHour: 5000,
+    fuelSurcharge: 0
+  },
 
   transportBookings: [
     {
@@ -457,15 +559,186 @@ const defaultState = {
       guestId: 'GUEST-402',
       guestName: 'Chief Adeleke Babalola',
       roomNumber: '402',
-      destination: 'Murtala Muhammed Int\'l Airport (MMA2)',
-      pickupTime: '2026-08-18 11:30 AM',
-      vehicle: 'Luxury Executive Sedan',
+      serviceType: 'ONE_TIME_DROPOFF', // 'ONE_TIME_DROPOFF' | 'FULL_DAY_CHARTER'
+      zoneId: 'AIR-2',
+      destination: 'Murtala Muhammed Domestic Terminal 2 (MMA2)',
+      zoneName: 'Murtala Muhammed Domestic Terminal 2 (MMA2)',
+      departureDate: '2026-08-18',
+      departureTime: '11:30 AM',
+      departureTimestamp: new Date(Date.now() + 7200000).toISOString(), // 2 hours from now
+      vehicleClassId: 'VEH-SEDAN',
+      vehicle: 'Executive Sedan (Mercedes-Benz / Lexus ES)',
       passengers: 2,
       price: 25000,
-      paymentStatus: 'PAYMENT SUCCESS', // 'PENDING' | 'PAYMENT SUCCESS' | 'PAYMENT FAILED'
-      status: 'CONFIRMED'
+      driverName: 'Ibrahim Bello',
+      driverPhone: '+234 803 555 4020',
+      vehiclePlate: 'KJA-402-CP',
+      status: 'CONFIRMED', // 'PENDING_DRIVER_ACCEPTANCE' | 'DRIVER_ACCEPTED' | 'DESTINATION_CONFIRMED' | 'CONFIRMED' | 'IN_TRANSIT' | 'COMPLETED'
+      createdAt: '2026-08-15 10:00:00',
+      paymentStatus: 'POSTED_TO_FOLIO',
+      reminder30Sent: false,
+      reminder15Sent: false
     }
   ],
+
+  // --- TOLANI LEARNING & CONTINUOUS IMPROVEMENT STORE STATE ---
+  interactionLogs: [
+    {
+      id: 'EVT-1001',
+      timestamp: '2026-08-15T12:30:00.000Z',
+      timeFormatted: '12:30 PM',
+      guestId: 'GUEST-402',
+      roomNumber: '402',
+      sessionId: 'SESS-2026-08-15-402',
+      activeService: 'RESTAURANT',
+      detectedIntent: 'ORDER_FOOD',
+      guestMessage: 'I want to order smoky jollof and chicken',
+      aiResponse: 'Wonderful choice, Chief Adeleke. I have opened our Capitol Restaurant Menu with Capitol Signature Jollof Fiesta ready.',
+      uiAction: 'OPEN_RESTAURANT_MENU',
+      selectedOptions: ['Capitol Signature Jollof Fiesta', 'Extra Fried Plantain'],
+      rejectedOptions: [],
+      conversationState: 'COMPLETED',
+      outcome: 'SUCCESSFUL',
+      correction: null,
+      satisfactionSignal: 5
+    },
+    {
+      id: 'EVT-1002',
+      timestamp: '2026-08-15T13:10:00.000Z',
+      timeFormatted: '01:10 PM',
+      guestId: 'GUEST-205',
+      roomNumber: '205',
+      sessionId: 'SESS-2026-08-15-205',
+      activeService: 'CONCIERGE_PORTER',
+      detectedIntent: 'LUGGAGE_ASSISTANCE',
+      guestMessage: 'Someone should come for my bags',
+      aiResponse: 'Certainly, Mrs. Davies. I have received your request for porter assistance.',
+      uiAction: 'OPEN_PORTER_OPTIONS',
+      selectedOptions: ['In Room'],
+      rejectedOptions: [],
+      conversationState: 'COMPLETED',
+      outcome: 'SUCCESSFUL',
+      correction: null,
+      satisfactionSignal: 5
+    }
+  ],
+
+  learningSuggestions: [
+    {
+      id: 'SUG-001',
+      category: 'MISUNDERSTOOD_REQUEST',
+      service: 'CONCIERGE_PORTER',
+      phrase: 'Someone should come for my bags',
+      currentClassification: 'VIP_TRANSPORTATION',
+      recommendedClassification: 'LUGGAGE_ASSISTANCE',
+      recommendationText: 'Map phrase "Someone should come for my bags" to LUGGAGE_ASSISTANCE in Porter service.',
+      evidenceSnippet: '17 guests used variations of this phrase seeking in-room luggage collection.',
+      occurrenceCount: 17,
+      firstObserved: '2026-08-14T09:00:00.000Z',
+      lastObserved: '2026-08-15T13:10:00.000Z',
+      status: 'PENDING_REVIEW',
+      reviewedBy: null,
+      reviewedAt: null,
+      impact: 'HIGH'
+    },
+    {
+      id: 'SUG-002',
+      category: 'MISUNDERSTOOD_REQUEST',
+      service: 'RESTAURANT',
+      phrase: 'Can I get something to eat?',
+      currentClassification: 'GENERAL_INQUIRY',
+      recommendedClassification: 'ORDER_FOOD',
+      recommendationText: 'Directly open Dining Menu when guest asks "Can I get something to eat?".',
+      evidenceSnippet: 'Observed 12 times during late night hours (10:00 PM – 02:00 AM).',
+      occurrenceCount: 12,
+      firstObserved: '2026-08-14T22:30:00.000Z',
+      lastObserved: '2026-08-15T11:45:00.000Z',
+      status: 'PENDING_REVIEW',
+      reviewedBy: null,
+      reviewedAt: null,
+      impact: 'MEDIUM'
+    },
+    {
+      id: 'SUG-003',
+      category: 'WORKFLOW_DISCOVERY',
+      service: 'RESTAURANT',
+      phrase: 'Where do I submit my food tray?',
+      currentClassification: 'INSIGHT',
+      recommendedClassification: 'REVIEW_ORDER_AT_TOP',
+      recommendationText: 'Ensure Review Order CTA is prominent at the top of the restaurant menu.',
+      evidenceSnippet: 'Guests frequently select items and search for review/place order button.',
+      occurrenceCount: 24,
+      firstObserved: '2026-08-13T14:00:00.000Z',
+      lastObserved: '2026-08-15T12:40:00.000Z',
+      status: 'PENDING_REVIEW',
+      reviewedBy: null,
+      reviewedAt: null,
+      impact: 'HIGH'
+    }
+  ],
+
+  approvedKnowledgeUpdates: [
+    {
+      id: 'KUP-0041',
+      updateCode: 'LEARNING UPDATE #0041',
+      suggestionId: 'SUG-000',
+      category: 'MISUNDERSTOOD_REQUEST',
+      service: 'CONCIERGE_PORTER',
+      approvedPhrase: 'Help with my luggage',
+      mappedIntent: 'LUGGAGE_ASSISTANCE',
+      approvedBy: 'Tariq Alabi (Operations Supervisor)',
+      timestamp: '2026-08-15T08:30:00.000Z',
+      dateFormatted: 'Aug 15, 2026',
+      status: 'ACTIVE'
+    }
+  ],
+
+  approvedLearnedPhrases: [
+    {
+      phrase: 'help with my luggage',
+      intent: 'LUGGAGE_ASSISTANCE',
+      service: 'CONCIERGE_PORTER',
+      updateCode: 'LEARNING UPDATE #0041'
+    }
+  ],
+
+  guestPreferences: [
+    {
+      guestId: 'GUEST-402',
+      category: 'DINING',
+      item: 'Capitol Signature Jollof Fiesta',
+      recordedAt: '2026-08-15T12:30:00.000Z'
+    },
+    {
+      guestId: 'GUEST-205',
+      category: 'BREAKFAST',
+      item: 'The English Royal Breakfast',
+      recordedAt: '2026-08-15T08:00:00.000Z'
+    }
+  ],
+
+  abandonedWorkflows: [],
+
+  serviceFeedbacks: [
+    {
+      id: 'FDB-001',
+      timestamp: '2026-08-15T09:00:00.000Z',
+      guestId: 'GUEST-205',
+      guestName: 'Mrs. Folake Davies',
+      roomNumber: '205',
+      serviceType: 'BREAKFAST',
+      rating: 5,
+      satisfaction: 'YES',
+      issue: null,
+      comment: 'Breakfast was hot, delicious, and on time.'
+    }
+  ],
+
+  learningSettings: {
+    enabled: true,
+    dataRetentionDays: 90,
+    autoAnalyze: true
+  },
 
   nearbyRecommendations: [
     {
@@ -943,12 +1216,14 @@ class StateStore {
 
   saveState() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+      }
       if (this.bc) {
         this.bc.postMessage({ type: 'STATE_UPDATED', state: this.state });
       }
     } catch (e) {
-      console.warn('Could not save state to localStorage:', e);
+      // Ignore in non-browser env
     }
   }
 
@@ -1392,7 +1667,257 @@ class StateStore {
       intercomMessages: [...s.intercomMessages, msg]
     }));
   }
+
+  // --- TOLANI LEARNING STORE MUTATIONS ---
+  addInteractionLog(log) {
+    this.setState(s => ({
+      ...s,
+      interactionLogs: [log, ...(s.interactionLogs || [])].slice(0, 500)
+    }));
+  }
+
+  addLearningSuggestion(suggestion) {
+    this.setState(s => ({
+      ...s,
+      learningSuggestions: [suggestion, ...(s.learningSuggestions || [])]
+    }));
+  }
+
+  updateLearningSuggestion(id, patch) {
+    this.setState(s => ({
+      ...s,
+      learningSuggestions: (s.learningSuggestions || []).map(sug => sug.id === id ? { ...sug, ...patch } : sug)
+    }));
+  }
+
+  addApprovedKnowledgeUpdate(update) {
+    this.setState(s => ({
+      ...s,
+      approvedKnowledgeUpdates: [update, ...(s.approvedKnowledgeUpdates || [])]
+    }));
+    this.addAudit('Knowledge Update Approved', update.updateCode, `Approved by ${update.approvedBy}: "${update.approvedPhrase}" -> ${update.mappedIntent}`);
+  }
+
+  addApprovedLearnedPhrase(phraseObj) {
+    this.setState(s => {
+      const phrases = s.approvedLearnedPhrases || [];
+      const filtered = phrases.filter(p => p.phrase !== phraseObj.phrase);
+      return {
+        ...s,
+        approvedLearnedPhrases: [phraseObj, ...filtered]
+      };
+    });
+  }
+
+  rollbackKnowledgeUpdate(updateId, adminName = 'Hotel Administrator') {
+    const update = (this.state.approvedKnowledgeUpdates || []).find(u => u.id === updateId);
+    if (!update) return;
+
+    this.setState(s => ({
+      ...s,
+      approvedKnowledgeUpdates: (s.approvedKnowledgeUpdates || []).map(u => u.id === updateId ? { ...u, status: 'ROLLED_BACK', rolledBackBy: adminName, rolledBackAt: new Date().toISOString() } : u),
+      approvedLearnedPhrases: (s.approvedLearnedPhrases || []).filter(p => p.updateCode !== update.updateCode)
+    }));
+
+    this.addAudit('Knowledge Update Rolled Back', update.updateCode, `Rolled back by ${adminName}`);
+  }
+
+  addGuestPreference(guestId, pref) {
+    this.setState(s => {
+      const prefs = s.guestPreferences || [];
+      return {
+        ...s,
+        guestPreferences: [pref, ...prefs.filter(p => !(p.guestId === guestId && p.category === pref.category && p.item === pref.item))]
+      };
+    });
+  }
+
+  recordAbandonedFlow(flow) {
+    this.setState(s => ({
+      ...s,
+      abandonedWorkflows: [flow, ...(s.abandonedWorkflows || [])].slice(0, 100)
+    }));
+  }
+
+  recordFeedback(feedback) {
+    this.setState(s => ({
+      ...s,
+      serviceFeedbacks: [feedback, ...(s.serviceFeedbacks || [])]
+    }));
+    this.addAudit('Guest Service Feedback', `${feedback.serviceType} (Rating: ${feedback.rating}/5)`, `Guest #${feedback.roomNumber} feedback: "${feedback.comment || feedback.satisfaction}"`);
+  }
+
+  clearLearningData() {
+    this.setState(s => ({
+      ...s,
+      interactionLogs: [],
+      abandonedWorkflows: [],
+      serviceFeedbacks: []
+    }));
+    this.addAudit('Learning Data Cleared', 'Admin Privacy Action', 'Cleared conversation interaction logs and feedback history.');
+  }
+
+  updateLearningSettings(settings) {
+    this.setState(s => ({
+      ...s,
+      learningSettings: { ...(s.learningSettings || {}), ...settings }
+    }));
+  }
+
+  // --- VIP TRANSPORTATION LIFECYCLE MUTATIONS ---
+  createTransportRequest(bookingData) {
+    const guest = this.getActiveGuest();
+    const tbkId = 'TBK-' + (this.state.transportBookings.length + 101);
+    const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    // Calculate departure timestamp
+    let departureTimestamp = Date.now() + 3600000; // default 1 hr from now
+    if (bookingData.departureDate && bookingData.departureTime) {
+      const parsed = new Date(`${bookingData.departureDate} ${bookingData.departureTime}`);
+      if (!isNaN(parsed.getTime())) {
+        departureTimestamp = parsed.getTime();
+      }
+    }
+
+    const newBooking = {
+      id: tbkId,
+      guestId: guest.id,
+      guestName: guest.name,
+      roomNumber: guest.roomNumber,
+      serviceType: bookingData.serviceType || 'ONE_TIME_DROPOFF',
+      zoneId: bookingData.zoneId,
+      destination: bookingData.destination,
+      zoneName: bookingData.zoneName,
+      departureDate: bookingData.departureDate || new Date().toISOString().slice(0, 10),
+      departureTime: bookingData.departureTime || 'Now',
+      departureTimestamp: new Date(departureTimestamp).toISOString(),
+      vehicleClassId: bookingData.vehicleClassId,
+      vehicle: bookingData.vehicle,
+      passengers: bookingData.passengers || 1,
+      charterDuration: bookingData.charterDuration || null,
+      price: bookingData.price,
+      driverName: 'Ibrahim Bello',
+      driverPhone: '+234 803 555 4020',
+      vehiclePlate: 'KJA-402-CP',
+      status: 'PENDING_DRIVER_ACCEPTANCE', // 'PENDING_DRIVER_ACCEPTANCE' | 'DRIVER_ACCEPTED' | 'DESTINATION_CONFIRMED' | 'CONFIRMED' | 'IN_TRANSIT' | 'COMPLETED'
+      createdAt: nowTime,
+      paymentStatus: 'POSTED_TO_FOLIO',
+      reminder30Sent: false,
+      reminder15Sent: false,
+      rescheduleRequested: null
+    };
+
+    // Auto-post to folio
+    const folioItem = {
+      id: 'FOL-' + Date.now().toString().slice(-4),
+      date: new Date().toISOString().split('T')[0],
+      desc: `VIP Chauffeured Transportation (${newBooking.destination})`,
+      amount: newBooking.price,
+      category: 'Transportation',
+      status: 'Posted'
+    };
+
+    this.setState(s => ({
+      ...s,
+      transportBookings: [newBooking, ...s.transportBookings],
+      guests: s.guests.map(g => g.id === guest.id ? { ...g, folio: [...g.folio, folioItem] } : g)
+    }));
+
+    this.addAudit('VIP Transportation Booked', `${tbkId} (${newBooking.destination})`, `Booked by Suite #${guest.roomNumber} (₦${newBooking.price.toLocaleString()})`);
+    return newBooking;
+  }
+
+  postToFolio(guestId, { desc, amount, category = 'General' }) {
+    const folioItem = {
+      id: 'FOL-' + Date.now().toString().slice(-4),
+      date: new Date().toISOString().split('T')[0],
+      desc,
+      amount,
+      category,
+      status: 'Posted'
+    };
+    this.setState(s => ({
+      ...s,
+      guests: s.guests.map(g => g.id === guestId ? { ...g, folio: [...g.folio, folioItem] } : g)
+    }));
+    return folioItem;
+  }
+
+  driverAcceptTransport(bookingId, driverName = 'Ibrahim Bello') {
+    this.setState(s => ({
+      ...s,
+      transportBookings: s.transportBookings.map(b => b.id === bookingId ? {
+        ...b,
+        status: 'DRIVER_ACCEPTED',
+        driverAccepted: true,
+        driverName
+      } : b)
+    }));
+    this.addAudit('Driver Accepted Ride', bookingId, `Driver ${driverName} accepted transportation dispatch.`);
+  }
+
+  driverConfirmDestination(bookingId) {
+    this.setState(s => ({
+      ...s,
+      transportBookings: s.transportBookings.map(b => b.id === bookingId ? {
+        ...b,
+        status: 'DESTINATION_CONFIRMED',
+        routeConfirmed: true
+      } : b)
+    }));
+    this.addAudit('Destination Confirmed', bookingId, 'Driver confirmed route and pickup destination.');
+  }
+
+  driverConfirmSchedule(bookingId) {
+    this.setState(s => ({
+      ...s,
+      transportBookings: s.transportBookings.map(b => b.id === bookingId ? {
+        ...b,
+        status: 'CONFIRMED',
+        scheduleConfirmed: true
+      } : b)
+    }));
+    this.addAudit('Transportation Schedule Confirmed', bookingId, 'Driver confirmed departure schedule. Guest Portal updated with live departure countdown.');
+  }
+
+  rescheduleTransport(bookingId, newDate, newTime) {
+    let newTs = Date.now() + 3600000;
+    if (newDate && newTime) {
+      const parsed = new Date(`${newDate} ${newTime}`);
+      if (!isNaN(parsed.getTime())) {
+        newTs = parsed.getTime();
+      }
+    }
+
+    this.setState(s => ({
+      ...s,
+      transportBookings: s.transportBookings.map(b => b.id === bookingId ? {
+        ...b,
+        departureDate: newDate,
+        departureTime: newTime,
+        departureTimestamp: new Date(newTs).toISOString(),
+        status: 'CONFIRMED',
+        rescheduled: true,
+        rescheduledAt: new Date().toISOString(),
+        reminder30Sent: false,
+        reminder15Sent: false
+      } : b)
+    }));
+
+    this.addAudit('Transportation Rescheduled', bookingId, `Departure rescheduled to ${newDate} at ${newTime}`);
+  }
+
+  updatePricingConfig(newConfig) {
+    this.setState(s => ({
+      ...s,
+      pricingConfig: { ...(s.pricingConfig || {}), ...newConfig }
+    }));
+    this.addAudit('Transportation Pricing Updated', 'Management Action', 'Modified base rates/surcharges.');
+  }
 }
 
 export const store = new StateStore();
-window.hotelCapitolStore = store;
+if (typeof window !== 'undefined') {
+  window.hotelCapitolStore = store;
+}
+

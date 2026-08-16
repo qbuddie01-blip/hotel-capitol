@@ -1,5 +1,5 @@
 /**
- * HOTEL CAPITOL — GUEST PORTAL & MOBILE FIRST EXPERIENCE
+ * HOTEL CAPITOL — GUEST PORTAL & MOBILE FIRST EXPERIENCE (TOLANI AI)
  * 6 Animashaun Close, Ikeja, Lagos
  * 10 Service Workflows: Restaurant, Breakfast, Room Service, Transport, Folio, Concierge, AI, Nearby, Info, Contact
  */
@@ -7,9 +7,9 @@
 import { getIcon, renderIntercomRoundBadge, renderIntercomBlackBadge } from '../assets/icons.js';
 import { store } from '../store/state.js';
 import { automationEngine } from '../services/automationRules.js';
-import { aiEngine, AMARA_ACTIONS, SERVICES } from '../services/aiEngine.js';
+import { aiEngine, AMARA_ACTIONS, SERVICES, TOLANI_VOICE_CONFIG } from '../services/aiEngine.js';
 
-let activeGuestTab = 'home'; // 'home' | 'restaurant' | 'breakfast' | 'room-service' | 'transport' | 'concierge' | 'folio' | 'nearby' | 'info' | 'contact'
+let activeGuestTab = 'home'; // 'home' | 'restaurant' | 'breakfast' | 'room-service' | 'transport' | 'concierge' | 'folio' | 'nearby' | 'info' | 'contact' | 'order-tracker'
 let selectedCategory = 'Food';
 let cart = []; // Cart items for restaurant ordering
 let orderDraftExtras = {};
@@ -18,10 +18,21 @@ let showPorterLocationModal = false;
 let restaurantFlowStep = 'MENU'; // 'MENU' | 'UPSELL_PROMPT' | 'UPSELL_OPTIONS' | 'REVIEW' | 'CONFIRMED'
 let activeTrackedOrderId = null;
 
+// Transportation state
+let selectedTransportMode = 'ONE_TIME_DROPOFF'; // 'ONE_TIME_DROPOFF' | 'FULL_DAY_CHARTER'
+let selectedZoneId = 'AIR-2';
+let selectedVehicleId = 'VEH-SEDAN';
+let selectedDepartureDate = new Date().toISOString().slice(0, 10);
+let selectedDepartureTime = '11:30 AM';
+let selectedPassengers = 2;
+let showTransportReviewModal = false;
+let showTransportRescheduleModal = null; // tbkId
+let showFeedbackModal = null; // { serviceType: 'RESTAURANT' }
+
 export function initGuestPortal() {
   window.getActiveGuestTab = () => activeGuestTab;
 
-  // Master Order Tracker Live Countdown Engine (Spec #10, #11, #16, #17, #18)
+  // Master Order Tracker & Transportation Live Countdown Engine
   if (window.hotelCapitolTimerInterval) {
     clearInterval(window.hotelCapitolTimerInterval);
   }
@@ -34,70 +45,109 @@ export function initGuestPortal() {
     const currentOrder = (activeTrackedOrderId && state.orders.find(o => o.id === activeTrackedOrderId)) ||
                          state.orders.find(o => o.guestId === guest.id && o.status !== 'DELIVERED') ||
                          state.orders[0];
-    if (!currentOrder) return;
 
     const now = Date.now();
 
-    // 1. Update PREPARING countdown & progress bar
-    if (currentOrder.status === 'PREPARING') {
-      const prepStarted = currentOrder.preparationStartedAt || (currentOrder.createdTimestamp || now);
-      const prepTotalMs = (currentOrder.preparationMinutes || 20) * 60 * 1000;
-      const estReady = currentOrder.estimatedReadyAt || (prepStarted + prepTotalMs);
-      const remainingPrepMs = Math.max(0, estReady - now);
-      const pMins = Math.floor(remainingPrepMs / 60000);
-      const pSecs = Math.floor((remainingPrepMs % 60000) / 1000);
-      const str = `${pMins.toString().padStart(2, '0')}:${pSecs.toString().padStart(2, '0')} REMAINING`;
-      const el = document.getElementById('prep-countdown-value');
-      if (el) el.innerText = str;
-
-      const elapsed = Math.max(0, now - prepStarted);
-      const prepPct = Math.min(99, Math.max(5, Math.round((elapsed / prepTotalMs) * 100)));
-      const pBar = document.getElementById('prep-progress-bar');
-      if (pBar) pBar.style.width = prepPct + '%';
-    }
-
-    // 2. Update DELIVERY countdown & progress bar
-    if (currentOrder.status === 'OUT_FOR_DELIVERY') {
-      const delStarted = currentOrder.deliveryStartedAt || now;
-      const delTotalMs = (currentOrder.deliveryMinutes || 15) * 60 * 1000;
-      const targetDelivery = currentOrder.revisedDeliveryAt || currentOrder.estimatedDeliveryAt || (delStarted + delTotalMs);
-      const remainingDeliveryMs = targetDelivery - now;
-      const el = document.getElementById('delivery-countdown-value');
-
-      if (remainingDeliveryMs > 0) {
-        const dMins = Math.floor(remainingDeliveryMs / 60000);
-        const dSecs = Math.floor((remainingDeliveryMs % 60000) / 1000);
-        const str = `${dMins.toString().padStart(2, '0')}:${dSecs.toString().padStart(2, '0')} REMAINING`;
+    if (currentOrder) {
+      // 1. Update PREPARING countdown & progress bar
+      if (currentOrder.status === 'PREPARING') {
+        const prepStarted = currentOrder.preparationStartedAt || (currentOrder.createdTimestamp || now);
+        const prepTotalMs = (currentOrder.preparationMinutes || 20) * 60 * 1000;
+        const estReady = currentOrder.estimatedReadyAt || (prepStarted + prepTotalMs);
+        const remainingPrepMs = Math.max(0, estReady - now);
+        const pMins = Math.floor(remainingPrepMs / 60000);
+        const pSecs = Math.floor((remainingPrepMs % 60000) / 1000);
+        const str = `${pMins.toString().padStart(2, '0')}:${pSecs.toString().padStart(2, '0')} REMAINING`;
+        const el = document.getElementById('prep-countdown-value');
         if (el) el.innerText = str;
 
-        const elapsed = Math.max(0, now - delStarted);
-        const delPct = Math.min(99, Math.max(10, Math.round((elapsed / delTotalMs) * 100)));
-        const dBar = document.getElementById('delivery-progress-bar');
-        if (dBar) dBar.style.width = delPct + '%';
+        const elapsed = Math.max(0, now - prepStarted);
+        const prepPct = Math.min(99, Math.max(5, Math.round((elapsed / prepTotalMs) * 100)));
+        const pBar = document.getElementById('prep-progress-bar');
+        if (pBar) pBar.style.width = prepPct + '%';
       }
 
-      // Check 5-minute notification (Spec #17: Triggers ONCE only)
-      const diffMins = remainingDeliveryMs / 60000;
-      if (diffMins <= 5 && diffMins > 0 && !currentOrder.fiveMinuteDeliveryNotificationSent) {
-        store.setState(s => ({
-          ...s,
-          orders: s.orders.map(o => o.id === currentOrder.id ? { ...o, fiveMinuteDeliveryNotificationSent: true } : o)
-        }));
-        aiEngine.speak(`Good day, ${guest.name}. Just a quick update — your order is approximately five minutes away. We hope you enjoy your meal.`);
-        automationEngine.showToast('🔔 Order 5 Mins Away', `Your meal is arriving in ~5 minutes to Suite #${guest.roomNumber}.`, 'info');
-      }
+      // 2. Update DELIVERY countdown & progress bar
+      if (currentOrder.status === 'OUT_FOR_DELIVERY') {
+        const delStarted = currentOrder.deliveryStartedAt || now;
+        const delTotalMs = (currentOrder.deliveryMinutes || 15) * 60 * 1000;
+        const targetDelivery = currentOrder.revisedDeliveryAt || currentOrder.estimatedDeliveryAt || (delStarted + delTotalMs);
+        const remainingDeliveryMs = targetDelivery - now;
+        const el = document.getElementById('delivery-countdown-value');
 
-      // Check Delay notification (Spec #18 & #19: Triggers ONCE only when target expires)
-      if (remainingDeliveryMs <= 0 && !currentOrder.delayNotificationSent) {
-        store.setState(s => ({
-          ...s,
-          orders: s.orders.map(o => o.id === currentOrder.id ? { ...o, delayNotificationSent: true } : o)
-        }));
-        aiEngine.speak(`Mr./Mrs. ${guest.name}, I sincerely apologize for the delay. Your order is taking a little longer than expected. We are following up with our team and I'll keep you updated with the revised delivery time.`);
-        automationEngine.showToast('⚠️ Delivery Delay', `Concierge is actively following up on Suite #${guest.roomNumber} order.`, 'critical');
-        if (window.renderApp) window.renderApp();
+        if (remainingDeliveryMs > 0) {
+          const dMins = Math.floor(remainingDeliveryMs / 60000);
+          const dSecs = Math.floor((remainingDeliveryMs % 60000) / 1000);
+          const str = `${dMins.toString().padStart(2, '0')}:${dSecs.toString().padStart(2, '0')} REMAINING`;
+          if (el) el.innerText = str;
+
+          const elapsed = Math.max(0, now - delStarted);
+          const delPct = Math.min(99, Math.max(10, Math.round((elapsed / delTotalMs) * 100)));
+          const dBar = document.getElementById('delivery-progress-bar');
+          if (dBar) dBar.style.width = delPct + '%';
+        }
+
+        // Check 5-minute notification (Triggers ONCE only)
+        const diffMins = remainingDeliveryMs / 60000;
+        if (diffMins <= 5 && diffMins > 0 && !currentOrder.fiveMinuteDeliveryNotificationSent) {
+          store.setState(s => ({
+            ...s,
+            orders: s.orders.map(o => o.id === currentOrder.id ? { ...o, fiveMinuteDeliveryNotificationSent: true } : o)
+          }));
+          aiEngine.speak(`Good day, ${guest.name}. Just a quick update — your order is approximately five minutes away. We hope you enjoy your meal.`);
+          automationEngine.showToast('🔔 Order 5 Mins Away', `Your meal is arriving in ~5 minutes to Suite #${guest.roomNumber}.`, 'info');
+        }
+
+        // Check Delay notification (Triggers ONCE only when target expires)
+        if (remainingDeliveryMs <= 0 && !currentOrder.delayNotificationSent) {
+          store.setState(s => ({
+            ...s,
+            orders: s.orders.map(o => o.id === currentOrder.id ? { ...o, delayNotificationSent: true } : o)
+          }));
+          aiEngine.speak(`Mr./Mrs. ${guest.name}, I sincerely apologize for the delay. Your order is taking a little longer than expected. We are following up with our team and I'll keep you updated with the revised delivery time.`);
+          automationEngine.showToast('⚠️ Delivery Delay', `Concierge is actively following up on Suite #${guest.roomNumber} order.`, 'critical');
+          if (window.renderApp) window.renderApp();
+        }
       }
     }
+
+    // 3. Update TRANSPORTATION countdowns & departure reminders
+    (state.transportBookings || []).filter(b => b.guestId === guest.id && b.status === 'CONFIRMED').forEach(tbk => {
+      const depTs = new Date(tbk.departureTimestamp || (Date.now() + 3600000)).getTime();
+      const remainingTs = depTs - now;
+      const el = document.getElementById(`transport-countdown-${tbk.id}`);
+      if (el) {
+        if (remainingTs > 0) {
+          const hrs = Math.floor(remainingTs / 3600000);
+          const mins = Math.floor((remainingTs % 3600000) / 60000);
+          const secs = Math.floor((remainingTs % 60000) / 1000);
+          el.innerText = `DEPARTURE IN ${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else {
+          el.innerText = 'DEPARTURE READY · CHAUFFEUR ON STANDBY';
+        }
+      }
+
+      // 30-min reminder (triggers once)
+      const remMins = remainingTs / 60000;
+      if (remMins <= 30 && remMins > 15 && !tbk.reminder30Sent) {
+        store.setState(s => ({
+          ...s,
+          transportBookings: s.transportBookings.map(b => b.id === tbk.id ? { ...b, reminder30Sent: true } : b)
+        }));
+        aiEngine.speak(`Good day, ${guest.name}. This is a reminder that your transportation is scheduled to depart in approximately 30 minutes.`);
+        automationEngine.showToast('🚗 Transportation Reminder', `Chauffeured vehicle to ${tbk.destination} departs in ~30 minutes.`, 'info');
+      }
+
+      // 15-min reminder (triggers once)
+      if (remMins <= 15 && remMins > 0 && !tbk.reminder15Sent) {
+        store.setState(s => ({
+          ...s,
+          transportBookings: s.transportBookings.map(b => b.id === tbk.id ? { ...b, reminder15Sent: true } : b)
+        }));
+        aiEngine.speak(`Hello, ${guest.name}. Your transportation is scheduled to depart in approximately 15 minutes. Your driver is preparing for your departure.`);
+        automationEngine.showToast('🚗 Driver Preparing', `Your driver ${tbk.driverName || 'Ibrahim'} is preparing for departure at the main entrance.`, 'info');
+      }
+    });
   }, 1000);
 
   // 1. ABSOLUTE EXPLORE ACTION: Opens UI without triggering voice, drafts, or requests
@@ -116,13 +166,14 @@ export function initGuestPortal() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 2. INTERCOM ACTION: Explicitly activates Amara with isolated card context
-  window.activateAmaraIntercom = (serviceKey, cardTitle) => {
+  // 2. INTERCOM ACTION: Explicitly activates Tolani with isolated card context
+  window.activateTolaniIntercom = (serviceKey, cardTitle) => {
     aiEngine.setServiceContext(serviceKey, cardTitle);
     window.toggleAIAssistant(true, true, serviceKey);
   };
+  window.activateAmaraIntercom = window.activateTolaniIntercom;
 
-  // 3. AMARA UI ACTION EXECUTOR: Translates AI intent into real visible UI state changes
+  // 3. TOLANI UI ACTION EXECUTOR: Translates AI intent into real visible UI state changes
   window.amaraActionExecutor = (actionType, payload = {}) => {
     if (!actionType) return;
 
@@ -175,6 +226,7 @@ export function initGuestPortal() {
       }
     }, 1800);
   };
+  window.tolaniActionExecutor = window.amaraActionExecutor;
 
   window.setMenuCategory = (cat) => {
     selectedCategory = cat;
@@ -219,7 +271,7 @@ export function initGuestPortal() {
     if (window.renderApp) window.renderApp();
   };
 
-  // Section 2: Restaurant Selection -> Amara Follow-Up (Offer Drinks/Snacks/Desserts)
+  // Section 2: Restaurant Selection -> Tolani Follow-Up (Offer Drinks/Snacks/Desserts)
   window.proceedToRestaurantUpsellOrReview = () => {
     if (cart.length === 0) {
       alert('Your order tray is currently empty. Please select an item from the menu.');
@@ -228,7 +280,7 @@ export function initGuestPortal() {
 
     const guest = store.getActiveGuest();
 
-    // Amara immediately acknowledges selection and asks prompt
+    // Tolani immediately acknowledges selection and asks prompt
     aiEngine.speak(`Thank you, ${guest.name}. I've received your selection. Would you like to add a drink, snack or dessert to your order?`);
 
     restaurantFlowStep = 'UPSELL_PROMPT';
@@ -240,7 +292,7 @@ export function initGuestPortal() {
   // Guest clicks YES to add drinks/snacks/desserts
   window.onSelectUpsellYes = () => {
     const guest = store.getActiveGuest();
-    aiEngine.speak(`Certainly. I'll show you the available options.`);
+    aiEngine.speak(`Certainly, ${guest.name}. I'll show you the available options.`);
     restaurantFlowStep = 'UPSELL_OPTIONS';
     if (window.renderApp) window.renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -249,7 +301,17 @@ export function initGuestPortal() {
   // Guest clicks NO to continue to review
   window.onSelectUpsellNo = () => {
     const guest = store.getActiveGuest();
-    aiEngine.speak(`Certainly. Let me show you your order for confirmation.`);
+    aiEngine.speak(`Certainly, ${guest.name}. Let me show you your order for confirmation.`);
+    restaurantFlowStep = 'REVIEW';
+    if (window.renderApp) window.renderApp();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // When adding upsell item
+  window.addUpsellItemToCart = (menuId) => {
+    const guest = store.getActiveGuest();
+    window.addToCart(menuId);
+    aiEngine.speak(`Thank you, ${guest.name}. I've added your selections. Let me show you your updated order.`);
     restaurantFlowStep = 'REVIEW';
     if (window.renderApp) window.renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -275,7 +337,7 @@ export function initGuestPortal() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Section 4, 5, 6, 7, 8: Final Order Confirmation & Kitchen Routing
+  // Section 4: Final Order Confirmation & Kitchen Routing
   window.confirmAndDispatchRestaurantOrder = () => {
     if (cart.length === 0) return;
 
@@ -306,20 +368,19 @@ export function initGuestPortal() {
 
     const formattedDeliveryTime = new Date(newOrder.estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // Amara speaks configured preparation and delivery timing
-    aiEngine.speak(`Thank you, ${guest.name}. Your order has been confirmed and sent to our kitchen. Your order is expected to be prepared in approximately ${newOrder.preparationMinutes} minutes and delivered to your room by approximately ${formattedDeliveryTime}.`);
+    // Tolani speaks configured preparation and delivery timing sequentially
+    aiEngine.speakSequence([
+      `Thank you, ${guest.name}. Your order has been confirmed and sent to our kitchen. Your order is expected to be prepared in approximately ${newOrder.preparationMinutes} minutes and delivered to your room by approximately ${formattedDeliveryTime}.`,
+      `Is there anything else I can assist you with while we prepare your order?`
+    ]);
 
-    // Amara follow-up prompt
-    setTimeout(() => {
-      aiEngine.speak(`Is there anything else I can assist you with while we prepare your order?`);
-    }, 3800);
-
-    activeGuestTab = 'restaurant';
+    // Automatically navigate to dedicated isolated Order Tracker page
+    activeGuestTab = 'order-tracker';
     if (window.renderApp) window.renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Dedicated Isolated Tracker Navigation (Spec #5 & #6)
+  // Dedicated Isolated Tracker Navigation
   window.navigateToOrderTracker = (orderId = null) => {
     activeGuestTab = 'order-tracker';
     if (orderId) {
@@ -329,13 +390,148 @@ export function initGuestPortal() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Additional Order: Allows placing an additional order without destroying current active orders (Spec #11)
+  // Additional Order: Allows placing an additional order without destroying current active orders
   window.startAdditionalRestaurantOrder = () => {
     cart = [];
     restaurantFlowStep = 'MENU';
     activeGuestTab = 'restaurant';
     if (window.renderApp) window.renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // --- VIP TRANSPORTATION STATE HANDLERS ---
+  window.setTransportMode = (mode) => {
+    selectedTransportMode = mode;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.setTransportZone = (zoneId) => {
+    selectedZoneId = zoneId;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.setTransportVehicle = (vehId) => {
+    selectedVehicleId = vehId;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.setTransportDate = (d) => {
+    selectedDepartureDate = d;
+  };
+
+  window.setTransportTime = (t) => {
+    selectedDepartureTime = t;
+  };
+
+  window.setTransportPassengers = (p) => {
+    selectedPassengers = parseInt(p, 10) || 1;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.openTransportBookingReview = () => {
+    showTransportReviewModal = true;
+    const guest = store.getActiveGuest();
+    aiEngine.speak(`Certainly, ${guest.name}. Please review your transportation details before confirmation.`);
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.closeTransportBookingReview = () => {
+    showTransportReviewModal = false;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.confirmTransportBooking = () => {
+    const state = store.getState();
+    const guest = store.getActiveGuest();
+    const isCharter = selectedTransportMode === 'FULL_DAY_CHARTER';
+    const zone = state.lagosZones.find(z => z.id === selectedZoneId) || state.lagosZones[0];
+    const veh = state.vehicleClasses.find(v => v.id === selectedVehicleId) || state.vehicleClasses[0];
+
+    const fare = isCharter ? veh.charterDailyRate : Math.round(zone.baseFare * veh.multiplier);
+
+    const booking = store.createTransportRequest({
+      serviceType: selectedTransportMode,
+      zoneId: zone.id,
+      destination: isCharter ? `Full-Day Luxury Charter (${zone.name})` : zone.name,
+      zoneName: zone.name,
+      departureDate: selectedDepartureDate,
+      departureTime: selectedDepartureTime,
+      vehicleClassId: veh.id,
+      vehicle: `${veh.name} (${veh.models})`,
+      passengers: selectedPassengers,
+      price: fare
+    });
+
+    showTransportReviewModal = false;
+    automationEngine.playChime('bell');
+    automationEngine.showToast('🚗 Transportation Confirmed', `Chauffeured ${veh.name} booked for ${booking.departureTime}.`, 'success');
+    
+    aiEngine.speakSequence([
+      `Thank you, ${guest.name}. Your luxury transportation to ${booking.destination} has been scheduled for ${booking.departureDate} at ${booking.departureTime}.`,
+      `Lead Driver Ibrahim Bello has been assigned and will meet you at the hotel entrance.`
+    ]);
+
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.openTransportRescheduleModal = (bookingId) => {
+    showTransportRescheduleModal = bookingId;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.closeTransportRescheduleModal = () => {
+    showTransportRescheduleModal = null;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.submitTransportReschedule = (bookingId) => {
+    const newDate = document.getElementById(`resched-date-${bookingId}`)?.value;
+    const newTime = document.getElementById(`resched-time-${bookingId}`)?.value;
+    if (!newDate || !newTime) {
+      alert('Please select both a new date and time for departure.');
+      return;
+    }
+    const guest = store.getActiveGuest();
+    store.rescheduleTransport(bookingId, newDate, newTime);
+    showTransportRescheduleModal = null;
+    automationEngine.showToast('📅 Ride Rescheduled', `Departure time updated to ${newDate} at ${newTime}.`, 'success');
+    aiEngine.speak(`Certainly, ${guest.name}. Your transportation departure has been rescheduled to ${newDate} at ${newTime}. Your countdown has been updated.`);
+    if (window.renderApp) window.renderApp();
+  };
+
+  // --- SERVICE EXPERIENCE FEEDBACK HANDLERS ---
+  window.openServiceFeedbackModal = (serviceType) => {
+    showFeedbackModal = { serviceType };
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.closeServiceFeedbackModal = () => {
+    showFeedbackModal = null;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.submitServiceFeedback = (serviceType, rating, satisfaction, issue = null, comment = '') => {
+    const guest = store.getActiveGuest();
+    store.recordFeedback({
+      id: `FDB-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      guestId: guest.id,
+      guestName: guest.name,
+      roomNumber: guest.roomNumber,
+      serviceType,
+      rating: parseInt(rating, 10) || 5,
+      satisfaction,
+      issue,
+      comment
+    });
+    showFeedbackModal = null;
+    automationEngine.showToast('⭐ Thank You', 'Your feedback has been recorded by Hotel Capitol management.', 'success');
+    if (rating >= 4 || satisfaction === 'YES') {
+      aiEngine.speak(`Thank you for your kind feedback, ${guest.name}. It is our honor to serve you.`);
+    } else {
+      aiEngine.speak(`I apologize for any inconvenience, ${guest.name}. I have shared your feedback directly with our duty supervisor to ensure we improve.`);
+    }
+    if (window.renderApp) window.renderApp();
   };
 
   // Breakfast selection submission
@@ -802,198 +998,228 @@ function renderRestaurantSection(guest) {
     return renderRestaurantConfirmationStep(guest, confirmedOrder);
   }
 
+  const totalItemCount = cart.reduce((acc, itm) => acc + itm.quantity, 0);
+
   return `
-    <div class="flex flex-col lg:flex-row gap-8 animate-fade-in">
+    <div class="flex flex-col gap-6 animate-fade-in">
       
-      <!-- Left: Menu Browser -->
-      <div class="flex-1">
-        
-        <div class="flex items-center justify-between mb-4 gap-4 flex-wrap">
-          <div>
-            <h2 class="text-xl sm:text-2xl font-serif text-white font-bold">Hotel Capitol Restaurant</h2>
-            <p class="text-xs text-slate-300">Gourmet culinary experiences prepared fresh by Executive Chef Babatunde.</p>
+      <!-- TOP REVIEW ORDER CTA (Visible at top across all categories) -->
+      <div class="glass-panel-gold p-4 rounded-2xl border-2 border-gold/50 flex items-center justify-between gap-4 shadow-xl flex-wrap">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-gold/15 border border-gold/40 flex items-center justify-center text-2xl text-gold">
+            🛒
           </div>
-          <button 
-            class="intercom-pill-btn"
-            onclick="window.activateAmaraIntercom('RESTAURANT', 'Kitchen & Dining');"
-            title="Direct intercom to Executive Chef Babatunde & Kitchen"
-          >
-            ${renderIntercomRoundBadge(18)}
-            <span>Intercom Kitchen</span>
-          </button>
+          <div>
+            <div class="font-serif font-bold text-white text-sm sm:text-base tracking-wide">RESTAURANT ORDER TRAY</div>
+            <div class="text-xs text-slate-300">
+              ${totalItemCount === 0 ? 'Your tray is currently empty — select dishes below' : `<strong class="text-gold font-bold">${totalItemCount} items selected</strong> · ₦${cartTotal.toLocaleString()}`}
+            </div>
+          </div>
         </div>
 
-        <!-- Category Selector -->
-        <div class="category-tabs-scroll">
-          ${categories.map(cat => `
-            <button 
-              class="menu-btn-gold ${selectedCategory === cat ? 'active' : ''}"
-              onclick="window.setMenuCategory('${cat}')"
-            >
-              <span>${cat === 'Food' ? '🍲' : cat === 'Drinks' ? '🍹' : cat === 'Breakfast' ? '🍳' : cat === 'Desserts' ? '🍰' : '🥨'}</span>
-              <span>${cat}</span>
-            </button>
-          `).join('')}
-        </div>
-
-        <!-- Menu Items List -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          ${filteredMenu.map(item => {
-            const selectedAddonIds = orderDraftExtras[item.id] || [];
-            return `
-              <div class="glass-panel rounded-2xl overflow-hidden flex flex-col justify-between border-2 border-gold/30 hover:border-gold transition-all" style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(220, 173, 84, 0.15);">
-                
-                <div class="h-44 w-full relative overflow-hidden bg-navy-950 rounded-t-2xl">
-                  <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" />
-                  <div class="absolute top-2.5 left-2.5 bg-navy-950/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-200 border border-white/10">
-                    ${item.category || 'Specialty'}
-                  </div>
-                </div>
-
-                <div class="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <!-- Title & Price Row -->
-                    <div class="flex items-start justify-between gap-2 mb-1.5 flex-wrap">
-                      <h3 class="font-serif text-base text-white font-bold flex-1 min-w-[140px]">${item.name}</h3>
-                      <div class="bg-amber-500/15 border border-gold/40 px-2.5 py-1 rounded-full text-xs font-bold text-gold whitespace-nowrap shadow-sm">
-                        ₦${item.price.toLocaleString()}
-                      </div>
-                    </div>
-
-                    <!-- Preparation Time Metadata -->
-                    <div class="flex items-center gap-2 mb-2 text-xs text-slate-300">
-                      <span class="inline-flex items-center gap-1.5 bg-navy-950/90 px-2.5 py-0.5 rounded-md border border-white/10 text-[11px] text-slate-300 font-medium">
-                        ${getIcon('clock', 12)} <span>~${item.prepTimeMinutes || 20} mins prep</span>
-                      </span>
-                    </div>
-
-                    <p class="text-xs text-slate-200 leading-relaxed mb-4">${item.desc}</p>
-                    
-                    <!-- Configurable Add-ons / Extras -->
-                    ${item.addons && item.addons.length > 0 ? `
-                      <div class="mb-4 bg-navy-950/70 p-3 rounded-xl border border-white/5">
-                        <div class="text-xs font-bold text-gold mb-2 flex items-center justify-between">
-                          <span>Optional Extras & Add-ons:</span>
-                          <span class="text-slate-400 font-normal">Select below</span>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                          ${item.addons.map(addon => {
-                            const isChecked = selectedAddonIds.includes(addon.id);
-                            return `
-                              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white p-1 rounded hover:bg-white/5">
-                                <span class="flex items-center gap-2">
-                                  <input 
-                                    type="checkbox" 
-                                    ${isChecked ? 'checked' : ''} 
-                                    onchange="window.toggleAddonSelection('${item.id}', '${addon.id}')"
-                                    class="accent-gold-500"
-                                  />
-                                  <span>${addon.name}</span>
-                                </span>
-                                <span class="text-gold font-medium">+₦${addon.price.toLocaleString()}</span>
-                              </label>
-                            `;
-                          }).join('')}
-                        </div>
-                      </div>
-                    ` : ''}
-
-                    <!-- Special instructions input -->
-                    <input 
-                      id="notes-${item.id}"
-                      type="text" 
-                      placeholder="Special instructions (e.g. less pepper, extra lime)..." 
-                      class="input-custom text-xs py-1.5 mb-3"
-                    />
-                  </div>
-
-                  <button class="btn-primary w-full py-2 text-xs font-bold mt-2" onclick="window.addToCart('${item.id}')">
-                    Add to Tray (${item.addons && selectedAddonIds.length > 0 ? `${selectedAddonIds.length} extras` : 'Standard'})
-                  </button>
-
-                </div>
-
-              </div>
-            `;
-          }).join('')}
-        </div>
-
+        <button 
+          class="btn-primary py-3 px-6 text-xs sm:text-sm font-bold shadow-lg flex items-center gap-2 ${totalItemCount === 0 ? 'opacity-60 cursor-not-allowed' : ''}"
+          onclick="if(${totalItemCount} > 0) { window.openRestaurantOrderReview(); } else { alert('Please select menu items into your tray first.'); }"
+          title="Review full itemized tray and place kitchen order"
+        >
+          <span>REVIEW ORDER (${totalItemCount} ITEMS · ₦${cartTotal.toLocaleString()})</span>
+          <span>→</span>
+        </button>
       </div>
 
-      <!-- Right: Active Cart Tray & Live Orders -->
-      <div class="w-full lg:w-80 flex flex-col gap-6">
+      <div class="flex flex-col lg:flex-row gap-8">
         
-        <!-- Cart Tray -->
-        <div class="glass-panel-gold p-5 rounded-2xl border border-gold/40 shadow-xl">
-          <div class="flex items-center justify-between pb-3 border-b border-gold/30 mb-3">
-            <h3 class="font-serif text-sm font-bold text-white tracking-luxury">YOUR ORDER TRAY</h3>
-            <span class="badge-gold text-xs">${cart.length} items</span>
+        <!-- Left: Menu Browser -->
+        <div class="flex-1">
+          
+          <div class="flex items-center justify-between mb-4 gap-4 flex-wrap">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-serif text-white font-bold">Hotel Capitol Restaurant</h2>
+              <p class="text-xs text-slate-300">Gourmet culinary experiences prepared fresh by Executive Chef Babatunde.</p>
+            </div>
+            <button 
+              class="intercom-pill-btn"
+              onclick="window.activateTolaniIntercom('RESTAURANT', 'Kitchen & Dining');"
+              title="Direct intercom to Executive Chef Babatunde & Kitchen"
+            >
+              ${renderIntercomRoundBadge(18)}
+              <span>Intercom Kitchen</span>
+            </button>
           </div>
 
-          ${cart.length === 0 ? `
-            <div class="text-center py-8 text-xs text-slate-400">
-              Your tray is currently empty.<br/>Select menu items to customize your order.
-            </div>
-          ` : `
-            <div class="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 pr-1">
-              ${cart.map((c, idx) => `
-                <div class="p-2.5 rounded-lg bg-navy-950 border border-white/5 text-xs">
-                  <div class="flex items-center justify-between font-semibold text-white">
-                    <span>${c.quantity}x ${c.name}</span>
-                    <span class="text-gold">₦${c.basePrice.toLocaleString()}</span>
-                  </div>
-                  ${c.extras && c.extras.length > 0 ? `
-                    <div class="text-slate-400 text-xs mt-1 pl-2 border-l border-gold/40">
-                      ${c.extras.map(e => `+ ${e.name} (₦${e.price.toLocaleString()})`).join('<br/>')}
+          <!-- Category Selector -->
+          <div class="category-tabs-scroll">
+            ${categories.map(cat => `
+              <button 
+                class="menu-btn-gold ${selectedCategory === cat ? 'active' : ''}"
+                onclick="window.setMenuCategory('${cat}')"
+              >
+                <span>${cat === 'Food' ? '🍲' : cat === 'Drinks' ? '🍹' : cat === 'Breakfast' ? '🍳' : cat === 'Desserts' ? '🍰' : '🥨'}</span>
+                <span>${cat}</span>
+              </button>
+            `).join('')}
+          </div>
+
+          <!-- Menu Items List -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            ${filteredMenu.map(item => {
+              const selectedAddonIds = orderDraftExtras[item.id] || [];
+              return `
+                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col justify-between border-2 border-gold/30 hover:border-gold transition-all" style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(220, 173, 84, 0.15);">
+                  
+                  <div class="h-44 w-full relative overflow-hidden bg-navy-950 rounded-t-2xl">
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" />
+                    <div class="absolute top-2.5 left-2.5 bg-navy-950/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-200 border border-white/10">
+                      ${item.category || 'Specialty'}
                     </div>
-                  ` : ''}
-                  ${c.specialInstructions ? `
-                    <div class="text-slate-400 italic text-xs mt-1">Note: "${c.specialInstructions}"</div>
-                  ` : ''}
-                  <button class="text-red-400 text-xs mt-1 bg-transparent border-none cursor-pointer" onclick="window.cart.splice(${idx}, 1); renderGuestPortal();">
-                    Remove
-                  </button>
+                  </div>
+
+                  <div class="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <!-- Title & Price Row -->
+                      <div class="flex items-start justify-between gap-2 mb-1.5 flex-wrap">
+                        <h3 class="font-serif text-base text-white font-bold flex-1 min-w-[140px]">${item.name}</h3>
+                        <div class="bg-amber-500/15 border border-gold/40 px-2.5 py-1 rounded-full text-xs font-bold text-gold whitespace-nowrap shadow-sm">
+                          ₦${item.price.toLocaleString()}
+                        </div>
+                      </div>
+
+                      <!-- Preparation Time Metadata -->
+                      <div class="flex items-center gap-2 mb-2 text-xs text-slate-300">
+                        <span class="inline-flex items-center gap-1.5 bg-navy-950/90 px-2.5 py-0.5 rounded-md border border-white/10 text-[11px] text-slate-300 font-medium">
+                          ${getIcon('clock', 12)} <span>~${item.prepTimeMinutes || 20} mins prep</span>
+                        </span>
+                      </div>
+
+                      <p class="text-xs text-slate-200 leading-relaxed mb-4">${item.desc}</p>
+                      
+                      <!-- Configurable Add-ons / Extras -->
+                      ${item.addons && item.addons.length > 0 ? `
+                        <div class="mb-4 bg-navy-950/70 p-3 rounded-xl border border-white/5">
+                          <div class="text-xs font-bold text-gold mb-2 flex items-center justify-between">
+                            <span>Optional Extras & Add-ons:</span>
+                            <span class="text-slate-400 font-normal">Select below</span>
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            ${item.addons.map(addon => {
+                              const isChecked = selectedAddonIds.includes(addon.id);
+                              return `
+                                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white p-1 rounded hover:bg-white/5">
+                                  <span class="flex items-center gap-2">
+                                    <input 
+                                      type="checkbox" 
+                                      ${isChecked ? 'checked' : ''} 
+                                      onchange="window.toggleAddonSelection('${item.id}', '${addon.id}')"
+                                      class="accent-gold-500"
+                                    />
+                                    <span>${addon.name}</span>
+                                  </span>
+                                  <span class="text-gold font-medium">+₦${addon.price.toLocaleString()}</span>
+                                </label>
+                              `;
+                            }).join('')}
+                          </div>
+                        </div>
+                      ` : ''}
+
+                      <!-- Special instructions input -->
+                      <input 
+                        id="notes-${item.id}"
+                        type="text" 
+                        placeholder="Special instructions (e.g. less pepper, extra lime)..." 
+                        class="input-custom text-xs py-1.5 mb-3"
+                      />
+                    </div>
+
+                    <button class="btn-primary w-full py-2 text-xs font-bold mt-2" onclick="window.addToCart('${item.id}')">
+                      Add to Tray (${item.addons && selectedAddonIds.length > 0 ? `${selectedAddonIds.length} extras` : 'Standard'})
+                    </button>
+
+                  </div>
+
                 </div>
-              `).join('')}
-            </div>
+              `;
+            }).join('')}
+          </div>
 
-            <div class="pt-3 border-t border-gold/30 flex items-center justify-between text-sm font-bold text-white mb-4">
-              <span>Total Bill:</span>
-              <span class="text-gold text-base">₦${cartTotal.toLocaleString()}</span>
-            </div>
-
-            <!-- Proceed with Selection Button -->
-            <button class="btn-primary w-full py-2.5 text-xs font-bold shadow-lg" onclick="window.proceedToRestaurantUpsellOrReview()">
-              Proceed with Order Selection →
-            </button>
-          `}
         </div>
 
-        <!-- Recent Suite Orders -->
-        <div class="glass-panel p-5 rounded-2xl border border-white/10">
-          <h3 class="font-serif text-sm font-bold text-white tracking-luxury mb-3">RECENT SUITE ORDERS</h3>
-          ${state.orders.filter(o => o.guestId === guest.id).length === 0 ? `
-            <div class="text-xs text-slate-400">No recent orders for Suite ${guest.roomNumber}.</div>
-          ` : `
-            <div class="flex flex-col gap-3">
-              ${state.orders.filter(o => o.guestId === guest.id).map(o => `
-                <div class="p-3 rounded-xl bg-navy-950 border border-gold/30 text-xs">
-                  <div class="flex items-center justify-between mb-1">
-                    <strong class="text-white">${o.id}</strong>
-                    <button class="badge-${o.status === 'DELIVERED' ? 'normal' : o.status === 'PREPARING' ? 'attention' : 'gold'} text-[11px] uppercase font-bold cursor-pointer hover:opacity-80 border-none" onclick="window.navigateToOrderTracker('${o.id}')">
-                      ${o.status.replace(/_/g, ' ')} →
+        <!-- Right: Active Cart Tray & Live Orders -->
+        <div class="w-full lg:w-80 flex flex-col gap-6">
+          
+          <!-- Cart Tray -->
+          <div class="glass-panel-gold p-5 rounded-2xl border border-gold/40 shadow-xl">
+            <div class="flex items-center justify-between pb-3 border-b border-gold/30 mb-3">
+              <h3 class="font-serif text-sm font-bold text-white tracking-luxury">YOUR ORDER TRAY</h3>
+              <span class="badge-gold text-xs">${cart.length} items</span>
+            </div>
+
+            ${cart.length === 0 ? `
+              <div class="text-center py-8 text-xs text-slate-400">
+                Your tray is currently empty.<br/>Select menu items to customize your order.
+              </div>
+            ` : `
+              <div class="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 pr-1">
+                ${cart.map((c, idx) => `
+                  <div class="p-2.5 rounded-lg bg-navy-950 border border-white/5 text-xs">
+                    <div class="flex items-center justify-between font-semibold text-white">
+                      <span>${c.quantity}x ${c.name}</span>
+                      <span class="text-gold">₦${c.basePrice.toLocaleString()}</span>
+                    </div>
+                    ${c.extras && c.extras.length > 0 ? `
+                      <div class="text-slate-400 text-xs mt-1 pl-2 border-l border-gold/40">
+                        ${c.extras.map(e => `+ ${e.name} (₦${e.price.toLocaleString()})`).join('<br/>')}
+                      </div>
+                    ` : ''}
+                    ${c.specialInstructions ? `
+                      <div class="text-slate-400 italic text-xs mt-1">Note: "${c.specialInstructions}"</div>
+                    ` : ''}
+                    <button class="text-red-400 text-xs mt-1 bg-transparent border-none cursor-pointer" onclick="window.cart.splice(${idx}, 1); renderGuestPortal();">
+                      Remove
                     </button>
                   </div>
-                  <div class="text-slate-300 mb-2">${o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</div>
-                  
-                  <div class="flex items-center justify-between text-slate-400 text-xs pt-2 border-t border-white/5">
-                    <span>${o.createdAt}</span>
-                    <span class="text-gold font-semibold">₦${o.totalAmount.toLocaleString()}</span>
+                `).join('')}
+              </div>
+
+              <div class="pt-3 border-t border-gold/30 flex items-center justify-between text-sm font-bold text-white mb-4">
+                <span>Total Bill:</span>
+                <span class="text-gold text-base">₦${cartTotal.toLocaleString()}</span>
+              </div>
+
+              <!-- Proceed with Selection Button -->
+              <button class="btn-primary w-full py-2.5 text-xs font-bold shadow-lg" onclick="window.proceedToRestaurantUpsellOrReview()">
+                Proceed with Order Selection →
+              </button>
+            `}
+          </div>
+
+          <!-- Recent Suite Orders -->
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <h3 class="font-serif text-sm font-bold text-white tracking-luxury mb-3">RECENT SUITE ORDERS</h3>
+            ${state.orders.filter(o => o.guestId === guest.id).length === 0 ? `
+              <div class="text-xs text-slate-400">No recent orders for Suite ${guest.roomNumber}.</div>
+            ` : `
+              <div class="flex flex-col gap-3">
+                ${state.orders.filter(o => o.guestId === guest.id).map(o => `
+                  <div class="p-3 rounded-xl bg-navy-950 border border-gold/30 text-xs">
+                    <div class="flex items-center justify-between mb-1">
+                      <strong class="text-white">${o.id}</strong>
+                      <button class="badge-${o.status === 'DELIVERED' ? 'normal' : o.status === 'PREPARING' ? 'attention' : 'gold'} text-[11px] uppercase font-bold cursor-pointer hover:opacity-80 border-none" onclick="window.navigateToOrderTracker('${o.id}')">
+                        ${o.status.replace(/_/g, ' ')} →
+                      </button>
+                    </div>
+                    <div class="text-slate-300 mb-2">${o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</div>
+                    
+                    <div class="flex items-center justify-between text-slate-400 text-xs pt-2 border-t border-white/5">
+                      <span>${o.createdAt}</span>
+                      <span class="text-gold font-semibold">₦${o.totalAmount.toLocaleString()}</span>
+                    </div>
                   </div>
-                </div>
-              `).join('')}
-            </div>
-          `}
+                `).join('')}
+              </div>
+            `}
+          </div>
+
         </div>
 
       </div>
@@ -1007,7 +1233,7 @@ function renderRestaurantUpsellPrompt(guest, cart, cartTotal) {
   return `
     <div class="max-w-2xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl border-2 border-gold/50 shadow-2xl text-center animate-fade-in">
       <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold/10 border border-gold/40 text-gold text-xs font-bold mb-4">
-        <span>🤖</span> <span>Amara Service Assistant</span>
+        <span>🤖</span> <span>Tolani Service Assistant</span>
       </div>
       
       <h2 class="text-2xl sm:text-3xl font-serif text-white font-bold mb-2">
@@ -1090,7 +1316,7 @@ function renderRestaurantUpsellOptions(guest, cart, cartTotal) {
             </div>
             <button 
               class="btn-primary text-xs py-1.5 px-3 font-bold whitespace-nowrap"
-              onclick="window.addToCart('${item.id}');"
+              onclick="window.addUpsellItemToCart('${item.id}');"
             >
               + Add to Order
             </button>
@@ -1121,7 +1347,7 @@ function renderRestaurantUpsellOptions(guest, cart, cartTotal) {
   `;
 }
 
-// Section 3: Order Review Summary Step (Spec #3)
+// Section 3: Order Review Summary Step
 function renderRestaurantReviewStep(guest, cart, cartTotal) {
   const maxPrepTime = Math.max(...cart.map(c => {
     const item = store.getState().menu.find(m => m.id === c.menuId);
@@ -1192,13 +1418,13 @@ function renderRestaurantReviewStep(guest, cart, cartTotal) {
         <span class="text-gold text-xl font-serif">₦${cartTotal.toLocaleString()}</span>
       </div>
 
-      <!-- Amara Review Prompt Note -->
+      <!-- Tolani Review Prompt Note -->
       <div class="p-3.5 rounded-xl bg-gold/10 border border-gold/30 text-xs text-slate-200 mb-6 flex items-center gap-2.5">
         <span class="text-xl">🤖</span>
-        <span>Amara: <em>"Please review your order, ${guest.name}. Once you're happy with your selection, I'll send it to our kitchen."</em></span>
+        <span>Tolani: <em>"Please review your order, ${guest.name}. Once you're happy with your selection, I'll send it to our kitchen."</em></span>
       </div>
 
-      <!-- Review Action Buttons -->
+      <!-- Review Action Buttons at Bottom -->
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
         <button 
           class="btn-secondary py-3 px-5 text-xs font-semibold w-full sm:w-auto"
@@ -1211,7 +1437,7 @@ function renderRestaurantReviewStep(guest, cart, cartTotal) {
           class="btn-primary py-3 px-8 text-xs font-bold w-full sm:w-auto shadow-xl"
           onclick="window.confirmAndDispatchRestaurantOrder();"
         >
-          ✓ CONFIRM & SEND TO KITCHEN →
+          ✓ PLACE ORDER →
         </button>
       </div>
 
@@ -1219,7 +1445,7 @@ function renderRestaurantReviewStep(guest, cart, cartTotal) {
   `;
 }
 
-// Section 4: Final Order Confirmed Step (With Prominent Track My Order CTA)
+// Section 4: Final Order Confirmed Step
 function renderRestaurantConfirmationStep(guest, order) {
   if (!order) {
     return `
@@ -1248,10 +1474,10 @@ function renderRestaurantConfirmationStep(guest, order) {
         Your order <strong>#${order.id}</strong> has been transmitted directly to Executive Chef Babatunde.
       </p>
 
-      <!-- Amara Confirmed Dialogue Box -->
+      <!-- Tolani Confirmed Dialogue Box -->
       <div class="p-4 rounded-xl bg-navy-950/80 border border-gold/30 mb-6 text-left text-xs text-slate-200">
         <div class="flex items-center gap-2 mb-2 font-bold text-gold">
-          <span>🤖</span> <span>Amara Voice Confirmation:</span>
+          <span>🤖</span> <span>Tolani Voice Confirmation:</span>
         </div>
         <p class="leading-relaxed">
           <em>"Thank you, ${guest.name}. Your order has been confirmed and sent to our kitchen. Your order is expected to be prepared in approximately ${order.preparationMinutes} minutes and delivered to your room by approximately ${formattedDeliveryTime}."</em>
@@ -1273,13 +1499,13 @@ function renderRestaurantConfirmationStep(guest, order) {
         </div>
       </div>
 
-      <!-- REQUIRED TRACKER CTA BUTTON (Spec: Clear CTA to Isolated Tracker) -->
+      <!-- Dedicated Tracker CTA Button -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
         <button 
           class="btn-primary py-3.5 px-8 text-xs sm:text-sm font-bold w-full sm:w-auto shadow-2xl flex items-center justify-center gap-2"
           onclick="window.navigateToOrderTracker('${order.id}')"
         >
-          <span>🚀</span> <span>TRACK MY ORDER →</span>
+          <span>🚀</span> <span>TRACK ACTIVE ORDER →</span>
         </button>
 
         <button 
@@ -1895,99 +2121,342 @@ function renderRoomServiceSection(guest) {
   `;
 }
 
-// 5. VIP TRANSPORTATION & PAYMENT (Spec #19 & #20)
+// 5. VIP TRANSPORTATION & PAYMENT (Lagos Zonal Pricing, One-Time vs Charter, Live Tickers & Rescheduling)
 function renderTransportSection(guest) {
   const state = store.getState();
+  const zones = state.lagosZones || [];
+  const vehicles = state.vehicleClasses || [];
+  const activeBookings = (state.transportBookings || []).filter(b => b.guestId === guest.id);
+
+  const selectedZone = zones.find(z => z.id === selectedZoneId) || zones[0];
+  const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId) || vehicles[0];
+
+  const isCharter = selectedTransportMode === 'FULL_DAY_CHARTER';
+  const calculatedFare = isCharter 
+    ? selectedVehicle.charterDailyRate 
+    : Math.round(selectedZone.baseFare * selectedVehicle.multiplier);
 
   return `
-    <div class="max-w-4xl mx-auto flex flex-col gap-8">
+    <div class="max-w-4xl mx-auto flex flex-col gap-8 animate-fade-in">
       
+      <!-- Top Header & Intercom Dispatch -->
       <div class="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <span class="text-xs font-bold uppercase tracking-luxury text-gold">Chauffeured Executive Fleet</span>
-          <h2 class="text-2xl font-serif text-white mt-1">Hotel Capitol Transportation</h2>
-          <p class="text-xs text-slate-300">Official luxury transit to Murtala Muhammed Airport, Victoria Island, and Lagos destinations.</p>
+          <span class="text-xs font-bold uppercase tracking-luxury text-gold">Chauffeured Executive Fleet & Transit</span>
+          <h2 class="text-2xl font-serif text-white mt-1">VIP Transportation & Chauffeur Services</h2>
+          <p class="text-xs text-slate-300">Dedicated luxury transfer across Lagos Island, Mainland & Murtala Muhammed Airport.</p>
         </div>
         <button 
           class="intercom-pill-btn"
-          onclick="window.openDirectIntercomCall('concierge-frontdesk', 'Concierge & Transport', 'Ibrahim Bello');"
-          title="Direct intercom to Lead Concierge Ibrahim"
+          onclick="window.activateTolaniIntercom('VIP_TRANSPORTATION', 'VIP Transportation');"
+          title="Direct intercom to Lead Concierge & Transport Chauffeur"
         >
           ${renderIntercomRoundBadge(18)}
-          <span>Intercom Concierge</span>
+          <span>Intercom Transport</span>
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        ${state.transportOptions.map(opt => `
-          <div class="glass-panel p-6 rounded-2xl border border-gold/20 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-2xl">🚕</div>
-                <span class="badge-gold text-xs">${opt.distanceEst}</span>
-              </div>
-              <h3 class="font-serif text-base text-white font-bold mb-1">${opt.destination}</h3>
-              
-              <div class="my-4 flex flex-col gap-2">
-                ${opt.vehicles.map((v, vIdx) => `
-                  <div class="p-3 rounded-xl bg-navy-950 border border-white/5 flex items-center justify-between text-xs">
-                    <div>
-                      <div class="font-semibold text-white">${v.type}</div>
-                      <div class="text-slate-400 text-[10px]">${v.seats} Passenger Capacity · Luggage Space</div>
-                    </div>
-                    <div class="text-right">
-                      <div class="font-bold text-gold text-sm">₦${v.price.toLocaleString()}</div>
-                      <button 
-                        class="btn-primary text-[10px] py-1 px-2.5 mt-1 font-bold"
-                        onclick="window.bookTransportation('${opt.id}', ${vIdx})"
-                      >
-                        Book & Pay
-                      </button>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-
-            <div class="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
-              <span>Pickup: Suite ${guest.roomNumber}</span>
-              <span class="text-emerald-400">✓ Hotel Verified Vehicle</span>
-            </div>
-          </div>
-        `).join('')}
+      <!-- Service Mode Switcher: One-Time Drop-off vs Full-Day Charter -->
+      <div class="grid grid-cols-2 gap-3 p-1.5 rounded-2xl bg-navy-950/80 border border-gold/40">
+        <button 
+          class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedTransportMode === 'ONE_TIME_DROPOFF' ? 'bg-gold text-black shadow-lg' : 'text-slate-300 hover:text-white'}"
+          onclick="window.setTransportMode('ONE_TIME_DROPOFF')"
+        >
+          <span>📍</span> <span>ONE-TIME DROP-OFF / TRANSFER</span>
+        </button>
+        <button 
+          class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedTransportMode === 'FULL_DAY_CHARTER' ? 'bg-gold text-black shadow-lg' : 'text-slate-300 hover:text-white'}"
+          onclick="window.setTransportMode('FULL_DAY_CHARTER')"
+        >
+          <span>👑</span> <span>FULL-DAY LUXURY CHARTER (12 HRS)</span>
+        </button>
       </div>
 
-      <!-- Booking History -->
-      <div class="glass-panel p-6 rounded-2xl">
-        <h3 class="font-serif text-sm font-bold text-white tracking-luxury mb-4">YOUR TRANSPORTATION BOOKINGS</h3>
-        ${state.transportBookings.filter(b => b.guestId === guest.id).length === 0 ? `
-          <div class="text-xs text-slate-400">No active ride bookings.</div>
-        ` : `
-          <div class="flex flex-col gap-3">
-            ${state.transportBookings.filter(b => b.guestId === guest.id).map(b => `
-              <div class="p-3.5 rounded-xl bg-navy-950 border border-gold/30 flex items-center justify-between text-xs">
+      <!-- Booking Configuration Panel -->
+      <div class="glass-panel-gold p-6 sm:p-8 rounded-2xl border-2 border-gold/50 shadow-2xl">
+        <h3 class="font-serif text-lg text-white font-bold mb-4 flex items-center gap-2">
+          <span>🚗</span> <span>Customize Your Executive Journey</span>
+        </h3>
+
+        <!-- Step A: Destination / Zonal Selector -->
+        <div class="mb-6">
+          <label class="block text-xs font-bold text-gold uppercase tracking-wider mb-2">
+            ${isCharter ? 'Primary Operating Region:' : 'Select Lagos Destination Zone:'}
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
+            ${zones.map(z => `
+              <div 
+                class="p-3 rounded-xl border cursor-pointer transition-all text-xs flex flex-col justify-between ${selectedZoneId === z.id ? 'bg-gold/20 border-gold shadow-md text-white' : 'bg-navy-950/70 border-white/10 text-slate-300 hover:border-gold/50'}"
+                onclick="window.setTransportZone('${z.id}')"
+              >
                 <div>
-                  <strong class="text-white">${b.destination}</strong>
-                  <div class="text-slate-400 text-[11px]">${b.vehicle} · Pickup: ${b.pickupTime}</div>
+                  <div class="font-bold ${selectedZoneId === z.id ? 'text-gold' : 'text-white'}">${z.name}</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">${z.category} · ~${z.estMinutes} mins</div>
                 </div>
-                <div class="text-right">
-                  <span class="badge-normal text-[10px] py-0.5">${b.paymentStatus}</span>
-                  <div class="text-gold font-bold mt-1">₦${b.price.toLocaleString()}</div>
+                <div class="mt-2 text-right font-bold text-gold">
+                  Base: ₦${z.baseFare.toLocaleString()}
                 </div>
               </div>
             `).join('')}
           </div>
+        </div>
+
+        <!-- Step B: Vehicle Class Selector -->
+        <div class="mb-6">
+          <label class="block text-xs font-bold text-gold uppercase tracking-wider mb-2">
+            Select Chauffeur Vehicle Class:
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            ${vehicles.map(v => {
+              const vFare = isCharter ? v.charterDailyRate : Math.round(selectedZone.baseFare * v.multiplier);
+              const isSelected = selectedVehicleId === v.id;
+              return `
+                <div 
+                  class="p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${isSelected ? 'bg-gold/20 border-2 border-gold shadow-lg' : 'bg-navy-950/70 border-white/10 hover:border-gold/40'}"
+                  onclick="window.setTransportVehicle('${v.id}')"
+                >
+                  <div>
+                    <div class="text-2xl mb-1">${v.icon}</div>
+                    <div class="font-serif font-bold text-white text-sm">${v.name}</div>
+                    <div class="text-[11px] text-slate-300 mt-0.5">${v.models}</div>
+                    <div class="text-[10px] text-slate-400 mt-1">${v.capacity} Passengers · AC & WiFi</div>
+                  </div>
+                  <div class="mt-4 pt-2 border-t border-white/10">
+                    <div class="text-xs text-slate-400">${isCharter ? 'Full Day (12h):' : 'Fixed Fare:'}</div>
+                    <div class="font-bold text-gold text-base font-serif">₦${vFare.toLocaleString()}</div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Step C: Departure Timing & Passengers -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label class="block text-xs font-bold text-gold uppercase tracking-wider mb-1.5">Departure Date:</label>
+            <input 
+              type="date" 
+              value="${selectedDepartureDate}" 
+              class="input-custom text-xs py-2"
+              onchange="window.setTransportDate(this.value)"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gold uppercase tracking-wider mb-1.5">Departure Time:</label>
+            <select class="input-custom text-xs py-2" onchange="window.setTransportTime(this.value)">
+              <option value="Immediate (15 mins)">Immediate (15 mins)</option>
+              <option value="08:00 AM">08:00 AM</option>
+              <option value="09:30 AM">09:30 AM</option>
+              <option value="11:30 AM" selected>11:30 AM</option>
+              <option value="02:00 PM">02:00 PM</option>
+              <option value="04:30 PM">04:30 PM</option>
+              <option value="07:00 PM">07:00 PM</option>
+              <option value="09:30 PM">09:30 PM</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gold uppercase tracking-wider mb-1.5">Passengers:</label>
+            <select class="input-custom text-xs py-2" onchange="window.setTransportPassengers(this.value)">
+              <option value="1">1 Passenger</option>
+              <option value="2" selected>2 Passengers</option>
+              <option value="3">3 Passengers</option>
+              <option value="4">4 Passengers</option>
+              <option value="6">5-8 Passengers (Sprinter)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Summary & CTA Bar -->
+        <div class="p-4 rounded-xl bg-navy-950 border border-gold/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <div class="text-xs text-slate-300">
+              Trip: <strong class="text-white">${isCharter ? 'Full-Day Charter' : selectedZone.name}</strong> · Vehicle: <strong class="text-gold">${selectedVehicle.name}</strong>
+            </div>
+            <div class="text-base font-serif font-bold text-white mt-0.5">
+              Calculated Total: <span class="text-gold">₦${calculatedFare.toLocaleString()}</span> <span class="text-xs text-slate-400 font-normal font-sans">(Billed to Suite Folio)</span>
+            </div>
+          </div>
+
+          <button 
+            class="btn-primary py-3 px-8 text-xs font-bold shadow-xl whitespace-nowrap w-full sm:w-auto"
+            onclick="window.openTransportBookingReview()"
+          >
+            Review & Confirm Transit →
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Active Bookings & Live Departure Countdowns -->
+      <div class="glass-panel p-6 rounded-2xl border border-white/10">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase">YOUR TRANSPORTATION BOOKINGS</h3>
+          <span class="badge-gold text-xs">${activeBookings.length} Bookings</span>
+        </div>
+
+        ${activeBookings.length === 0 ? `
+          <div class="text-xs text-slate-400 py-4 text-center">No active or past rides for Suite ${guest.roomNumber}.</div>
+        ` : `
+          <div class="flex flex-col gap-4">
+            ${activeBookings.map(b => {
+              return `
+                <div class="p-5 rounded-2xl bg-navy-950 border-2 ${b.status === 'CONFIRMED' ? 'border-gold/50' : 'border-white/10'} flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <strong class="text-white text-base font-serif">${b.destination}</strong>
+                      <span class="badge-gold text-[10px]">${b.serviceType === 'FULL_DAY_CHARTER' ? 'FULL-DAY CHARTER' : 'ONE-TIME TRANSFER'}</span>
+                      <span class="badge-normal text-[10px]">${b.paymentStatus || 'POSTED TO FOLIO'}</span>
+                    </div>
+                    
+                    <div class="text-xs text-slate-300">
+                      Vehicle: <strong class="text-gold">${b.vehicle}</strong> · Departure: <strong>${b.departureDate} at ${b.departureTime}</strong> (${b.passengers} pax)
+                    </div>
+
+                    <div class="text-[11px] text-slate-400 mt-1">
+                      Assigned Chauffeur: <strong class="text-white">${b.driverName || 'Lead Driver Ibrahim Bello'}</strong> (${b.driverVehiclePlate || 'LAG-889-CAP'})
+                    </div>
+
+                    <!-- Live Departure Countdown Ticker -->
+                    <div class="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-gold/10 border border-gold/30 text-gold font-mono text-xs font-bold" id="transport-countdown-${b.id}">
+                      DEPARTURE IN CALCULATING...
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col items-start md:items-end gap-2 w-full md:w-auto">
+                    <div class="font-serif font-bold text-gold text-lg">₦${b.price.toLocaleString()}</div>
+                    
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <button 
+                        class="btn-secondary text-xs py-1.5 px-3 font-semibold"
+                        onclick="window.openTransportRescheduleModal('${b.id}')"
+                      >
+                        📅 Reschedule
+                      </button>
+
+                      <button 
+                        class="btn-secondary text-xs py-1.5 px-3 font-semibold"
+                        onclick="window.openServiceFeedbackModal('TRANSPORTATION')"
+                      >
+                        ⭐ Rate Ride
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
         `}
       </div>
+
+      <!-- Reschedule Modal -->
+      ${showTransportRescheduleModal ? `
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="glass-panel-gold max-w-md w-full p-6 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in">
+            <h3 class="font-serif text-lg text-white font-bold mb-2">Reschedule Departure</h3>
+            <p class="text-xs text-slate-300 mb-4">Select your updated departure date and time for booking <strong>#${showTransportRescheduleModal}</strong>.</p>
+            
+            <div class="flex flex-col gap-3 mb-6">
+              <div>
+                <label class="block text-xs font-bold text-gold mb-1">New Departure Date:</label>
+                <input type="date" id="resched-date-${showTransportRescheduleModal}" value="${new Date().toISOString().slice(0, 10)}" class="input-custom text-xs py-2" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gold mb-1">New Departure Time:</label>
+                <select id="resched-time-${showTransportRescheduleModal}" class="input-custom text-xs py-2">
+                  <option value="09:00 AM">09:00 AM</option>
+                  <option value="11:30 AM" selected>11:30 AM</option>
+                  <option value="01:30 PM">01:30 PM</option>
+                  <option value="03:30 PM">03:30 PM</option>
+                  <option value="05:30 PM">05:30 PM</option>
+                  <option value="08:00 PM">08:00 PM</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+              <button class="btn-secondary text-xs py-2 px-4" onclick="window.closeTransportRescheduleModal()">Cancel</button>
+              <button class="btn-primary text-xs py-2 px-5 font-bold" onclick="window.submitTransportReschedule('${showTransportRescheduleModal}')">Confirm New Time</button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Transport Review Modal -->
+      ${showTransportReviewModal ? `
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="glass-panel-gold max-w-lg w-full p-6 sm:p-8 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in">
+            <div class="flex items-center justify-between pb-3 border-b border-gold/30 mb-4">
+              <h3 class="font-serif text-lg text-white font-bold">Review Chauffeur Booking</h3>
+              <span class="badge-gold text-xs">Suite #${guest.roomNumber}</span>
+            </div>
+
+            <div class="flex flex-col gap-2.5 text-xs text-slate-300 mb-6">
+              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
+                <span>Journey Type:</span>
+                <strong class="text-white">${isCharter ? 'Full-Day Charter (12 Hours)' : 'One-Time Transfer'}</strong>
+              </div>
+              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
+                <span>Destination / Zone:</span>
+                <strong class="text-gold">${isCharter ? selectedZone.name + ' (Charter Base)' : selectedZone.name}</strong>
+              </div>
+              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
+                <span>Vehicle Class:</span>
+                <strong class="text-white">${selectedVehicle.name} (${selectedVehicle.models})</strong>
+              </div>
+              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
+                <span>Departure Schedule:</span>
+                <strong class="text-white">${selectedDepartureDate} at ${selectedDepartureTime}</strong>
+              </div>
+              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
+                <span>Passengers:</span>
+                <strong class="text-white">${selectedPassengers} Guests</strong>
+              </div>
+              <div class="flex justify-between p-3 rounded-xl bg-navy-950 border border-gold/40 text-sm font-bold text-white mt-2">
+                <span>Total Fare (Charged to Folio):</span>
+                <span class="text-gold text-base">₦${calculatedFare.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+              <button class="btn-secondary text-xs py-2.5 px-4" onclick="window.closeTransportBookingReview()">Back to Edit</button>
+              <button class="btn-primary text-xs py-2.5 px-6 font-bold" onclick="window.confirmTransportBooking()">Confirm & Dispatch Driver →</button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Service Feedback Modal -->
+      ${showFeedbackModal ? `
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="glass-panel-gold max-w-md w-full p-6 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in">
+            <h3 class="font-serif text-lg text-white font-bold mb-2">Guest Service Feedback</h3>
+            <p class="text-xs text-slate-300 mb-4">How was your ${showFeedbackModal.serviceType.toLowerCase()} experience today?</p>
+            
+            <div class="flex justify-center gap-2 text-2xl mb-4" id="rating-stars">
+              <button class="cursor-pointer bg-transparent border-none" onclick="window.submitServiceFeedback('${showFeedbackModal.serviceType}', 5, 'YES')">⭐⭐⭐⭐⭐</button>
+            </div>
+
+            <div class="flex flex-col gap-3 mb-4">
+              <textarea id="feedback-comment" class="input-custom text-xs py-2" rows="3" placeholder="Any comments, compliments or areas of improvement for Tolani and management..."></textarea>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <button class="btn-secondary text-xs py-2 px-4" onclick="window.closeServiceFeedbackModal()">Close</button>
+              <button class="btn-primary text-xs py-2 px-5 font-bold" onclick="window.submitServiceFeedback('${showFeedbackModal.serviceType}', 5, 'YES', null, document.getElementById('feedback-comment')?.value)">Submit Feedback</button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
 
     </div>
   `;
 }
 
-// 6. CONCIERGE & PORTER (Isolated Porter Workflow - Sections 17-20)
+// 6. CONCIERGE & PORTER (Clean Luggage Handling & Polished Tolani Voice Language)
 function renderConciergeSection(guest) {
   return `
-    <div class="max-w-3xl mx-auto flex flex-col gap-6">
+    <div class="max-w-3xl mx-auto flex flex-col gap-6 animate-fade-in">
       
       <div class="glass-panel p-6 sm:p-8 rounded-2xl">
         <div class="flex items-center justify-between pb-4 border-b border-gold/20 mb-6 gap-4 flex-wrap">
@@ -1998,7 +2467,7 @@ function renderConciergeSection(guest) {
           </div>
           <button 
             class="intercom-pill-btn"
-            onclick="window.activateAmaraIntercom('CONCIERGE_PORTER', 'Concierge & Porter')"
+            onclick="window.activateTolaniIntercom('CONCIERGE_PORTER', 'Concierge & Porter')"
             title="Direct Intercom for Porter & Concierge"
           >
             ${renderIntercomRoundBadge(18)}
@@ -2006,7 +2475,7 @@ function renderConciergeSection(guest) {
           </button>
         </div>
 
-        <!-- REDESIGNED LUXURY PORTER SERVICE CARDS (Spec #23 - #27) -->
+        <!-- LUXURY PORTER SERVICE CARDS -->
         <div class="mb-6">
           <div class="flex items-center justify-between mb-3.5">
             <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase flex items-center gap-2">
@@ -2080,7 +2549,7 @@ function renderConciergeSection(guest) {
           </div>
         </div>
 
-        <!-- Other Concierge Services (Including Dining, Wakeup, Tours, Pressing) -->
+        <!-- Other Concierge Services -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="glass-panel-subtle p-4 rounded-xl border border-white/10 flex flex-col justify-between">
             <div>
