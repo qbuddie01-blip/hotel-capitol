@@ -3,7 +3,7 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V3';
+const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V5';
 
 // Initial seed demo state
 const defaultState = {
@@ -923,10 +923,12 @@ class StateStore {
 
   loadState() {
     try {
-      // Purge legacy outdated cache keys so browser loads Amara configuration cleanly
+      // Purge legacy outdated cache keys so browser loads fresh FSM configuration cleanly
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V1');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V2');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V3');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V4');
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           return JSON.parse(saved);

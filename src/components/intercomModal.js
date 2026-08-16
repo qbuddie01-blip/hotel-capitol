@@ -147,19 +147,19 @@ export function initIntercom() {
       if (channel === 'kitchen-fb') {
         relaySender = 'Chef Babatunde Adele';
         relayRole = 'Executive Head Chef';
-        replyText = `Kitchen station receiving for ${senderName}. Culinary preparation is in progress.`;
+        replyText = `Kitchen station acknowledges ${senderName}. Please place your order selection in the dining tray to confirm.`;
       } else if (channel === 'housekeeping') {
         relaySender = 'Amara Nwosu';
         relayRole = 'Head of Housekeeping';
-        replyText = `Housekeeping copies ${senderName}. Room linens and replenishment have been assigned for immediate delivery.`;
+        replyText = `Housekeeping station copies ${senderName}. Attendants standing by for your room request.`;
       } else if (channel === 'concierge-frontdesk') {
         relaySender = 'Lead Concierge Ibrahim';
         relayRole = 'Chief Concierge';
-        replyText = `Concierge desk copies. Airport transfer and VIP arrangements are actively being coordinated.`;
+        replyText = `Concierge desk copies ${senderName}. Standing by to assist with your suite needs.`;
       } else if (channel === 'emergency-security') {
         relaySender = 'Security Lead Officer';
         relayRole = 'Head of Security';
-        replyText = `🚨 Security control center confirms priority dispatch. Duty officers dispatched.`;
+        replyText = `🚨 Security control center confirms priority dispatch for Suite #402.`;
       }
 
       const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });

@@ -1,10 +1,67 @@
 /**
- * HOTEL CAPITOL AI — AMARA: GUEST VOICE CONCIERGE & SERVICE ORCHESTRATION ENGINE
+ * HOTEL CAPITOL AI — AMARA: ISOLATED FINITE-STATE MACHINE & SERVICE ORCHESTRATION ENGINE
  * 6 Animashaun Close, Ikeja, Lagos
- * Master AI Prompt, Voice Persona, 10 Service Workflows & Audio Alerts
+ * 
+ * CORE PRINCIPLE:
+ * AMARA LISTENS → UNDERSTANDS → OPENS REAL UI → GUEST SELECTS → REVIEW → CONFIRM → DISPATCH → REAL BACKEND STATUS
  */
 
 import { store } from '../store/state.js';
+
+// Central Amara UI Action Constants
+export const AMARA_ACTIONS = {
+  OPEN_RESTAURANT_MENU: 'OPEN_RESTAURANT_MENU',
+  OPEN_BREAKFAST_MENU: 'OPEN_BREAKFAST_MENU',
+  OPEN_DRINKS: 'OPEN_DRINKS',
+  OPEN_SNACKS: 'OPEN_SNACKS',
+  OPEN_DESSERTS: 'OPEN_DESSERTS',
+  OPEN_EXTRAS: 'OPEN_EXTRAS',
+  OPEN_PORTER_OPTIONS: 'OPEN_PORTER_OPTIONS',
+  OPEN_CONCIERGE_OPTIONS: 'OPEN_CONCIERGE_OPTIONS',
+  OPEN_TRANSPORTATION_OPTIONS: 'OPEN_TRANSPORTATION_OPTIONS',
+  OPEN_HOUSEKEEPING_OPTIONS: 'OPEN_HOUSEKEEPING_OPTIONS',
+  OPEN_FOLIO: 'OPEN_FOLIO',
+  OPEN_AMENITIES: 'OPEN_AMENITIES',
+  OPEN_NEARBY: 'OPEN_NEARBY',
+  OPEN_FRONT_DESK: 'OPEN_FRONT_DESK',
+  SHOW_ORDER_SUMMARY: 'SHOW_ORDER_SUMMARY',
+  SHOW_REQUEST_SUMMARY: 'SHOW_REQUEST_SUMMARY',
+  ADD_ITEM_TO_DRAFT: 'ADD_ITEM_TO_DRAFT',
+  REMOVE_ITEM_FROM_DRAFT: 'REMOVE_ITEM_FROM_DRAFT',
+  SUBMIT_REQUEST: 'SUBMIT_REQUEST'
+};
+
+// Isolated Service Keys
+export const SERVICES = {
+  GENERAL: 'GENERAL',
+  RESTAURANT: 'RESTAURANT',
+  BREAKFAST: 'BREAKFAST',
+  HOUSEKEEPING: 'HOUSEKEEPING',
+  CONCIERGE_PORTER: 'CONCIERGE_PORTER',
+  VIP_TRANSPORTATION: 'VIP_TRANSPORTATION',
+  FOLIO: 'FOLIO',
+  AMENITIES: 'AMENITIES',
+  NEAR_HOTEL: 'NEAR_HOTEL',
+  FRONT_DESK: 'FRONT_DESK'
+};
+
+// Conversation Lifecycle States
+export const CONV_STATES = {
+  IDLE: 'IDLE',
+  ACTIVATED: 'ACTIVATED',
+  GREETING: 'GREETING',
+  LISTENING: 'LISTENING',
+  UNDERSTANDING: 'UNDERSTANDING',
+  SHOWING_OPTIONS: 'SHOWING_OPTIONS',
+  COLLECTING_SELECTION: 'COLLECTING_SELECTION',
+  REVIEWING: 'REVIEWING',
+  AWAITING_CONFIRMATION: 'AWAITING_CONFIRMATION',
+  SUBMITTING: 'SUBMITTING',
+  WAITING_FOR_DEPARTMENT: 'WAITING_FOR_DEPARTMENT',
+  IN_PROGRESS: 'IN_PROGRESS',
+  READY: 'READY',
+  COMPLETED: 'COMPLETED'
+};
 
 export class HotelCapitolAI {
   constructor() {
@@ -12,9 +69,22 @@ export class HotelCapitolAI {
     this.isListening = false;
     this.recognition = null;
     this.currentVoice = null;
-    this.lastContext = 'general';
-    this.clarificationAttempts = 0;
-    this.upsellOffered = {}; // Tracks 1 upsell per session/order
+    
+    // Explicit Isolated Service Context Object
+    this.context = {
+      currentGuest: 'Chief Adeleke Babalola',
+      currentRoom: '402',
+      currentCard: 'General Portal',
+      currentService: SERVICES.GENERAL,
+      currentIntent: null,
+      currentRequest: null,
+      currentRequestId: null,
+      currentDepartment: 'FRONT_DESK',
+      currentStatus: 'IDLE',
+      conversationState: CONV_STATES.IDLE
+    };
+
+    this.upsellOffered = {}; // Tracks 1 upsell per dining session
     this.setupSpeechRecognition();
     this.setupVoiceSelection();
   }
@@ -26,7 +96,7 @@ export class HotelCapitolAI {
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = false;
         this.recognition.interimResults = false;
-        this.recognition.lang = 'en-NG'; // Nigerian English context
+        this.recognition.lang = 'en-NG'; // Nigerian English
       }
     }
   }
@@ -42,39 +112,37 @@ export class HotelCapitolAI {
     }
   }
 
-  // Authentic Soft Female Nigerian English Voice Selector
   getNigerianFemaleVoice() {
     if (!this.speechSynth) return null;
     const voices = this.speechSynth.getVoices();
     if (!voices || voices.length === 0) return null;
 
-    // 1. Prioritize official Nigerian English Female voices (e.g. en-NG, Ebele, Blessing, Nigeria)
+    // 1. Official en-NG female voice
     const ngFemale = voices.find(v => 
-      (v.lang === 'en-NG' || v.lang === 'en_NG' || v.name.toLowerCase().includes('nigeria') || v.name.toLowerCase().includes('en-ng')) &&
+      (v.lang === 'en-NG' || v.lang === 'en_NG' || v.name.toLowerCase().includes('nigeria')) &&
       (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('ebele') || v.name.toLowerCase().includes('blessing') || !v.name.toLowerCase().includes('male'))
     );
     if (ngFemale) return ngFemale;
 
-    // 2. Any en-NG voice
+    // 2. Any en-NG
     const anyNg = voices.find(v => v.lang === 'en-NG' || v.lang === 'en_NG' || v.name.toLowerCase().includes('nigeria'));
     if (anyNg) return anyNg;
 
-    // 3. African / Commonwealth warm female voices (en-ZA, en-GH, en-GB, en-KE)
+    // 3. African / Commonwealth warm female
     const regionalFemale = voices.find(v => 
       (v.lang.startsWith('en-ZA') || v.lang.startsWith('en-GB') || v.lang.startsWith('en-IE') || v.lang.startsWith('en-AU')) &&
-      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('victoria') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('karen') || v.name.toLowerCase().includes('moira'))
+      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('victoria') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('karen'))
     );
     if (regionalFemale) return regionalFemale;
 
-    // 4. Natural female English voice fallback
+    // 4. Fallback female
     const femaleFallback = voices.find(v => 
       v.lang.startsWith('en') && 
-      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('karen') || v.name.toLowerCase().includes('hazel') || v.name.toLowerCase().includes('susan'))
+      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('hazel'))
     );
     return femaleFallback || voices.find(v => v.lang.startsWith('en')) || voices[0];
   }
 
-  // Voice synthesis speaking out responses with Amara's acoustic profile (concise, warm, composed)
   speak(text, onEnd = null) {
     if (!this.speechSynth) {
       onEnd && onEnd();
@@ -88,7 +156,6 @@ export class HotelCapitolAI {
 
     try {
       this.speechSynth.cancel();
-      // Clean markdown and symbols for pure, natural acoustic diction
       const cleanText = text
         .replace(/[*#•_`]/g, '')
         .replace(/₦/g, 'Naira ')
@@ -97,13 +164,11 @@ export class HotelCapitolAI {
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
       const voice = this.currentVoice || this.getNigerianFemaleVoice();
-      if (voice) {
-        utterance.voice = voice;
-      }
+      if (voice) utterance.voice = voice;
       
       utterance.lang = 'en-NG';
-      utterance.rate = 0.94;   // Calm, articulate pace
-      utterance.pitch = 1.12;  // Soft, warm feminine pitch
+      utterance.rate = 0.94;
+      utterance.pitch = 1.12;
 
       if (onEnd) {
         utterance.onend = () => { onEnd(); };
@@ -117,7 +182,6 @@ export class HotelCapitolAI {
     }
   }
 
-  // Start voice dictation
   listen(onResult, onEnd, onError) {
     if (!this.recognition) {
       onError && onError('Speech recognition not supported in this browser. Please use text input.');
@@ -157,34 +221,79 @@ export class HotelCapitolAI {
     }
   }
 
-  // Section 3 & 20/21: Dynamic Context-Aware Core Greeting
-  getGreeting(context = null) {
+  // --- SERVICE ISOLATION & CONTEXT INITIALIZATION ---
+
+  /**
+   * Sets the active isolated service context when guest clicks an Intercom or card AI trigger.
+   * Completely resets any prior foreign service state.
+   */
+  setServiceContext(serviceKey = SERVICES.GENERAL, cardTitle = 'General Portal') {
+    const guest = store.getActiveGuest();
+    const guestName = guest ? guest.name : 'Valued Guest';
+    const roomNumber = guest ? guest.roomNumber : '402';
+
+    let department = 'FRONT_DESK';
+    if (serviceKey === SERVICES.RESTAURANT || serviceKey === SERVICES.BREAKFAST) {
+      department = 'KITCHEN';
+    } else if (serviceKey === SERVICES.HOUSEKEEPING) {
+      department = 'HOUSEKEEPING';
+    } else if (serviceKey === SERVICES.CONCIERGE_PORTER) {
+      department = 'PORTER';
+    } else if (serviceKey === SERVICES.VIP_TRANSPORTATION) {
+      department = 'TRANSPORTATION';
+    }
+
+    this.context = {
+      currentGuest: guestName,
+      currentRoom: roomNumber,
+      currentCard: cardTitle,
+      currentService: serviceKey,
+      currentIntent: null,
+      currentRequest: null,
+      currentRequestId: null,
+      currentDepartment: department,
+      currentStatus: 'IDLE',
+      conversationState: CONV_STATES.ACTIVATED
+    };
+
+    return this.context;
+  }
+
+  // --- GREETING ENGINE (Context-Aware, Waits for Guest) ---
+  getGreetingForContext(serviceKey = null) {
     const guest = store.getActiveGuest();
     const guestName = guest ? guest.name : 'Valued Guest';
     const hour = new Date().getHours();
-    
-    // 1. Context-Aware Card Intercom Greetings
-    if (context === 'restaurant') {
-      return `Hello, ${guestName}. I see you're exploring our dining options. How may I assist you with your order?`;
-    } else if (context === 'breakfast') {
-      return `Good morning, ${guestName}. I see you're arranging breakfast. Would you like me to assist you with your selection?`;
-    } else if (context === 'room-service' || context === 'housekeeping') {
+    const s = serviceKey || this.context.currentService;
+
+    if (s === SERVICES.RESTAURANT) {
+      return `Hello, ${guestName}. I'm Amara, your Hotel Capitol concierge. I see you're exploring our dining options. How may I assist you today?`;
+    }
+    if (s === SERVICES.BREAKFAST) {
+      return `Good morning, ${guestName}. I'm Amara, your Hotel Capitol concierge. I see you're arranging breakfast. How may I assist you?`;
+    }
+    if (s === SERVICES.HOUSEKEEPING) {
       return `I'm here to assist with your room, ${guestName}. Would you like to request housekeeping, fresh towels, or another room amenity?`;
-    } else if (context === 'transport') {
-      return `I'd be happy to assist with your transportation arrangements, ${guestName}. Where would you like to go?`;
-    } else if (context === 'concierge') {
-      return `Good day, ${guestName}. Your concierge team is at your service. What may I arrange for you?`;
-    } else if (context === 'folio') {
+    }
+    if (s === SERVICES.CONCIERGE_PORTER) {
+      return `Hello, ${guestName}. I'm Amara, your Hotel Capitol concierge. Our concierge team is at your service. How may I assist you?`;
+    }
+    if (s === SERVICES.VIP_TRANSPORTATION) {
+      return `Good day, ${guestName}. I'd be happy to assist with your transportation arrangements. Where would you like to go?`;
+    }
+    if (s === SERVICES.FOLIO) {
       return `I can help you review your current Hotel Capitol folio, ${guestName}. What would you like to know?`;
-    } else if (context === 'nearby') {
-      return `Certainly, ${guestName}. I can help you discover places and services around Hotel Capitol.`;
-    } else if (context === 'info') {
-      return `I'd be delighted to help you with information about Hotel Capitol's facilities and amenities, ${guestName}.`;
-    } else if (context === 'contact') {
-      return `Certainly, ${guestName}. I'll help you contact our front desk team.`;
+    }
+    if (s === SERVICES.AMENITIES) {
+      return `I'd be delighted to help you with information about Hotel Capitol's facilities and WiFi amenities, ${guestName}.`;
+    }
+    if (s === SERVICES.NEAR_HOTEL) {
+      return `Certainly, ${guestName}. I can help you discover verified restaurants, nightlife, and cultural spots around Ikeja.`;
+    }
+    if (s === SERVICES.FRONT_DESK) {
+      return `Good day, ${guestName}. I am Amara, your Hotel Capitol concierge. I'll connect you directly with our Front Desk team. How may we assist you today?`;
     }
 
-    // 2. Standard Time-Adjusted Greetings
     if (hour < 12) {
       return `Good morning, ${guestName}. Welcome to Hotel Capitol. I'm Amara, your personal concierge. It is my pleasure to assist you this morning. How may I help you?`;
     } else if (hour < 17) {
@@ -194,400 +303,266 @@ export class HotelCapitolAI {
     }
   }
 
-  // Automated Voice Welcome when Guest launches Amara
-  startGuestVoiceWelcome(context = null, onSpeechReady = null) {
-    this.lastContext = context || 'general';
-    const welcomeText = this.getGreeting(context);
-    const guest = store.getActiveGuest();
-    const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  // --- INTENT CLASSIFICATION LAYER ---
+  classifyIntent(query, currentService) {
+    const q = query.toLowerCase().trim();
 
-    // Append greeting to conversation if brand new or context switched
-    if (guest) {
-      const welcomeMsg = { id: 'msg-' + Date.now(), sender: 'ai', time: nowTime, text: welcomeText };
-      store.setState(s => ({
-        ...s,
-        guests: s.guests.map(g => g.id === guest.id ? {
-          ...g,
-          aiConversations: [...(g.aiConversations || []), welcomeMsg]
-        } : g)
-      }));
+    // Frustration
+    if (q.includes('frustrat') || q.includes('angry') || q.includes('annoyed') || q.includes('stupid') || q.includes('useless') || q.includes('terrible') || q.includes('bad service')) {
+      return { intent: 'FRUSTRATION', service: SERVICES.FRONT_DESK, department: 'FRONT_DESK' };
     }
 
-    // Speak welcome prompt and trigger listening when finished
-    this.speak(welcomeText, () => {
-      if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
-        window.hotelCapitolAutomation.playChime('listen-start');
-      }
-      onSpeechReady && onSpeechReady();
-    });
+    // Human Handoff / Reception
+    if (q.includes('human') || q.includes('speak to reception') || q.includes('talk to someone') || q.includes('front desk') || q.includes('operator')) {
+      return { intent: 'HUMAN_HANDOFF', service: SERVICES.FRONT_DESK, department: 'FRONT_DESK' };
+    }
+
+    // Gratitude / Thank you
+    if (q === 'thank you' || q === 'thanks' || q === 'thank you amara' || q === 'thanks amara' || q === 'appreciate it') {
+      return { intent: 'THANK_YOU', service: currentService, department: this.context.currentDepartment };
+    }
+
+    // Negative / No thanks
+    if (q === 'no' || q === 'no thanks' || q === 'nope' || q === 'not now' || q === 'leave it') {
+      return { intent: 'NO_THANKS', service: currentService, department: this.context.currentDepartment };
+    }
+
+    // 1. Luggage Assistance / Porter (Strictly PORTER, Never Transportation)
+    if (q.includes('luggage') || q.includes('bag') || q.includes('carry bag') || q.includes('porter') || q.includes('suitcase') || q.includes('help with my luggage')) {
+      return { intent: 'LUGGAGE_ASSISTANCE', service: SERVICES.CONCIERGE_PORTER, department: 'PORTER' };
+    }
+
+    // 2. VIP Transportation / Car / Driver
+    if (q.includes('taxi') || q.includes('airport pickup') || q.includes('airport drop') || q.includes('driver') || q.includes('car to') || q.includes('need a car') || q.includes('uber') || q.includes('mma2') || q.includes('chauffeur') || q.includes('transfer')) {
+      return { intent: 'VIP_TRANSPORTATION', service: SERVICES.VIP_TRANSPORTATION, department: 'TRANSPORTATION' };
+    }
+
+    // 3. Breakfast Request
+    if (q.includes('breakfast') || q.includes('morning meal') || q.includes('pancake') || q.includes('egg and yam')) {
+      return { intent: 'ORDER_BREAKFAST', service: SERVICES.BREAKFAST, department: 'KITCHEN' };
+    }
+
+    // 4. Restaurant & Dining / Food Request
+    if (q.includes('food') || q.includes('menu') || q.includes('hungry') || q.includes('dinner') || q.includes('lunch') || q.includes('restaurant') || q.includes('jollof') || q.includes('suya') || q.includes('eat') || q.includes('order food') || q.includes('drink') || q.includes('chapman') || q.includes('dessert') || q.includes('snack')) {
+      return { intent: 'ORDER_FOOD', service: SERVICES.RESTAURANT, department: 'KITCHEN' };
+    }
+
+    // 5. Housekeeping & Room Cleaning / Towels
+    if (q.includes('towel') || q.includes('clean') || q.includes('linen') || q.includes('bed sheet') || q.includes('water') || q.includes('pillow') || q.includes('toiletries') || q.includes('soap') || q.includes('insecticide') || q.includes('room service')) {
+      return { intent: 'HOUSEKEEPING_REQUEST', service: SERVICES.HOUSEKEEPING, department: 'HOUSEKEEPING' };
+    }
+
+    // 6. Folio / Bill Check
+    if (q.includes('bill') || q.includes('folio') || q.includes('balance') || q.includes('charge') || q.includes('receipt') || q.includes('invoice')) {
+      return { intent: 'VIEW_FOLIO', service: SERVICES.FOLIO, department: 'FRONT_DESK' };
+    }
+
+    // 7. WiFi & Amenities
+    if (q.includes('wifi') || q.includes('password') || q.includes('internet') || q.includes('pool') || q.includes('gym') || q.includes('fitness')) {
+      return { intent: 'VIEW_AMENITIES', service: SERVICES.AMENITIES, department: 'FRONT_DESK' };
+    }
+
+    // 8. Near Hotel / Local Ikeja Recommendations
+    if (q.includes('nearby') || q.includes('ikeja') || q.includes('barber') || q.includes('salon') || q.includes('nightlife') || q.includes('fela') || q.includes('shrine') || q.includes('supermarket')) {
+      return { intent: 'VIEW_NEARBY', service: SERVICES.NEAR_HOTEL, department: 'CONCIERGE' };
+    }
+
+    // Default: contextual continuation or general inquiry
+    return { intent: 'GENERAL_INQUIRY', service: currentService, department: this.context.currentDepartment };
   }
 
-  // Section 23: Multi-Intent Parser & Service Orchestrator
+  // --- WORKFLOW EXECUTION ENGINE ---
+
+  /**
+   * Main conversational turn processor.
+   * Enforces MENU-FIRST / OPTIONS-FIRST principle.
+   * Returns text response, voiceText, actionType, and actionPayload to execute visible UI changes.
+   */
   processGuestQuery(userQuery) {
-    const state = store.getState();
     const guest = store.getActiveGuest();
-    const q = userQuery.toLowerCase().trim();
-    const guestName = guest ? guest.name : 'Guest';
+    const guestName = guest ? guest.name : 'Valued Guest';
     const roomNumber = guest ? guest.roomNumber : '402';
+    const q = userQuery.toLowerCase().trim();
+
+    // 1. Intent Detection
+    const { intent, service, department } = this.classifyIntent(userQuery, this.context.currentService);
+    
+    // Update active service context to match detected intent
+    this.context.currentService = service;
+    this.context.currentDepartment = department;
+    this.context.currentIntent = intent;
 
     let response = {
       text: '',
       voiceText: '',
       actionType: null,
       actionPayload: null,
-      serviceRequest: null,
-      secondaryRequests: []
+      serviceContext: { ...this.context }
     };
 
-    // --- Section 34: GUEST FRUSTRATION PROTOCOL ---
-    if (q.includes('frustrat') || q.includes('angry') || q.includes('annoyed') || q.includes('stupid') || q.includes('useless') || q.includes('terrible') || q.includes('bad service')) {
-      const resp = `I'm sorry this has been frustrating, ${guestName}. Let me make this easier for you. I can connect you directly with our Hotel Capitol team, or I can continue assisting you here. Which would you prefer?`;
-      response.text = resp;
-      response.voiceText = resp;
-      response.actionType = 'NAV_CONTACT';
+    // --- A. FRUSTRATION PROTOCOL ---
+    if (intent === 'FRUSTRATION') {
+      const msg = `I'm sorry this has been frustrating, ${guestName}. Let me make this easier for you. I can connect you directly with our Hotel Capitol Front Desk team (Ext 0), or assist you step-by-step here. Which would you prefer?`;
+      response.text = msg;
+      response.voiceText = msg;
+      response.actionType = AMARA_ACTIONS.OPEN_FRONT_DESK;
       return response;
     }
 
-    // --- Section 31: THANK YOU HANDLING ---
-    if (q === 'thank you' || q === 'thanks' || q === 'thank you amara' || q === 'thanks amara' || q === 'appreciate it') {
-      const responses = [
-        `It is my pleasure, ${guestName}. Please let me know if there is anything else I may arrange for you.`,
-        `You're most welcome, ${guestName}. I'm always happy to assist you.`,
-        `My pleasure. I am here whenever you need me during your stay at Hotel Capitol.`
-      ];
-      const resp = responses[Math.floor(Math.random() * responses.length)];
-      response.text = resp;
-      response.voiceText = resp;
+    // --- B. HUMAN HANDOFF ---
+    if (intent === 'HUMAN_HANDOFF') {
+      const voiceMsg = `Certainly, ${guestName}. I am connecting you directly with the Hotel Capitol Front Desk team now.`;
+      response.text = `Certainly, ${guestName}. I am connecting you directly with the **Hotel Capitol Front Desk** team (Extension 0 / Reception Supervisor Tariq). A staff member is on standby to assist Suite #${roomNumber}.`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_FRONT_DESK;
       return response;
     }
 
-    // --- Section 30: IF GUEST SAYS NO ---
-    if (q === 'no' || q === 'no thanks' || q === 'nope' || q === 'not now' || q === 'leave it') {
-      const resp = `Of course, ${guestName}. No problem at all. Your current request will remain unchanged. Please let me know if you need anything else.`;
-      response.text = resp;
-      response.voiceText = resp;
+    // --- C. THANK YOU ---
+    if (intent === 'THANK_YOU') {
+      const msg = `It is my pleasure, ${guestName}. Please let me know if there is anything else I may arrange for your stay.`;
+      response.text = msg;
+      response.voiceText = msg;
       return response;
     }
 
-    // --- Section 33: HUMAN HANDOFF ---
-    if (q.includes('human') || q.includes('speak to reception') || q.includes('talk to someone') || q.includes('manager') || q.includes('front desk') || q.includes('operator')) {
-      const resp = `Certainly, ${guestName}. I am connecting you directly with the Hotel Capitol Front Desk team now.`;
-      response.text = `Certainly, ${guestName}. I am connecting you directly with the **Hotel Capitol Front Desk** team (Extension 0 / Reception Supervisor Tariq). A staff member is on standby to assist you.`;
-      response.voiceText = resp;
-      response.actionType = 'NAV_CONTACT';
-      
-      if (typeof window !== 'undefined' && window.openDirectIntercomCall) {
-        setTimeout(() => {
-          window.openDirectIntercomCall('concierge-frontdesk', 'Front Desk Reception', 'Supervisor Tariq');
-        }, 1200);
-      }
+    // --- D. NO THANKS ---
+    if (intent === 'NO_THANKS') {
+      const msg = `Of course, ${guestName}. Your current request will remain unchanged. Please let me know whenever you need assistance.`;
+      response.text = msg;
+      response.voiceText = msg;
       return response;
     }
 
-    // --- Section 23: MULTI-REQUEST DETECTION ---
-    const isMultiRequest = (q.includes(' and ') || q.includes(' also ') || q.includes(' then ')) && 
-      (q.includes('breakfast') || q.includes('towel') || q.includes('taxi') || q.includes('water') || q.includes('clean') || q.includes('food'));
+    // --- 1. RESTAURANT & DINING WORKFLOW (Sections 4-12) ---
+    if (service === SERVICES.RESTAURANT || intent === 'ORDER_FOOD') {
+      this.context.conversationState = CONV_STATES.SHOWING_OPTIONS;
+      this.context.currentStatus = 'IDLE';
 
-    if (isMultiRequest) {
-      const createdRequests = [];
+      // Check if specific items are named
+      let specificItem = null;
+      if (q.includes('jollof')) specificItem = 'Capitol Signature Jollof Fiesta';
+      else if (q.includes('suya')) specificItem = 'Prime Grilled Beef Suya Skewers';
+      else if (q.includes('chapman')) specificItem = 'Hotel Capitol Signature Chapman';
 
-      // Check sub-intents
-      if (q.includes('breakfast')) {
-        createdRequests.push(store.createServiceRequest('Kitchen & F&B', 'Gourmet Breakfast Service', `Multi-Intent Request: Breakfast for Suite #${roomNumber}`, 'NORMAL', 'Chef Babatunde Adele', 'Kitchen'));
-      }
-      if (q.includes('towel') || q.includes('water') || q.includes('clean') || q.includes('housekeeping')) {
-        const itemTitle = q.includes('towel') ? 'Fresh Luxury Towels' : q.includes('water') ? 'Bottled Spring Water' : 'Suite Refresh';
-        createdRequests.push(store.createServiceRequest('Housekeeping', itemTitle, `Multi-Intent Request: ${itemTitle} for Suite #${roomNumber}`, 'HIGH', 'Amara Nwosu', 'Housekeeping'));
-      }
-      if (q.includes('taxi') || q.includes('airport') || q.includes('transport') || q.includes('car')) {
-        createdRequests.push(store.createServiceRequest('Concierge', 'VIP Chauffeur Transfer', `Multi-Intent Request: Airport Transit for Suite #${roomNumber}`, 'HIGH', 'Ibrahim Bello', 'Concierge'));
-      }
-
-      if (createdRequests.length > 1) {
-        const summary = createdRequests.map(r => `• **${r.title}** (${r.department} - ${r.id})`).join('\n');
-        const voiceResp = `Certainly, ${guestName}. I have arranged each of your requests for Suite ${roomNumber}, and notified the responsible hotel departments.`;
+      if (specificItem) {
+        // Add to draft and show menu
+        this.context.currentRequest = { item: specificItem, status: 'DRAFT' };
+        this.context.conversationState = CONV_STATES.COLLECTING_SELECTION;
         
-        response.text = `Certainly, ${guestName}. I have organized your requests and dispatched tickets to the respective departments:\n${summary}\n\nOur team is attending to each one promptly.`;
-        response.voiceText = voiceResp;
-        response.serviceRequest = createdRequests[0];
-        response.secondaryRequests = createdRequests.slice(1);
-        response.actionType = 'SERVICE_CREATED';
-
-        if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
-          window.hotelCapitolAutomation.showToast('✅ Multi-Service Dispatched', `${createdRequests.length} requests confirmed and sent to staff departments.`, 'success');
-        }
-        return response;
-      }
-    }
-
-    // --- Section 7 & 8 & 9: RESTAURANT & DINING ---
-    if (q.includes('food') || q.includes('menu') || q.includes('hungry') || q.includes('dinner') || q.includes('lunch') || q.includes('restaurant') || q.includes('order') || q.includes('jollof') || q.includes('suya') || q.includes('soup') || q.includes('drink') || q.includes('chapman') || q.includes('sandwich') || q.includes('eat')) {
-      const itemTitle = q.includes('suya') ? 'Prime Grilled Suya Platter' : q.includes('jollof') ? 'Capitol Smoky Jollof Fiesta' : q.includes('chapman') ? 'Hotel Capitol Signature Chapman' : 'Gourmet In-Room Dining Order';
-      
-      const newReq = store.createServiceRequest(
-        'Kitchen & F&B',
-        itemTitle,
-        `Guest Order via Amara: "${userQuery}" for Suite #${roomNumber}`,
-        'HIGH',
-        'Chef Babatunde Adele',
-        'Kitchen'
-      );
-
-      // Section 8: 1 Complementary Suggestion / Upsell Logic
-      let upsellText = '';
-      let voiceUpsell = '';
-      if (!this.upsellOffered[roomNumber] && !q.includes('chapman') && !q.includes('drink')) {
-        this.upsellOffered[roomNumber] = true;
-        upsellText = `\n\n💡 *Would you like to add a refreshing Hotel Capitol Signature Chapman or dessert to your order?*`;
-        voiceUpsell = ` Would you like to add a refreshing drink or dessert?`;
-      }
-
-      const voiceResp = `Thank you, ${guestName}. I have received your order for ${itemTitle} and confirmed it with our kitchen. Estimated preparation time is ${newReq.targetMinutes} minutes.${voiceUpsell}`;
-      
-      response.text = `Thank you, ${guestName}. I have received your order for **${itemTitle}** for Suite **#${roomNumber}**. I have confirmed it with **Executive Chef Babatunde** (**${newReq.id}**). Estimated preparation time is **${newReq.targetMinutes} minutes**.${upsellText}`;
-      response.voiceText = voiceResp;
-      response.actionType = 'SERVICE_CREATED';
-      response.actionPayload = newReq;
-      response.serviceRequest = newReq;
-      
-      if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
-        window.hotelCapitolAutomation.showToast('🍽️ Kitchen Alert Dispatched', `Attention: New restaurant order from Room ${roomNumber}.`, 'success');
-        window.hotelCapitolAutomation.triggerStaffVoiceDispatch(newReq);
+        const voiceMsg = `Wonderful choice, ${guestName}. I've opened our dining menu with ${specificItem} ready. Please feel free to add drinks, sides or desserts to your tray.`;
+        response.text = `Wonderful choice, ${guestName}. I have opened our **Hotel Capitol Restaurant Menu** with **${specificItem}** selected. Please review your order tray, select any desired extras, and confirm when you are ready to send to our kitchen.`;
+        response.voiceText = voiceMsg;
+        response.actionType = AMARA_ACTIONS.OPEN_RESTAURANT_MENU;
+        response.actionPayload = { preselectItem: specificItem };
+      } else {
+        // Menu-First Principle
+        const voiceMsg = `It would be my pleasure, ${guestName}. I'm opening our dining menu for you now. Please select your meals, drinks, snacks or desserts.`;
+        response.text = `It would be my pleasure, ${guestName}. I have opened our **Hotel Capitol Restaurant Menu** for Suite **#${roomNumber}**.\n\nPlease select your preferred dishes from the menu below, add any artisan extras, and confirm when you are ready to dispatch your order to Executive Chef Babatunde.`;
+        response.voiceText = voiceMsg;
+        response.actionType = AMARA_ACTIONS.OPEN_RESTAURANT_MENU;
       }
       return response;
     }
 
-    // --- Section 10: BREAKFAST SERVICE ---
-    if (q.includes('breakfast') || q.includes('morning meal') || q.includes('pancake') || q.includes('tea') || q.includes('coffee') || q.includes('egg')) {
+    // --- 2. BREAKFAST SERVICE WORKFLOW (Sections 13-16) ---
+    if (service === SERVICES.BREAKFAST || intent === 'ORDER_BREAKFAST') {
+      this.context.conversationState = CONV_STATES.SHOWING_OPTIONS;
+      this.context.currentStatus = 'IDLE';
       const isFree = guest?.breakfastEntitlement === 'Complimentary';
-      
-      const newReq = store.createServiceRequest(
-        'Kitchen & F&B',
-        'Daily Gourmet Breakfast Service',
-        `Guest Breakfast Request via Amara: "${userQuery}" for Suite #${roomNumber}`,
-        'NORMAL',
-        'Chef Babatunde Adele',
-        'Kitchen'
-      );
 
-      const voiceResp = `Thank you, ${guestName}. Your breakfast request for Suite ${roomNumber} has been confirmed with our kitchen for prompt delivery.`;
-      
-      response.text = `Thank you, ${guestName}. I have logged your breakfast request for Suite **#${roomNumber}** (` + (isFree ? 'Complimentary' : 'Standard Folio') + `) and confirmed it with **Executive Chef Babatunde** (**${newReq.id}**). Delivery window is active between **06:00 AM and 10:00 AM**.`;
-      response.voiceText = voiceResp;
-      response.actionType = 'SERVICE_CREATED';
-      response.actionPayload = newReq;
-      response.serviceRequest = newReq;
-
-      if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
-        window.hotelCapitolAutomation.showToast('☕ Breakfast Confirmed', `Dispatched to Kitchen for Suite #${roomNumber}.`, 'success');
-        window.hotelCapitolAutomation.triggerStaffVoiceDispatch(newReq);
-      }
+      const voiceMsg = `Certainly, ${guestName}. I've opened our breakfast service. Please select your preferred breakfast entrée and delivery window between 6 and 10 AM.`;
+      response.text = `Certainly, ${guestName}. I have opened our **Daily Breakfast Service** for Suite **#${roomNumber}** (` + (isFree ? 'Complimentary' : 'Standard Folio') + `).\n\nPlease choose from **The English Royal Breakfast**, **The Naija Executive Breakfast**, or **Continental Basket**, select your delivery window (06:00 AM – 10:00 AM), and confirm your order.`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_BREAKFAST_MENU;
       return response;
     }
 
-    // --- Section 11: ROOM SERVICE & CLEANING ---
-    if (q.includes('clean') || q.includes('towel') || q.includes('toilet') || q.includes('sheet') || q.includes('linen') || q.includes('insecticide') || q.includes('room service') || q.includes('housekeeping') || q.includes('water') || q.includes('pillow') || q.includes('soap')) {
-      let targetDept = 'Housekeeping';
-      let targetStaff = 'Amara Nwosu';
-      let reqTitle = 'Extra Fresh Bath Towels & Room Refresh';
+    // --- 3. CONCIERGE & PORTER WORKFLOW (Sections 17-20) ---
+    // STRICT RULE: Luggage requests MUST route to PORTER, NEVER VIP_TRANSPORTATION
+    if (service === SERVICES.CONCIERGE_PORTER || intent === 'LUGGAGE_ASSISTANCE') {
+      this.context.conversationState = CONV_STATES.SHOWING_OPTIONS;
+      this.context.currentStatus = 'IDLE';
+      this.context.currentDepartment = 'PORTER';
 
-      if (q.includes('water')) {
-        reqTitle = 'Chilled Premium Bottled Spring Water (2 Bottles)';
-      } else if (q.includes('clean') || q.includes('housekeeping')) {
-        reqTitle = 'Full Suite Deep Cleaning & Turn-Down';
-      } else if (q.includes('linen') || q.includes('sheet') || q.includes('bed')) {
-        reqTitle = 'Fresh Egyptian Cotton Linen Change';
-      } else if (q.includes('pillow')) {
-        reqTitle = 'Extra Orthopedic Luxury Pillows';
-      } else if (q.includes('toilet') || q.includes('soap')) {
-        reqTitle = 'Premium Botanical Toiletries Kit';
-      }
-
-      const newReq = store.createServiceRequest(
-        targetDept,
-        reqTitle,
-        `Guest Housekeeping Request via Amara: "${userQuery}" for Suite #${roomNumber}`,
-        'HIGH',
-        targetStaff,
-        targetDept
-      );
-
-      const voiceResp = `Certainly, ${guestName}. I have arranged ${reqTitle} for Suite ${roomNumber}. Our housekeeping team will attend to your room shortly.`;
-      
-      response.text = `Certainly, ${guestName}. Your housekeeping ticket **${newReq.id}** for **${reqTitle}** has been dispatched to designated attendant **${targetStaff}**. Target delivery: **${newReq.targetMinutes} minutes**.`;
-      response.voiceText = voiceResp;
-      response.actionType = 'SERVICE_CREATED';
-      response.actionPayload = newReq;
-      response.serviceRequest = newReq;
-
-      if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
-        window.hotelCapitolAutomation.showToast('🛎️ Housekeeping Dispatched', `Attendant ${targetStaff} is attending to Suite #${roomNumber}.`, 'success');
-        window.hotelCapitolAutomation.triggerStaffVoiceDispatch(newReq);
-      }
+      const voiceMsg = `Certainly, ${guestName}. I'd be delighted to arrange porter assistance for you. Would you like our porter team to assist you in your room or at the main lobby?`;
+      response.text = `Certainly, ${guestName}. I'd be delighted to arrange porter assistance for you.\n\nWould you like our porter team to assist you **in your room (Suite #${roomNumber})** or **at the Main Lobby**? Please tap your preferred location below:`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_PORTER_OPTIONS;
+      response.actionPayload = { roomNumber };
       return response;
     }
 
-    // --- Section 12: VIP TRANSPORTATION ---
-    if (q.includes('airport') || q.includes('taxi') || q.includes('transport') || q.includes('car') || q.includes('driver') || q.includes('uber') || q.includes('ride') || q.includes('mma2') || q.includes('flight') || q.includes('transfer')) {
-      const newReq = store.createServiceRequest(
-        'Concierge',
-        'VIP Chauffeur Transfer (MMA2 Airport / Island)',
-        `Guest Transit Request via Amara: "${userQuery}" for Suite #${roomNumber}`,
-        'HIGH',
-        'Ibrahim Bello',
-        'Concierge'
-      );
+    // --- 4. VIP TRANSPORTATION WORKFLOW (Section 21) ---
+    // STRICT RULE: Only activates for car/driver/airport requests
+    if (service === SERVICES.VIP_TRANSPORTATION || intent === 'VIP_TRANSPORTATION') {
+      this.context.conversationState = CONV_STATES.SHOWING_OPTIONS;
+      this.context.currentStatus = 'IDLE';
+      this.context.currentDepartment = 'TRANSPORTATION';
 
-      const voiceResp = `Certainly, ${guestName}. I have submitted your VIP transportation request to Lead Concierge Ibrahim Bello. Our team will confirm vehicle and pickup details shortly.`;
-      
-      response.text = `Certainly, ${guestName}. I have submitted your **VIP Chauffeur Transfer** request (**${newReq.id}**) to **Lead Concierge Ibrahim Bello**. Our transportation team will confirm availability and driver details with you shortly.`;
-      response.voiceText = voiceResp;
-      response.actionType = 'SERVICE_CREATED';
-      response.actionPayload = newReq;
-      response.serviceRequest = newReq;
-
-      if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
-        window.hotelCapitolAutomation.showToast('🚕 VIP Transit Dispatched', `Coordinating with Lead Concierge Ibrahim Bello.`, 'success');
-        window.hotelCapitolAutomation.triggerStaffVoiceDispatch(newReq);
-      }
+      const voiceMsg = `I'd be happy to assist with your transportation arrangements, ${guestName}. I've opened our executive chauffeured fleet options for you.`;
+      response.text = `I'd be happy to assist with your transportation arrangements, ${guestName}.\n\nI have opened our **Hotel Capitol Chauffeured Fleet** options below. Please select your destination (MMA2 Airport, International Airport, or Lagos Island) and preferred executive vehicle.`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_TRANSPORTATION_OPTIONS;
       return response;
     }
 
-    // --- Section 13: CONCIERGE & PORTER ---
-    if (q.includes('bag') || q.includes('luggage') || q.includes('porter') || q.includes('bell') || q.includes('carry') || q.includes('wake up') || q.includes('recommendation')) {
-      const reqTitle = q.includes('wake') ? 'Scheduled Wake-up Call' : 'Porter Luggage & Bell Service';
-      
-      const newReq = store.createServiceRequest(
-        'Concierge',
-        reqTitle,
-        `Guest Porter Assistance via Amara: "${userQuery}" for Suite #${roomNumber}`,
-        'HIGH',
-        'Ibrahim Bello',
-        'Concierge'
-      );
+    // --- 5. HOUSEKEEPING WORKFLOW ---
+    if (service === SERVICES.HOUSEKEEPING || intent === 'HOUSEKEEPING_REQUEST') {
+      this.context.conversationState = CONV_STATES.SHOWING_OPTIONS;
+      this.context.currentStatus = 'IDLE';
+      this.context.currentDepartment = 'HOUSEKEEPING';
 
-      const voiceResp = `Certainly, ${guestName}. I'll arrange porter assistance for you. A member of our team will attend to Room ${roomNumber} shortly.`;
-      
-      response.text = `Certainly, ${guestName}. I have notified our porter team that **${reqTitle}** is requested for Suite **#${roomNumber}** (**${newReq.id}**). Lead Concierge Ibrahim Bello is dispatching a team member now.`;
-      response.voiceText = voiceResp;
-      response.actionType = 'SERVICE_CREATED';
-      response.actionPayload = newReq;
-      response.serviceRequest = newReq;
+      let specificItem = 'Fresh Bath Towels';
+      if (q.includes('water')) specificItem = 'Chilled Premium Bottled Spring Water';
+      else if (q.includes('clean') || q.includes('cleaning')) specificItem = 'Full Suite Deep Cleaning';
+      else if (q.includes('linen') || q.includes('sheet')) specificItem = 'Fresh Egyptian Cotton Linen Change';
+      else if (q.includes('pillow')) specificItem = 'Extra Luxury Orthopedic Pillows';
 
-      if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
-        window.hotelCapitolAutomation.showToast('🧳 Porter Assistance Dispatched', `Porter assistance requested from Room ${roomNumber}.`, 'success');
-        window.hotelCapitolAutomation.triggerStaffVoiceDispatch(newReq);
-      }
+      const voiceMsg = `I'm here to assist with your room, ${guestName}. I've opened our housekeeping options for Suite ${roomNumber}.`;
+      response.text = `I'm here to assist with your room, ${guestName}.\n\nI have opened our **Room Service & Housekeeping** dispatch options for Suite **#${roomNumber}**. Please select what you need (towels, bottled water, deep cleaning, or linen change):`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_HOUSEKEEPING_OPTIONS;
+      response.actionPayload = { suggestedItem: specificItem };
       return response;
     }
 
-    // --- Section 14: MY BILL & FOLIO ---
-    if (q.includes('bill') || q.includes('folio') || q.includes('charge') || q.includes('pay') || q.includes('cost') || q.includes('invoice') || q.includes('receipt') || q.includes('balance') || q.includes('spent') || q.includes('owe')) {
-      const folioItems = guest?.folio || [];
-      const totalFolio = folioItems.reduce((sum, item) => sum + item.amount, 0);
-
-      // Dispute handling
-      if (q.includes('dispute') || q.includes('wrong') || q.includes('mistake') || q.includes('unfamiliar') || q.includes('overcharged')) {
-        const resp = `I'm sorry that a charge appears unfamiliar, ${guestName}. I have flagged this item for our Front Desk Supervisor Tariq to review with you.`;
-        response.text = `I'm sorry that a charge appears unfamiliar, ${guestName}. I have flagged this item for our Front Desk team to review immediately. A duty supervisor will contact Suite #${roomNumber} to clarify.`;
-        response.voiceText = resp;
-        response.actionType = 'NAV_FOLIO';
-        return response;
-      }
-
-      const voiceResp = `Your current outstanding balance is Naira ${totalFolio.toLocaleString()}. I have displayed your itemized folio for you to review.`;
+    // --- 6. DIGITAL FOLIO WORKFLOW ---
+    if (service === SERVICES.FOLIO || intent === 'VIEW_FOLIO') {
+      this.context.conversationState = CONV_STATES.SHOWING_OPTIONS;
+      const totalFolio = guest ? guest.folio.reduce((a, b) => a + b.amount, 0) : 0;
       
-      response.text = `Certainly, ${guestName}. Your current outstanding balance for Suite **#${roomNumber}** is **₦${totalFolio.toLocaleString()}** across ${folioItems.length} posted transactions:\n` +
-        folioItems.map(f => `• ${f.description}: **₦${f.amount.toLocaleString()}** (${f.date})`).join('\n') +
-        `\n\nYou can review full tax invoices in your Digital Folio.`;
-      response.voiceText = voiceResp;
-      response.actionType = 'NAV_FOLIO';
+      const voiceMsg = `Certainly, ${guestName}. Your current outstanding balance for Suite ${roomNumber} is ${totalFolio.toLocaleString()} Naira. I have opened your itemized folio.`;
+      response.text = `Certainly, ${guestName}. Your current outstanding folio balance for Suite **#${roomNumber}** is **₦${totalFolio.toLocaleString()}** across **${guest?.folio?.length || 0} items**.\n\nI have opened your itemized folio statement for review.`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_FOLIO;
       return response;
     }
 
-    // --- Section 17: NEAR HOTEL CAPITOL (IKEJA GUIDE) ---
-    if (q.includes('barber') || q.includes('salon') || q.includes('hair') || q.includes('supermarket') || q.includes('shop') || q.includes('mall') || q.includes('nightlife') || q.includes('club') || q.includes('shrine') || q.includes('nearby') || q.includes('ikeja') || q.includes('around') || q.includes('hospital') || q.includes('pharmacy') || q.includes('atm')) {
-      const voiceResp = `I'd be happy to help, ${guestName}. Here are Hotel Capitol approved recommendations in Ikeja around Animashaun Close.`;
-      
-      response.text = `Here are Hotel Capitol approved recommendations in Ikeja for you, ${guestName}:\n` +
-        `• 💈 **Grooming**: *Karisma Executive Barber* (0.4 km away · Open till 9 PM)\n` +
-        `• 🛒 **Shopping**: *Ikeja Supermart & Gourmet Deli* (0.3 km away)\n` +
-        `• 🍸 **Nightlife**: *The Capitol Penthouse Lounge* (5th Floor) or *Cubana Lounge* (1.8 km)\n` +
-        `• 🎷 **Culture**: *Kalakuta Fela Museum & Shrine* (2.5 km)\n` +
-        `• 🏥 **Medical & Pharmacy**: *Ikeja Medical Center & HealthPlus* (0.8 km)\n` +
-        `Opening the Nearby Ikeja Guide now.`;
-      response.voiceText = voiceResp;
-      response.actionType = 'NAV_NEARBY';
+    // --- 7. AMENITIES & WIFI WORKFLOW ---
+    if (service === SERVICES.AMENITIES || intent === 'VIEW_AMENITIES') {
+      const voiceMsg = `High-speed WiFi is complimentary, ${guestName}. Network name is Capitol-VIP-Guest, and password is CapitolLagos2026.`;
+      response.text = `High-speed Fiber WiFi is complimentary throughout Hotel Capitol:\n• **Network**: \`Capitol-VIP-Guest\`\n• **Password**: \`CapitolLagos2026\`\n\nPool terrace is open daily 06:30 AM – 10:00 PM on the 1st Floor, and the Fitness Center is accessible 24/7 on the 2nd Floor.`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_AMENITIES;
       return response;
     }
 
-    // --- Section 18: HOTEL AMENITIES & WIFI ---
-    if (q.includes('wifi') || q.includes('password') || q.includes('gym') || q.includes('pool') || q.includes('swimming') || q.includes('fitness') || q.includes('spa') || q.includes('address') || q.includes('amenities') || q.includes('checkin') || q.includes('checkout') || q.includes('time')) {
-      const voiceResp = `Certainly, ${guestName}. I have displayed the Hotel Capitol WiFi credentials and hotel facility hours on your screen.`;
-      
-      response.text = `**Hotel Capitol Amenities & Facilities Information**:\n` +
-        `• 📶 **High-Speed WiFi**: Network: \`Capitol-VIP-Guest\` | Password: \`CapitolLagos2026\`\n` +
-        `• 🏊 **Swimming Pool & Cabana**: Open daily 06:30 AM – 10:00 PM (1st Floor Terrace)\n` +
-        `• 🏋️ **Executive Fitness Center**: Open 24/7 (2nd Floor, keycard access)\n` +
-        `• 📍 **Hotel Address**: 6 Animashaun Close, Ikeja, Lagos\n` +
-        `• 🕒 **Check-In**: 02:00 PM | **Check-Out**: 12:00 PM\n` +
-        `• 📞 **Front Desk**: Dial Extension 0 from Suite #${roomNumber}`;
-      response.voiceText = voiceResp;
-      response.actionType = 'NAV_INFO';
+    // --- 8. NEARBY IKEJA WORKFLOW ---
+    if (service === SERVICES.NEAR_HOTEL || intent === 'VIEW_NEARBY') {
+      const voiceMsg = `I'd be delighted to help you explore Ikeja, ${guestName}. I have opened our curated guide for salons, dining, and nightlife near Hotel Capitol.`;
+      response.text = `I'd be delighted to help you explore Ikeja, ${guestName}.\n\nI have opened our **Curated Ikeja Directory** featuring verified spots like **Karisma Executive Barber** (350m), **The Capitol Penthouse Lounge** (5th Floor), and the historic **Kalakuta Museum / Fela Shrine**.`;
+      response.voiceText = voiceMsg;
+      response.actionType = AMARA_ACTIONS.OPEN_NEARBY;
       return response;
     }
 
-    // --- Section 32: CLARIFICATION & GRACEFUL FALLBACK ---
-    this.clarificationAttempts++;
-    if (this.clarificationAttempts >= 2) {
-      const voiceResp = `I want to make sure I assist you correctly, ${guestName}. Would you like me to connect you with our front desk team?`;
-      response.text = `I want to make sure I assist you correctly, ${guestName}. Would you like me to connect you directly with our Front Desk team at Extension 0?`;
-      response.voiceText = voiceResp;
-      response.actionType = 'NAV_CONTACT';
-      this.clarificationAttempts = 0;
-      return response;
-    }
-
-    const fallbackVoice = `I'd be delighted to help, ${guestName}. Could you please tell me a little more about what you'd like arranged?`;
-    response.text = `I'd be delighted to help, ${guestName}. Could you please tell me a little more about what you'd like arranged for Suite #${roomNumber}? You can also select any service card below or speak directly to Front Desk.`;
-    response.voiceText = fallbackVoice;
+    // --- DEFAULT CONVERSATIONAL RESPONSE ---
+    const defaultVoice = `I am at your service, ${guestName}. Would you like to explore dining, breakfast, housekeeping, porter assistance, or transportation?`;
+    response.text = `I am at your service, ${guestName}. How may I make your stay in Suite **#${roomNumber}** more comfortable today?\n\nYou may ask me to open our **Dining Menu**, arrange **Breakfast**, request **Fresh Towels / Housekeeping**, dispatch **Porter Luggage Assistance**, or book **Airport Transportation**.`;
+    response.voiceText = defaultVoice;
     return response;
-  }
-
-  // Generate dynamic AI Insights for General Manager & Supervisors
-  getManagerInsights() {
-    const state = store.getState();
-    const lowStockItems = state.inventory.filter(i => i.status !== 'NORMAL');
-
-    return [
-      {
-        id: 'INS-01',
-        type: 'revenue',
-        title: 'Dining & Room Service Surge',
-        impact: '+18.4% Revenue',
-        detail: `Restaurant orders have generated ₦${state.orders.reduce((acc, o) => acc + o.totalAmount, 0).toLocaleString()} today. Signature Jollof Fiesta & Chapman are top sellers.`,
-        action: 'Kitchen team prepared for evening dinner rush.'
-      },
-      {
-        id: 'INS-02',
-        type: 'workload',
-        title: 'Housekeeping Peak Velocity',
-        impact: 'High Efficiency (96% On-time)',
-        detail: `Housekeeping staff turned around 4 suites with an average duration of 21 minutes. Peak workload forecasted between 09:00 AM and 11:30 AM.`,
-        action: 'Sufficient linens currently in circulation.'
-      },
-      {
-        id: 'INS-03',
-        type: 'inventory',
-        title: `${lowStockItems.length} Inventory Items Require Replenishment`,
-        impact: 'Critical Stock Alert',
-        detail: `Cooking Oil (20% remaining) and Room Insecticide Spray (7.5% remaining) have breached reorder thresholds.`,
-        action: '1 stock request pending manager approval.'
-      }
-    ];
   }
 }
 
 export const aiEngine = new HotelCapitolAI();
-window.hotelCapitolAI = aiEngine;
-

@@ -6,38 +6,61 @@
 import { getIcon, renderIntercomRoundBadge } from '../assets/icons.js';
 import { renderHotelCapitolLogo } from '../assets/logo.js';
 import { store } from '../store/state.js';
-import { aiEngine } from '../services/aiEngine.js';
+import { aiEngine, AMARA_ACTIONS, SERVICES } from '../services/aiEngine.js';
 import { automationEngine } from '../services/automationRules.js';
 
 let isAssistantOpen = false;
 let isRecording = false;
-let currentContext = 'general';
 
 export function initAIAssistant() {
-  window.toggleAIAssistant = (forceOpen = null, triggerVoiceWelcome = true, context = 'general') => {
+  window.toggleAIAssistant = (forceOpen = null, triggerVoiceWelcome = true, serviceKey = SERVICES.GENERAL) => {
     isAssistantOpen = forceOpen !== null ? forceOpen : !isAssistantOpen;
-    currentContext = context || 'general';
-    renderAIAssistant();
     
     if (isAssistantOpen) {
+      // Initialize isolated service context
+      aiEngine.setServiceContext(serviceKey);
+      renderAIAssistant();
+
       setTimeout(() => {
         const input = document.getElementById('ai-chat-input');
         if (input) input.focus();
         scrollChatToBottom();
       }, 100);
 
-      // Automated Amara Voice Welcome if opening
+      // Automated Amara Voice Greeting (Waits for guest)
       if (triggerVoiceWelcome) {
-        aiEngine.startGuestVoiceWelcome(currentContext, () => {
+        const greeting = aiEngine.getGreetingForContext(serviceKey);
+        const guest = store.getActiveGuest();
+        const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        if (guest) {
+          const welcomeMsg = { id: 'msg-' + Date.now(), sender: 'ai', time: nowTime, text: greeting };
+          store.setState(s => ({
+            ...s,
+            guests: s.guests.map(g => g.id === guest.id ? {
+              ...g,
+              aiConversations: [...(g.aiConversations || []), welcomeMsg]
+            } : g)
+          }));
+          renderAIAssistant();
+          scrollChatToBottom();
+        }
+
+        aiEngine.speak(greeting, () => {
+          if (typeof window !== 'undefined' && window.hotelCapitolAutomation) {
+            window.hotelCapitolAutomation.playChime('listen-start');
+          }
           window.toggleAIVoiceInput();
         });
       }
+    } else {
+      renderAIAssistant();
     }
   };
 
   // 1-Click Amara Voice Concierge End-to-End Demo Runner
   window.runFullAIVoiceConciergeDemo = () => {
-    window.toggleAIAssistant(true, false, 'general');
+    window.toggleAIAssistant(true, false, SERVICES.GENERAL);
     
     const guest = store.getActiveGuest();
     const guestName = guest ? guest.name : 'Valued Guest';
@@ -46,9 +69,9 @@ export function initAIAssistant() {
     aiEngine.speak(welcome);
     automationEngine.showToast('🎙️ Amara Voice Concierge', welcome, 'info');
 
-    // Guest makes multi-request after 3.2s
+    // Guest makes request after 3.2s
     setTimeout(() => {
-      const guestText = "Please send 2 extra bath towels, cold bottled water and order Jollof rice for Suite " + (guest?.roomNumber || '402');
+      const guestText = "I want to order food";
       window.sendAIMessage(guestText);
     }, 3500);
   };
@@ -77,7 +100,7 @@ export function initAIAssistant() {
     renderAIAssistant();
     scrollChatToBottom();
 
-    // Amara thinking & response
+    // Process intent & execute real visible UI action
     setTimeout(() => {
       const response = aiEngine.processGuestQuery(text);
       const aiMsg = { 
@@ -85,8 +108,8 @@ export function initAIAssistant() {
         sender: 'ai', 
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }), 
         text: response.text,
-        serviceRequest: response.serviceRequest,
-        actionType: response.actionType
+        actionType: response.actionType,
+        serviceContext: response.serviceContext
       };
 
       store.setState(s => ({
@@ -100,31 +123,15 @@ export function initAIAssistant() {
       renderAIAssistant();
       scrollChatToBottom();
 
-      // Speak Amara's concise, composed voice response (1-3 sentences)
+      // Speak Amara's concise spoken response
       const spokenText = response.voiceText || response.text;
       aiEngine.speak(spokenText);
 
-      // Actionable contextual routing if appropriate
-      if (response.actionType) {
-        if (response.actionType === 'NAV_RESTAURANT') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('restaurant'); }, 1200);
-        } else if (response.actionType === 'NAV_BREAKFAST') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('breakfast'); }, 1200);
-        } else if (response.actionType === 'NAV_ROOM_SERVICE') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('room-service'); }, 1200);
-        } else if (response.actionType === 'NAV_TRANSPORT') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('transport'); }, 1200);
-        } else if (response.actionType === 'NAV_FOLIO') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('folio'); }, 1200);
-        } else if (response.actionType === 'NAV_NEARBY') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('nearby'); }, 1200);
-        } else if (response.actionType === 'NAV_INFO') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('info'); }, 1200);
-        } else if (response.actionType === 'NAV_CONTACT') {
-          setTimeout(() => { window.navigateGuestTab && window.navigateGuestTab('contact'); }, 1200);
-        }
+      // Execute Real Visible UI Action Layer
+      if (response.actionType && window.amaraActionExecutor) {
+        window.amaraActionExecutor(response.actionType, response.actionPayload);
       }
-    }, 400);
+    }, 350);
   };
 
   window.toggleAIVoiceInput = () => {

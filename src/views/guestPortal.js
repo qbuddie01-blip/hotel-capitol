@@ -7,19 +7,62 @@
 import { getIcon, renderIntercomRoundBadge, renderIntercomBlackBadge } from '../assets/icons.js';
 import { store } from '../store/state.js';
 import { automationEngine } from '../services/automationRules.js';
-import { aiEngine } from '../services/aiEngine.js';
+import { aiEngine, AMARA_ACTIONS, SERVICES } from '../services/aiEngine.js';
 
 let activeGuestTab = 'home'; // 'home' | 'restaurant' | 'breakfast' | 'room-service' | 'transport' | 'concierge' | 'folio' | 'nearby' | 'info' | 'contact'
 let selectedCategory = 'Food';
 let cart = []; // Cart items for restaurant ordering
 let orderDraftExtras = {};
 let isVoiceActiveForService = false;
+let showPorterLocationModal = false;
 
 export function initGuestPortal() {
   window.getActiveGuestTab = () => activeGuestTab;
 
+  // 1. ABSOLUTE EXPLORE ACTION: Opens UI without triggering voice, drafts, or requests
   window.navigateGuestTab = (tab) => {
     activeGuestTab = tab;
+    if (window.renderApp) window.renderApp();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 2. INTERCOM ACTION: Explicitly activates Amara with isolated card context
+  window.activateAmaraIntercom = (serviceKey, cardTitle) => {
+    aiEngine.setServiceContext(serviceKey, cardTitle);
+    window.toggleAIAssistant(true, true, serviceKey);
+  };
+
+  // 3. AMARA UI ACTION EXECUTOR: Translates AI intent into real visible UI state changes
+  window.amaraActionExecutor = (actionType, payload = {}) => {
+    if (!actionType) return;
+
+    if (actionType === AMARA_ACTIONS.OPEN_RESTAURANT_MENU) {
+      activeGuestTab = 'restaurant';
+      if (payload.preselectItem) {
+        const item = store.getState().menu.find(m => m.name.toLowerCase().includes(payload.preselectItem.toLowerCase()));
+        if (item) {
+          window.addToCart(item.id);
+        }
+      }
+    } else if (actionType === AMARA_ACTIONS.OPEN_BREAKFAST_MENU) {
+      activeGuestTab = 'breakfast';
+    } else if (actionType === AMARA_ACTIONS.OPEN_PORTER_OPTIONS) {
+      activeGuestTab = 'concierge';
+      showPorterLocationModal = true;
+    } else if (actionType === AMARA_ACTIONS.OPEN_TRANSPORTATION_OPTIONS) {
+      activeGuestTab = 'transport';
+    } else if (actionType === AMARA_ACTIONS.OPEN_HOUSEKEEPING_OPTIONS) {
+      activeGuestTab = 'room-service';
+    } else if (actionType === AMARA_ACTIONS.OPEN_FOLIO) {
+      activeGuestTab = 'folio';
+    } else if (actionType === AMARA_ACTIONS.OPEN_AMENITIES) {
+      activeGuestTab = 'info';
+    } else if (actionType === AMARA_ACTIONS.OPEN_NEARBY) {
+      activeGuestTab = 'nearby';
+    } else if (actionType === AMARA_ACTIONS.OPEN_FRONT_DESK) {
+      activeGuestTab = 'contact';
+    }
+
     if (window.renderApp) window.renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -60,16 +103,15 @@ export function initGuestPortal() {
       specialInstructions: specialNotes
     });
 
-    // Reset extras for that item
     orderDraftExtras[menuId] = [];
     automationEngine.playChime('bell');
-    automationEngine.showToast('Item Added to Order', `${item.name} added to your tray.`, 'success');
+    automationEngine.showToast('Item Added to Order', `${item.name} added to your order tray.`, 'success');
     if (window.renderApp) window.renderApp();
   };
 
   window.submitGuestRestaurantOrder = () => {
     if (cart.length === 0) {
-      alert('Your tray is currently empty. Please select an item from the menu.');
+      alert('Your order tray is currently empty. Please select an item from the menu.');
       return;
     }
 
@@ -78,6 +120,7 @@ export function initGuestPortal() {
       return sum + (item.basePrice + extrasSum) * item.quantity;
     }, 0);
 
+    const guest = store.getActiveGuest();
     const newOrder = store.createOrder({
       items: [...cart],
       totalAmount,
@@ -86,14 +129,11 @@ export function initGuestPortal() {
 
     cart = [];
     automationEngine.playChime('order');
-    automationEngine.showToast('Order Placed Successfully', `Order ${newOrder.id} has been dispatched to Executive Chef Babatunde.`, 'success');
-    
-    // Auto advance order simulation for demo
-    setTimeout(() => {
-      store.updateOrderStatus(newOrder.id, 'PREPARING');
-      automationEngine.showToast('Kitchen Update', `Chef Babatunde is now preparing order ${newOrder.id}.`, 'info');
-      if (window.renderApp) window.renderApp();
-    }, 3000);
+    automationEngine.showToast('Order Submitted to Kitchen', `Order ${newOrder.id} dispatched to Executive Chef Babatunde.`, 'success');
+
+    // Section 11: Kitchen receives alert
+    automationEngine.showToast('👨‍🍳 Kitchen Alert', `Attention: New restaurant order from Room ${guest.roomNumber}.`, 'info');
+    aiEngine.speak(`New restaurant order from Room ${guest.roomNumber}.`);
 
     activeGuestTab = 'restaurant';
     if (window.renderApp) window.renderApp();
@@ -187,6 +227,31 @@ export function initGuestPortal() {
     if (window.renderApp) window.renderApp();
   };
 
+  // Submit Porter Luggage Request (Section 19 - Strictly PORTER)
+  window.submitPorterRequest = (location) => {
+    const guest = store.getActiveGuest();
+    const req = store.createServiceRequest(
+      'Porter',
+      `Luggage Porter Assistance (${location})`,
+      `Guest Luggage Assistance Request for Suite #${guest.roomNumber} (${location})`,
+      'HIGH',
+      'Lead Porter Ibrahim',
+      'Porter'
+    );
+    automationEngine.playChime('bell');
+    automationEngine.showToast('🧳 Porter Dispatched', `Luggage assistance requested for ${location}. Ticket ${req.id} sent to Porter Department.`, 'success');
+    
+    // Section 19: Porter department audible alert
+    aiEngine.speak(`New porter assistance request from Room ${guest.roomNumber}.`);
+    
+    setTimeout(() => {
+      aiEngine.speak(`Your porter assistance request has been confirmed. A member of our team will be with you shortly.`);
+    }, 2400);
+
+    showPorterLocationModal = false;
+    if (window.renderApp) window.renderApp();
+  };
+
   // Submit custom room service
   window.submitCustomRoomService = () => {
     const text = document.getElementById('room-service-custom-text')?.value.trim();
@@ -194,10 +259,11 @@ export function initGuestPortal() {
       alert('Please describe your room service request or use voice dictation.');
       return;
     }
-    const req = store.createServiceRequest('Housekeeping', 'Custom Guest Request', text, 'HIGH');
+    const guest = store.getActiveGuest();
+    const req = store.createServiceRequest('Housekeeping', 'Custom Housekeeping Request', text, 'HIGH', 'Amara Nwosu', 'Housekeeping');
     automationEngine.playChime('bell');
-    automationEngine.showToast('Request Created', `Request ${req.id} created: "${text}"`, 'success');
-    aiEngine.speak(`Thank you Chief Adeleke. Your request has been registered and dispatched.`);
+    automationEngine.showToast('Request Created', `Housekeeping ticket ${req.id} created: "${text}"`, 'success');
+    aiEngine.speak(`New housekeeping request from Room ${guest.roomNumber}.`);
     const customInp = document.getElementById('room-service-custom-text');
     if (customInp) customInp.value = '';
     if (window.renderApp) window.renderApp();
@@ -319,11 +385,11 @@ export function renderGuestPortal() {
           </p>
         </div>
 
-        <!-- Instruction 1: Stack 'Ask Hotel Capitol AI' and 'Intercom' tabs vertically in Guest profile card -->
+        <!-- Stack 'Ask Hotel Capitol AI' and 'Intercom' tabs vertically in Guest profile card -->
         <div class="flex flex-col items-stretch sm:items-end gap-2.5 w-full md:w-auto mt-3 md:mt-0">
           <button 
             class="floating-ai-btn-banner py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 w-full sm:w-auto" 
-            onclick="window.toggleAIAssistant(true)"
+            onclick="window.activateAmaraIntercom('GENERAL', 'General Concierge')"
             title="Ask Hotel Capitol AI"
           >
             <span class="floating-ai-pulse" aria-label="AI Online"></span>
@@ -348,7 +414,7 @@ export function renderGuestPortal() {
           
           <button 
             class="menu-btn-gold py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 w-full sm:w-auto"
-            onclick="window.openDirectIntercomCall('concierge-frontdesk', 'Front Desk Reception', 'Supervisor Tariq');"
+            onclick="window.activateAmaraIntercom('FRONT_DESK', 'Front Desk Reception');"
             title="Open direct two-way intercom call to Hotel Capitol staff"
           >
             ${renderIntercomRoundBadge(20)}
@@ -389,16 +455,16 @@ export function renderGuestPortal() {
 // 1. GUEST PORTAL HOME - 10 LARGE SERVICE CARDS + DIRECT SUITE INTERCOM BAR
 function renderGuestHomeCards(guest, activeOrders) {
   const cards = [
-    { id: 'restaurant', icon: '🍽', title: 'Restaurant & Dining', badge: 'Popular', intercomChannel: 'kitchen-fb' },
-    { id: 'breakfast', icon: '☕', title: 'Breakfast Service', badge: guest.breakfastEntitlement === 'Complimentary' ? 'Complimentary' : 'Available', intercomChannel: 'kitchen-fb' },
-    { id: 'room-service', icon: '🛎', title: 'Room Service & Cleaning', badge: 'Voice<br/>Enabled', intercomChannel: 'housekeeping' },
-    { id: 'transport', icon: '🚕', title: 'VIP Transportation', badge: 'Instant<br/>Quote', intercomChannel: 'concierge-frontdesk' },
-    { id: 'concierge', icon: '🧳', title: 'Concierge & Porter', badge: '24/7<br/>Support', intercomChannel: 'concierge-frontdesk' },
-    { id: 'folio', icon: '🧾', title: 'My Bill & Folio', badge: `₦${guest.folio.reduce((a, b) => a + b.amount, 0).toLocaleString()}` },
-    { id: 'ai', icon: '🤖', title: 'Ask Hotel Capitol AI', badge: 'Instant<br/>AI', intercomChannel: null },
-    { id: 'nearby', icon: '📍', title: 'Near Hotel Capitol', badge: 'Ikeja<br/>Guide', intercomChannel: null },
-    { id: 'info', icon: '🏨', title: 'Hotel Amenities & WiFi', badge: 'Hotel<br/>Info', intercomChannel: null },
-    { id: 'contact', icon: '📞', title: 'Contact Front Desk', badge: 'Live<br/>Desk', intercomChannel: 'general-operations' }
+    { id: 'restaurant', icon: '🍽', title: 'Restaurant & Dining', badge: 'Popular', serviceKey: 'RESTAURANT' },
+    { id: 'breakfast', icon: '☕', title: 'Breakfast Service', badge: guest.breakfastEntitlement === 'Complimentary' ? 'Complimentary' : 'Available', serviceKey: 'BREAKFAST' },
+    { id: 'room-service', icon: '🛎', title: 'Room Service & Cleaning', badge: 'Voice<br/>Enabled', serviceKey: 'HOUSEKEEPING' },
+    { id: 'transport', icon: '🚕', title: 'VIP Transportation', badge: 'Instant<br/>Quote', serviceKey: 'VIP_TRANSPORTATION' },
+    { id: 'concierge', icon: '🧳', title: 'Concierge & Porter', badge: '24/7<br/>Support', serviceKey: 'CONCIERGE_PORTER' },
+    { id: 'folio', icon: '🧾', title: 'My Bill & Folio', badge: `₦${guest.folio.reduce((a, b) => a + b.amount, 0).toLocaleString()}`, serviceKey: 'FOLIO' },
+    { id: 'ai', icon: '🤖', title: 'Ask Hotel Capitol AI', badge: 'Instant<br/>AI', serviceKey: 'GENERAL' },
+    { id: 'nearby', icon: '📍', title: 'Near Hotel Capitol', badge: 'Ikeja<br/>Guide', serviceKey: 'NEAR_HOTEL' },
+    { id: 'info', icon: '🏨', title: 'Hotel Amenities & WiFi', badge: 'Hotel<br/>Info', serviceKey: 'AMENITIES' },
+    { id: 'contact', icon: '📞', title: 'Contact Front Desk', badge: 'Live<br/>Desk', serviceKey: 'FRONT_DESK' }
   ];
 
   return `
@@ -430,13 +496,13 @@ function renderGuestHomeCards(guest, activeOrders) {
 
       <!-- Instruction 1: Vertically Stacked Tabs to Left Side of Card -->
       <div class="flex flex-col items-start gap-3.5 w-full sm:w-auto pt-2 pb-1">
-        <button class="intercom-gold-tab-btn" onclick="window.openDirectIntercomCall('concierge-frontdesk', 'Front Desk', 'Supervisor Tariq');" title="Direct 2-way voice to Front Desk">
+        <button class="intercom-gold-tab-btn" onclick="window.activateAmaraIntercom('FRONT_DESK', 'Front Desk Reception');" title="Direct 2-way voice to Front Desk">
           ${renderIntercomBlackBadge(20)} <span>Intercom Front Desk</span>
         </button>
-        <button class="intercom-gold-tab-btn" onclick="window.openDirectIntercomCall('kitchen-fb', 'Kitchen', 'Chef Babatunde');" title="Direct 2-way voice to Kitchen">
+        <button class="intercom-gold-tab-btn" onclick="window.activateAmaraIntercom('RESTAURANT', 'Kitchen & Dining');" title="Direct 2-way voice to Kitchen">
           ${renderIntercomBlackBadge(20)} <span>Intercom Kitchen</span>
         </button>
-        <button class="intercom-gold-tab-btn" onclick="window.openDirectIntercomCall('housekeeping', 'Housekeeping', 'Amara Nwosu');" title="Direct 2-way voice to Housekeeping">
+        <button class="intercom-gold-tab-btn" onclick="window.activateAmaraIntercom('HOUSEKEEPING', 'Housekeeping Service');" title="Direct 2-way voice to Housekeeping">
           ${renderIntercomBlackBadge(20)} <span>Intercom Housekeeping</span>
         </button>
       </div>
@@ -448,7 +514,7 @@ function renderGuestHomeCards(guest, activeOrders) {
       ${cards.map(c => `
         <div 
           class="service-card flex flex-col justify-between cursor-pointer transform hover:-translate-y-1 transition-all"
-          onclick="${c.id === 'ai' ? 'window.toggleAIAssistant(true)' : `window.navigateGuestTab('${c.id}')`}"
+          onclick="${c.id === 'ai' ? `window.activateAmaraIntercom('GENERAL', 'Ask Hotel Capitol AI')` : `window.navigateGuestTab('${c.id}')`}"
           style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 0 10px rgba(220, 173, 84, 0.05);"
         >
           <div>
@@ -462,7 +528,6 @@ function renderGuestHomeCards(guest, activeOrders) {
               <!-- Centered Side-by-Side Icon & Badge Row with Balanced Spacing -->
               <div class="service-card-top-row">
                 <div class="service-card-icon">${c.icon}</div>
-                <!-- Instructions 2 & 3: Shift Concierge & Folio Badges to the Left for Visible Borders with Zero Lapping -->
                 ${c.badge ? `
                   <span 
                     class="badge-gold ${c.id === 'concierge' || c.id === 'folio' ? 'badge-shifted-left' : ''}" 
@@ -476,18 +541,18 @@ function renderGuestHomeCards(guest, activeOrders) {
             <h3 class="font-serif text-base text-white font-bold tracking-wide">${c.title}</h3>
           </div>
 
-          <!-- Instruction 4: Sleek Clean Footer with High-Visibility CTA Buttons for All Cards (Including Bottom Two Cards: Hotel Amenities & WiFi and Contact Front Desk) -->
+          <!-- Explore CTA and Intercom Trigger -->
           <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
             <span class="text-gold font-bold text-xs flex items-center gap-1.5 hover:text-white transition-colors">
               <span>${c.id === 'contact' ? 'Contact Desk' : c.id === 'info' ? 'Explore Amenities' : 'Explore'}</span> 
               <span class="text-sm font-bold">→</span>
             </span>
             
-            ${c.intercomChannel ? `
+            ${c.id !== 'folio' && c.id !== 'nearby' && c.id !== 'info' && c.id !== 'ai' ? `
               <button 
                 class="intercom-icon-btn"
-                onclick="event.stopPropagation(); window.openDirectIntercomCall('${c.intercomChannel}', '${c.title}');"
-                title="Direct Intercom Call to ${c.title}"
+                onclick="event.stopPropagation(); window.activateAmaraIntercom('${c.serviceKey}', '${c.title}');"
+                title="Direct Intercom Call for ${c.title}"
               >
                 ${renderIntercomRoundBadge(20)}
               </button>
@@ -1083,49 +1148,100 @@ function renderTransportSection(guest) {
   `;
 }
 
-// 6. CONCIERGE & PORTER (Spec #21)
+// 6. CONCIERGE & PORTER (Isolated Porter Workflow - Sections 17-20)
 function renderConciergeSection(guest) {
   return `
-    <div class="max-w-3xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl">
-      <div class="mb-6">
-        <span class="text-xs font-bold uppercase tracking-luxury text-gold">24/7 Digital Concierge</span>
-        <h2 class="text-2xl font-serif text-white mt-1">Concierge & Guest Assistance</h2>
-        <p class="text-xs text-slate-300">Our concierge desk handles luggage assistance, flight check-in, city tours, and private reservations.</p>
+    <div class="max-w-3xl mx-auto flex flex-col gap-6">
+      
+      <div class="glass-panel p-6 sm:p-8 rounded-2xl">
+        <div class="flex items-center justify-between pb-4 border-b border-gold/20 mb-6 gap-4 flex-wrap">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">24/7 Concierge & Porter Services</span>
+            <h2 class="text-2xl font-serif text-white mt-1">Concierge & Porter Assistance</h2>
+            <p class="text-xs text-slate-300">Dedicated luggage handling, city cultural tours, pressing, and front desk coordination.</p>
+          </div>
+          <button 
+            class="intercom-pill-btn"
+            onclick="window.activateAmaraIntercom('CONCIERGE_PORTER', 'Concierge & Porter')"
+            title="Direct Intercom for Porter & Concierge"
+          >
+            ${renderIntercomRoundBadge(18)}
+            <span>Intercom Porter</span>
+          </button>
+        </div>
+
+        <!-- PORTER LUGGAGE ASSISTANCE OPTIONS WIDGET (Sections 18 & 19) -->
+        <div class="glass-panel-gold p-5 rounded-xl mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">🧳</span>
+              <div>
+                <h3 class="font-serif text-base text-white font-bold">Luggage & Porter Assistance</h3>
+                <p class="text-xs text-slate-200">Where would you like our porter team to assist you?</p>
+              </div>
+            </div>
+            <span class="badge-gold text-xs">Porter Service</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-3">
+            <button 
+              class="p-3 rounded-xl bg-navy-950 border border-gold/40 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
+              onclick="window.submitPorterRequest('Suite #' + '${guest.roomNumber}')"
+            >
+              <div class="font-bold text-xs text-white">🛎️ In Room</div>
+              <div class="text-[11px] text-slate-300 mt-1">Suite #${guest.roomNumber} (Pick up bags from room)</div>
+              <div class="text-gold font-semibold text-[10px] mt-2">Tap to Dispatch →</div>
+            </button>
+
+            <button 
+              class="p-3 rounded-xl bg-navy-950 border border-white/10 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
+              onclick="window.submitPorterRequest('Main Lobby Reception')"
+            >
+              <div class="font-bold text-xs text-white">🏛️ Main Lobby</div>
+              <div class="text-[11px] text-slate-300 mt-1">Ground floor reception & entrance</div>
+              <div class="text-gold font-semibold text-[10px] mt-2">Tap to Dispatch →</div>
+            </button>
+
+            <button 
+              class="p-3 rounded-xl bg-navy-950 border border-white/10 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
+              onclick="window.submitPorterRequest('Baggage Storage Vault')"
+            >
+              <div class="font-bold text-xs text-white">🔒 Storage Vault</div>
+              <div class="text-[11px] text-slate-300 mt-1">Secure holding until departure</div>
+              <div class="text-gold font-semibold text-[10px] mt-2">Tap to Dispatch →</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Other Concierge Services -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
+            <div class="text-xl mb-1">⏰ Wake-Up Call</div>
+            <p class="text-xs text-slate-300 mb-3">Schedule a pleasant morning chime & phone call.</p>
+            <button class="btn-secondary text-xs py-2 px-3 w-full" onclick="alert('Wake-up call scheduled for 06:30 AM.');">
+              Set 06:30 AM Wake-up
+            </button>
+          </div>
+
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
+            <div class="text-xl mb-1">🎭 Lagos Tours</div>
+            <p class="text-xs text-slate-300 mb-3">VIP bookings for Kalakuta Shrine and galleries.</p>
+            <button class="btn-secondary text-xs py-2 px-3 w-full" onclick="window.navigateGuestTab('nearby')">
+              Browse Spots →
+            </button>
+          </div>
+
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
+            <div class="text-xl mb-1">👔 Dry Cleaning</div>
+            <p class="text-xs text-slate-300 mb-3">Express dry cleaning & traditional attire pressing.</p>
+            <button class="btn-primary text-xs py-2 px-3 w-full" onclick="window.submitQuickService('Concierge', 'Express Dry Cleaning Pickup')">
+              Request Laundry
+            </button>
+          </div>
+        </div>
+
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
-          <div class="text-xl mb-2">🧳 Luggage & Porter</div>
-          <p class="text-xs text-slate-300 mb-3">Request safe luggage collection or baggage storage in our secure vault.</p>
-          <button class="btn-primary text-xs py-2 px-3 w-full" onclick="window.submitQuickService('Concierge', 'Luggage Porter Assistance')">
-            Request Porter to Suite ${guest.roomNumber}
-          </button>
-        </div>
-
-        <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
-          <div class="text-xl mb-2">⏰ Wake-Up Call</div>
-          <p class="text-xs text-slate-300 mb-3">Schedule an automated pleasant morning chime & front desk call.</p>
-          <button class="btn-secondary text-xs py-2 px-3 w-full" onclick="alert('Wake-up call scheduled for 06:30 AM.');">
-            Set 06:30 AM Wake-up
-          </button>
-        </div>
-
-        <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
-          <div class="text-xl mb-2">🎭 Lagos Tours & Culture</div>
-          <p class="text-xs text-slate-300 mb-3">VIP bookings for Kalakuta Shrine, Nike Art Gallery, and Lekki Conservation Centre.</p>
-          <button class="btn-secondary text-xs py-2 px-3 w-full" onclick="window.navigateGuestTab('nearby')">
-            Browse Cultural Spots →
-          </button>
-        </div>
-
-        <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
-          <div class="text-xl mb-2">👔 Dry Cleaning & Pressing</div>
-          <p class="text-xs text-slate-300 mb-3">Same-day express dry cleaning and bespoke traditional attire pressing.</p>
-          <button class="btn-primary text-xs py-2 px-3 w-full" onclick="window.submitQuickService('Concierge', 'Express Dry Cleaning Pickup')">
-            Request Laundry Pickup
-          </button>
-        </div>
-      </div>
     </div>
   `;
 }
