@@ -38,21 +38,26 @@ export function initGuestPortal() {
 
     if (actionType === AMARA_ACTIONS.OPEN_RESTAURANT_MENU) {
       activeGuestTab = 'restaurant';
-      if (payload.preselectItem) {
+      if (payload && payload.preselectItem) {
         const item = store.getState().menu.find(m => m.name.toLowerCase().includes(payload.preselectItem.toLowerCase()));
         if (item) {
           window.addToCart(item.id);
         }
       }
+      automationEngine.showToast('🍽️ Restaurant & Dining', 'Opened Hotel Capitol dining menu for Suite.', 'success');
     } else if (actionType === AMARA_ACTIONS.OPEN_BREAKFAST_MENU) {
       activeGuestTab = 'breakfast';
+      automationEngine.showToast('☕ Breakfast Service', 'Opened daily breakfast selection.', 'success');
     } else if (actionType === AMARA_ACTIONS.OPEN_PORTER_OPTIONS) {
       activeGuestTab = 'concierge';
       showPorterLocationModal = true;
+      automationEngine.showToast('🧳 Porter Assistance', 'Please choose In Room or Main Lobby.', 'info');
     } else if (actionType === AMARA_ACTIONS.OPEN_TRANSPORTATION_OPTIONS) {
       activeGuestTab = 'transport';
+      automationEngine.showToast('🚕 VIP Transportation', 'Viewing chauffeur transit destinations.', 'info');
     } else if (actionType === AMARA_ACTIONS.OPEN_HOUSEKEEPING_OPTIONS) {
       activeGuestTab = 'room-service';
+      automationEngine.showToast('🛎️ Housekeeping', 'Viewing housekeeping and room amenities.', 'info');
     } else if (actionType === AMARA_ACTIONS.OPEN_FOLIO) {
       activeGuestTab = 'folio';
     } else if (actionType === AMARA_ACTIONS.OPEN_AMENITIES) {
@@ -65,6 +70,13 @@ export function initGuestPortal() {
 
     if (window.renderApp) window.renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Auto-minimize AI Assistant Modal after 1.8s so guest immediately sees and interacts with the opened menu
+    setTimeout(() => {
+      if (typeof window.toggleAIAssistant === 'function') {
+        window.toggleAIAssistant(false);
+      }
+    }, 1800);
   };
 
   window.setMenuCategory = (cat) => {
@@ -1212,28 +1224,44 @@ function renderConciergeSection(guest) {
           </div>
         </div>
 
-        <!-- Other Concierge Services -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
-            <div class="text-xl mb-1">⏰ Wake-Up Call</div>
-            <p class="text-xs text-slate-300 mb-3">Schedule a pleasant morning chime & phone call.</p>
+        <!-- Other Concierge Services (Including Dining, Wakeup, Tours, Pressing) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="text-xl mb-1">🍽️ Dining & Room Service</div>
+              <p class="text-xs text-slate-300 mb-3">Order Chef Babatunde's signature Nigerian & continental dishes.</p>
+            </div>
+            <button class="btn-primary text-xs py-2 px-3 w-full" onclick="window.navigateGuestTab('restaurant')">
+              Open Dining Menu →
+            </button>
+          </div>
+
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="text-xl mb-1">⏰ Wake-Up Call</div>
+              <p class="text-xs text-slate-300 mb-3">Schedule a pleasant morning chime & phone call.</p>
+            </div>
             <button class="btn-secondary text-xs py-2 px-3 w-full" onclick="alert('Wake-up call scheduled for 06:30 AM.');">
               Set 06:30 AM Wake-up
             </button>
           </div>
 
-          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
-            <div class="text-xl mb-1">🎭 Lagos Tours</div>
-            <p class="text-xs text-slate-300 mb-3">VIP bookings for Kalakuta Shrine and galleries.</p>
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="text-xl mb-1">🎭 Lagos Tours</div>
+              <p class="text-xs text-slate-300 mb-3">VIP bookings for Kalakuta Shrine and art galleries.</p>
+            </div>
             <button class="btn-secondary text-xs py-2 px-3 w-full" onclick="window.navigateGuestTab('nearby')">
               Browse Spots →
             </button>
           </div>
 
-          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10">
-            <div class="text-xl mb-1">👔 Dry Cleaning</div>
-            <p class="text-xs text-slate-300 mb-3">Express dry cleaning & traditional attire pressing.</p>
-            <button class="btn-primary text-xs py-2 px-3 w-full" onclick="window.submitQuickService('Concierge', 'Express Dry Cleaning Pickup')">
+          <div class="glass-panel-subtle p-4 rounded-xl border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="text-xl mb-1">👔 Dry Cleaning</div>
+              <p class="text-xs text-slate-300 mb-3">Express dry cleaning & traditional attire pressing.</p>
+            </div>
+            <button class="btn-secondary text-xs py-2 px-3 w-full" onclick="window.submitQuickService('Concierge', 'Express Dry Cleaning Pickup')">
               Request Laundry
             </button>
           </div>

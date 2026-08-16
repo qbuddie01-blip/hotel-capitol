@@ -342,8 +342,16 @@ export class HotelCapitolAI {
       return { intent: 'ORDER_BREAKFAST', service: SERVICES.BREAKFAST, department: 'KITCHEN' };
     }
 
-    // 4. Restaurant & Dining / Food Request
-    if (q.includes('food') || q.includes('menu') || q.includes('hungry') || q.includes('dinner') || q.includes('lunch') || q.includes('restaurant') || q.includes('jollof') || q.includes('suya') || q.includes('eat') || q.includes('order food') || q.includes('drink') || q.includes('chapman') || q.includes('dessert') || q.includes('snack')) {
+    // 4. Restaurant & Dining / Food Request (Comprehensive matching)
+    if (
+      q.includes('food') || q.includes('dining') || q.includes('dinner') || q.includes('lunch') ||
+      q.includes('menu') || q.includes('hungry') || q.includes('eat') || q.includes('order') ||
+      q.includes('meal') || q.includes('dish') || q.includes('cuisine') || q.includes('restaurant') ||
+      q.includes('kitchen') || q.includes('jollof') || q.includes('suya') || q.includes('chapman') ||
+      q.includes('drink') || q.includes('beverage') || q.includes('dessert') || q.includes('snack') ||
+      q.includes('wine') || q.includes('cocktail') || q.includes('pepper soup') || q.includes('peppersoup') ||
+      q.includes('starters') || q.includes('appetizer') || q.includes('in-suite dining') || q.includes('room dining')
+    ) {
       return { intent: 'ORDER_FOOD', service: SERVICES.RESTAURANT, department: 'KITCHEN' };
     }
 

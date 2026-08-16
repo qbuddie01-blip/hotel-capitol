@@ -284,6 +284,52 @@ export function renderAIAssistant() {
                     : 'glass-panel border border-gold/30 text-white rounded-tl-none shadow-md'
                 }">
                   ${formatAIMarkdown(msg.text)}
+
+                  ${msg.actionType === 'OPEN_RESTAURANT_MENU' ? `
+                    <div class="mt-3 pt-2.5 border-t border-white/15">
+                      <button class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 w-full justify-center" onclick="window.toggleAIAssistant(false); window.navigateGuestTab('restaurant');">
+                        <span>🍽️ Open Dining & Restaurant Menu</span> <span>→</span>
+                      </button>
+                    </div>
+                  ` : ''}
+
+                  ${msg.actionType === 'OPEN_BREAKFAST_MENU' ? `
+                    <div class="mt-3 pt-2.5 border-t border-white/15">
+                      <button class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 w-full justify-center" onclick="window.toggleAIAssistant(false); window.navigateGuestTab('breakfast');">
+                        <span>☕ Open Breakfast Service</span> <span>→</span>
+                      </button>
+                    </div>
+                  ` : ''}
+
+                  ${msg.actionType === 'OPEN_PORTER_OPTIONS' ? `
+                    <div class="mt-3 pt-2.5 border-t border-white/15 flex flex-col gap-2">
+                      <div class="text-xs text-gold font-bold">Select Porter Location:</div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <button class="btn-primary text-xs py-1.5 px-2 text-center" onclick="window.submitPorterRequest('In Room (Suite #' + '${guest.roomNumber}' + ')'); window.toggleAIAssistant(false);">
+                          🛎️ In Room
+                        </button>
+                        <button class="btn-secondary text-xs py-1.5 px-2 text-center" onclick="window.submitPorterRequest('Main Lobby Reception'); window.toggleAIAssistant(false);">
+                          🏛️ Main Lobby
+                        </button>
+                      </div>
+                    </div>
+                  ` : ''}
+
+                  ${msg.actionType === 'OPEN_TRANSPORTATION_OPTIONS' ? `
+                    <div class="mt-3 pt-2.5 border-t border-white/15">
+                      <button class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 w-full justify-center" onclick="window.toggleAIAssistant(false); window.navigateGuestTab('transport');">
+                        <span>🚕 View VIP Transportation Fleet</span> <span>→</span>
+                      </button>
+                    </div>
+                  ` : ''}
+
+                  ${msg.actionType === 'OPEN_HOUSEKEEPING_OPTIONS' ? `
+                    <div class="mt-3 pt-2.5 border-t border-white/15">
+                      <button class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 w-full justify-center" onclick="window.toggleAIAssistant(false); window.navigateGuestTab('room-service');">
+                        <span>🛎️ Open Room Service & Housekeeping</span> <span>→</span>
+                      </button>
+                    </div>
+                  ` : ''}
                   
                   ${msg.serviceRequest ? `
                     <div class="mt-3 pt-2.5 border-t border-white/15 text-xs flex items-center justify-between gap-2">
