@@ -299,13 +299,6 @@ export function renderStaffPortal() {
   `;
 }
 
-      <!-- TAB VIEW -->
-      ${tabContent}
-
-    </div>
-  `;
-}
-
 // 1. MY TASKS TAB (Spec #24)
 function renderStaffTasksTab(myTasks, staff) {
   return `
