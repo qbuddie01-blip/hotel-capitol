@@ -11,6 +11,7 @@ import { store } from '../store/state.js';
 // Central Amara UI Action Constants
 export const AMARA_ACTIONS = {
   OPEN_RESTAURANT_MENU: 'OPEN_RESTAURANT_MENU',
+  OPEN_ORDER_TRACKER: 'OPEN_ORDER_TRACKER',
   OPEN_BREAKFAST_MENU: 'OPEN_BREAKFAST_MENU',
   OPEN_DRINKS: 'OPEN_DRINKS',
   OPEN_SNACKS: 'OPEN_SNACKS',
@@ -485,7 +486,8 @@ export class HotelCapitolAI {
 
       response.text = voiceMsg;
       response.voiceText = voiceMsg;
-      response.actionType = AMARA_ACTIONS.OPEN_RESTAURANT_MENU;
+      response.actionType = AMARA_ACTIONS.OPEN_ORDER_TRACKER;
+      response.payload = { orderId: active.id };
       return response;
     }
 
