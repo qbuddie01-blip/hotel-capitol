@@ -954,9 +954,10 @@ dialog {
   padding: 0;
   background: transparent;
   border: none;
-  max-width: 92vw;
-  width: 580px;
+  max-width: min(94vw, 640px);
+  width: 100%;
   color: #f1f5f9;
+  box-sizing: border-box;
 }
 
 dialog::backdrop {
@@ -966,12 +967,14 @@ dialog::backdrop {
 
 .modal-content {
   background: #0c1827;
-  border: 1px solid rgba(197, 160, 89, 0.3);
+  border: 1.5px solid rgba(197, 160, 89, 0.4);
   border-radius: var(--radius-xl);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.8);
-  max-height: 85vh;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.85);
+  max-height: 88vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 /* Forms & Inputs */
@@ -1555,12 +1558,62 @@ dialog::backdrop {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 28px rgba(255, 215, 0, 0.6);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+/* ==========================================================================
+   HOTEL CAPITOL — UNIFIED RESPONSIVE SYSTEM (MOBILE + TABLET + DESKTOP)
+   ========================================================================== */
+
+/* Table Responsive Container - Strict isolation: table scrolls horizontally inside its card without pushing the page */
+.table-responsive-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.table-responsive-container table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+/* Dashboard KPI Grid Transitions (1-2 col mobile -> 3 col tablet -> 6 col desktop) */
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 600px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+/* Responsive adjustments across breakpoints */
+
+/* Mobile only (< 600px) */
+@media (max-width: 599px) {
   .hide-mobile { display: none !important; }
+  .show-mobile-only { display: block !important; }
+  .show-mobile-flex { display: flex !important; }
+  .show-tablet-only { display: none !important; }
+  .show-desktop-only { display: none !important; }
   
   main#app-root {
-    padding-bottom: 140px !important;
+    padding-bottom: 120px !important;
   }
 
   .floating-ai-btn {
@@ -1575,7 +1628,7 @@ dialog::backdrop {
 
 @media (max-width: 480px) {
   main#app-root {
-    padding-bottom: 150px !important;
+    padding-bottom: 140px !important;
   }
 
   .grid-responsive-cards {
@@ -1636,8 +1689,43 @@ dialog::backdrop {
   }
 }
 
-@media (min-width: 769px) {
+/* Tablet (600px to 1024px) */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .hide-tablet { display: none !important; }
+  .show-tablet-only { display: block !important; }
+  .show-tablet-flex { display: flex !important; }
   .show-mobile-only { display: none !important; }
+  .show-desktop-only { display: none !important; }
+  .bottom-nav { display: none !important; }
+  
+  main#app-root {
+    padding-bottom: 90px !important;
+  }
+
+  .floating-ai-btn {
+    bottom: 80px;
+    right: 20px;
+    padding: 0.65rem 1.2rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Mobile & Tablet combined (< 1025px) */
+@media (max-width: 1024px) {
+  .show-mobile-tablet { display: block !important; }
+  .show-mobile-tablet-flex { display: flex !important; }
+  .hide-mobile-tablet { display: none !important; }
+}
+
+/* Desktop only (>= 1025px) */
+@media (min-width: 1025px) {
+  .show-mobile-only { display: none !important; }
+  .show-tablet-only { display: none !important; }
+  .show-mobile-tablet { display: none !important; }
+  .show-mobile-tablet-flex { display: none !important; }
+  .show-desktop-only { display: block !important; }
+  .show-desktop-flex { display: flex !important; }
+  .hide-desktop { display: none !important; }
   .bottom-nav { display: none !important; }
 }
 

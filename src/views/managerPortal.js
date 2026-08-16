@@ -857,7 +857,7 @@ function renderOverviewTab(state, activeOrders, pendingRequests, activeTransport
     <div class="flex flex-col gap-6 animate-fade-in">
       
       <!-- OPERATIONAL KPI CARDS -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div class="dashboard-kpi-grid">
         
         <div class="glass-panel p-4 rounded-xl border border-gold/30 flex flex-col justify-between">
           <span class="text-[10px] uppercase font-bold text-slate-400">Active Guests</span>
