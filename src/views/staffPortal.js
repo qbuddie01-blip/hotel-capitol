@@ -8,7 +8,7 @@ import { getIcon, renderIntercomRoundBadge } from '../assets/icons.js';
 import { store } from '../store/state.js';
 import { automationEngine } from '../services/automationRules.js';
 
-let activeStaffTab = 'tasks'; // 'tasks' | 'rooms' | 'requests' | 'schedule' | 'performance' | 'profile'
+let activeStaffTab = 'profile'; // 'profile' | 'tasks' | 'rooms' | 'requests' | 'schedule' | 'performance'
 let staffIntercomState = 'ready'; // 'ready' | 'active' | 'delivered'
 
 export function initStaffPortal() {
@@ -131,7 +131,9 @@ export function renderStaffPortal() {
   const myPendingCount = myTasks.filter(t => t.status !== 'COMPLETED').length;
 
   let tabContent = '';
-  if (activeStaffTab === 'tasks') {
+  if (activeStaffTab === 'profile') {
+    tabContent = renderStaffPersonalProfileTab(staff);
+  } else if (activeStaffTab === 'tasks') {
     tabContent = renderStaffTasksTab(myTasks, staff);
   } else if (activeStaffTab === 'rooms') {
     tabContent = renderStaffRoomsTab(state.rooms);
@@ -141,25 +143,11 @@ export function renderStaffPortal() {
     tabContent = renderStaffScheduleTab(state.schedule, state.shiftSwapRequests, staff);
   } else if (activeStaffTab === 'performance') {
     tabContent = renderStaffPerformanceTab(staff);
-  } else if (activeStaffTab === 'profile') {
-    tabContent = renderStaffPersonalProfileTab(staff);
   }
 
   return `
-    <div class="container-custom py-6">
+    <div class="container-custom py-4 sm:py-6">
       
-      <!-- TOP NAVIGATION BAR WITH BACK BUTTON -->
-      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-bold uppercase tracking-luxury text-gold">Hotel Capitol Operations</span>
-          <span class="badge-gold text-[10px]">${staff.department.toUpperCase()}</span>
-        </div>
-
-        <button class="btn-admin-back" onclick="window.navigatePortal('guest')">
-          <span>←</span> <span>Back to Guest Portal</span>
-        </button>
-      </div>
-
       <!-- REAL-TIME VOICE REQUEST CONFIRMATION PROMPT BANNER -->
       ${state.serviceRequests.filter(r => r.status === 'AWAITING_STAFF_CONFIRMATION').map(pendingReq => `
         <div class="glass-panel-gold p-4 sm:p-5 rounded-2xl mb-6 border-2 border-gold flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in" style="background: linear-gradient(135deg, rgba(32, 18, 4, 0.95) 0%, rgba(10, 22, 38, 0.95) 100%); box-shadow: 0 0 25px rgba(220, 173, 84, 0.35);">
@@ -194,55 +182,8 @@ export function renderStaffPortal() {
         </div>
       `).join('')}
 
-      <!-- STAFF HEADER & TIMECLOCK CARD (Omitted on Profile Tab to prevent duplicate presentation) -->
-      ${activeStaffTab !== 'profile' ? `
-        <div class="glass-panel p-6 rounded-2xl mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-gold/30">
-          
-          <div class="flex items-center gap-4">
-            <img src="${staff.avatar}" class="w-16 h-16 rounded-2xl object-cover border-2 border-gold shadow-lg" alt="${staff.name}" />
-            <div>
-              <div class="flex items-center gap-2">
-                <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">${staff.name}</h1>
-                <span class="badge-gold text-xs">${staff.role}</span>
-              </div>
-              <p class="text-xs text-slate-300 mt-1">
-                Department: <strong class="text-gold uppercase">${staff.department}</strong> · Shift: <strong>${staff.shift}</strong>
-              </p>
-            </div>
-          </div>
-
-          <!-- Attendance & Timeclock Box -->
-          <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-            <div class="text-left md:text-right">
-              <div class="text-xs text-slate-400">Attendance Status:</div>
-              <div class="flex items-center gap-1 text-xs font-bold text-emerald-400">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                ${staff.clockedIn ? `Signed In (${staff.clockInTime}) · ${staff.clockStatus}` : 'Signed Out'}
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <button 
-                class="glass-panel text-xs py-1.5 px-3 flex items-center gap-2 border border-gold/40 hover:border-gold cursor-pointer transition-all rounded-xl"
-                onclick="window.triggerStaffIntercom()"
-                title="Open Staff Intercom & Radio"
-              >
-                ${renderIntercomRoundBadge(22)} <span class="text-slate-200 font-semibold hide-mobile">Intercom</span>
-              </button>
-              <button 
-                class="${staff.clockedIn ? 'btn-danger' : 'btn-primary'} text-xs py-2 px-4 font-bold"
-                onclick="window.hotelCapitolStore.toggleClockIn('${staff.id}'); renderStaffPortal();"
-              >
-                ${staff.clockedIn ? 'Clock Out' : 'Clock In'}
-              </button>
-            </div>
-          </div>
-
-        </div>
-      ` : ''}
-
-      <!-- NAVIGATION TABS with Golden Outlay & Glowing Borders (Horizontal Smooth Scroll on Mobile) -->
-      <div class="category-tabs-scroll">
+      <!-- NAVIGATION TABS with Golden Outlay & Glowing Borders -->
+      <div class="category-tabs-scroll mb-6">
         <button 
           class="menu-btn-gold ${activeStaffTab === 'profile' ? 'active' : ''}"
           onclick="window.navigateStaffTab('profile')"
@@ -292,7 +233,7 @@ export function renderStaffPortal() {
         </button>
       </div>
 
-      <!-- TAB VIEW -->
+      <!-- ACTIVE TAB CONTENT -->
       ${tabContent}
 
     </div>
