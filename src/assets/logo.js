@@ -20,7 +20,8 @@ export function renderHotelCapitolLogo(options = {}) {
     return `
       <div class="inline-flex items-center ${className}" style="padding-top: 4px; padding-bottom: 2px;">
         <img 
-          src="/src/assets/hotel-capitol-logo.png" 
+          src="./src/assets/hotel-capitol-logo.png" 
+          onerror="if(this.src!=='./hotel-capitol-logo.png')this.src='./hotel-capitol-logo.png';"
           alt="Hotel Capitol Logo" 
           style="height: ${navLogoHeight}px; max-height: 36px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(220, 173, 84, 0.5)); display: block;"
         />
@@ -32,7 +33,8 @@ export function renderHotelCapitolLogo(options = {}) {
     return `
       <div class="inline-flex items-center justify-center ${className}" style="height: ${baseHeight}px;">
         <img 
-          src="/src/assets/hotel-capitol-logo.png" 
+          src="./src/assets/hotel-capitol-logo.png" 
+          onerror="if(this.src!=='./hotel-capitol-logo.png')this.src='./hotel-capitol-logo.png';"
           alt="Hotel Capitol Monogram" 
           style="height: ${baseHeight}px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 16px rgba(220, 173, 84, 0.6));"
         />
@@ -44,7 +46,8 @@ export function renderHotelCapitolLogo(options = {}) {
   return `
     <div class="flex flex-col items-center text-center ${className}">
       <img 
-        src="/src/assets/hotel-capitol-logo.png" 
+        src="./src/assets/hotel-capitol-logo.png" 
+        onerror="if(this.src!=='./hotel-capitol-logo.png')this.src='./hotel-capitol-logo.png';"
         alt="Hotel Capitol Official Logo" 
         style="height: ${baseHeight}px; max-width: 92vw; width: auto; object-fit: contain; filter: drop-shadow(0 8px 25px rgba(220, 173, 84, 0.65));"
       />

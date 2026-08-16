@@ -108,24 +108,39 @@ export class HotelCapitolAI {
 
   setupSpeechRecognition() {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        this.recognition = new SpeechRecognition();
-        this.recognition.continuous = false;
-        this.recognition.interimResults = false;
-        this.recognition.lang = 'en-NG'; // Nigerian English
+      try {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          this.recognition = new SpeechRecognition();
+          this.recognition.continuous = false;
+          this.recognition.interimResults = false;
+          this.recognition.lang = 'en-NG'; // Nigerian English
+        }
+      } catch (e) {
+        console.warn('SpeechRecognition unavailable or deferred in current browser:', e);
+        this.recognition = null;
       }
     }
   }
 
   setupVoiceSelection() {
     if (!this.speechSynth) return;
-    const loadVoices = () => {
-      this.currentVoice = this.getNigerianFemaleVoice();
-    };
-    loadVoices();
-    if (this.speechSynth.onvoiceschanged !== undefined) {
-      this.speechSynth.onvoiceschanged = loadVoices;
+    try {
+      const loadVoices = () => {
+        try {
+          this.currentVoice = this.getNigerianFemaleVoice();
+        } catch (err) {
+          console.warn('Voice lookup error:', err);
+        }
+      };
+      loadVoices();
+      if (typeof this.speechSynth.addEventListener === 'function') {
+        this.speechSynth.addEventListener('voiceschanged', loadVoices);
+      } else if (this.speechSynth.onvoiceschanged !== undefined) {
+        this.speechSynth.onvoiceschanged = loadVoices;
+      }
+    } catch (e) {
+      console.warn('Speech synthesis voice selection error:', e);
     }
   }
 

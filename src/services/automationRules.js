@@ -43,9 +43,14 @@ export class AutomationEngine {
 
   getAudioContext() {
     if (!this.audioCtx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        this.audioCtx = new AudioCtx();
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          this.audioCtx = new AudioCtx();
+        }
+      } catch (e) {
+        console.warn('AudioContext unavailable or restricted in current context:', e);
+        this.audioCtx = null;
       }
     }
     return this.audioCtx;
