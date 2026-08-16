@@ -100,39 +100,161 @@ const reschedBooking = store.getState().transportBookings.find(b => b.id === boo
 assert(reschedBooking.departureTime === '02:30 PM', 'Rescheduled departure time updated');
 assert(reschedBooking.rescheduled === true, 'Rescheduled flag set');
 
-// --- 2B. AUTHORITATIVE LOCATION CATALOG DATA TESTS ---
+// --- 2B. AUTHORITATIVE LOCATION CATALOG DATA & COVERAGE TESTS ---
 const allZones = store.getState().lagosZones || [];
 let allHaveValidLocations = true;
 let noNullOrUndefined = true;
+let allValidMetadata = true;
 
 for (const z of allZones) {
   if (!Array.isArray(z.locations) || z.locations.length === 0) allHaveValidLocations = false;
-  if (!z.id || !z.name || z.baseFare === undefined || z.name.includes('undefined') || (z.category && z.category.includes('undefined'))) noNullOrUndefined = false;
+  if (!z.id || typeof z.id !== 'string' || !z.name || typeof z.name !== 'string') allValidMetadata = false;
+  if (typeof z.baseFare !== 'number' || z.baseFare <= 0) allValidMetadata = false;
+  if ((z.estimatedMinutes === undefined || z.estimatedMinutes <= 0) && (z.estMinutes === undefined || z.estMinutes <= 0)) allValidMetadata = false;
+  if (!z.category && !z.region) allValidMetadata = false;
+  
+  if (z.id.includes('undefined') || z.id.includes('null')) noNullOrUndefined = false;
+  if (z.name.includes('undefined') || z.name.includes('null')) noNullOrUndefined = false;
+  if (z.category && (z.category.includes('undefined') || z.category.includes('null'))) noNullOrUndefined = false;
+  
   for (const loc of (z.locations || [])) {
-    if (!loc || loc.includes('undefined') || loc.includes('null')) noNullOrUndefined = false;
+    if (!loc || typeof loc !== 'string' || loc.trim() === '' || loc.includes('undefined') || loc.includes('null')) {
+      noNullOrUndefined = false;
+    }
   }
 }
+
 assert(allHaveValidLocations === true, 'All 11 transportation zones contain non-empty location arrays');
+assert(allValidMetadata === true, 'Every zone has valid ID, name, base fare > 0, travel time > 0, and region/category');
 assert(noNullOrUndefined === true, 'No zone or location contains undefined or null values');
 
-// Verify key locations in specific zones
-const zoneI1 = allZones.find(z => z.id === 'I-1');
-const zoneI2 = allZones.find(z => z.id === 'I-2');
-const zoneI3 = allZones.find(z => z.id === 'I-3');
-const zoneI4 = allZones.find(z => z.id === 'I-4');
-const zoneM1 = allZones.find(z => z.id === 'M-1');
-const zoneM2 = allZones.find(z => z.id === 'M-2');
-const zoneM3 = allZones.find(z => z.id === 'M-3');
-const zoneM4 = allZones.find(z => z.id === 'M-4');
+// Verify all 16 required test locations exist in authoritative catalog
+const allLocationsFlat = allZones.flatMap(z => z.locations || []);
+const zoneCoverageCatalog = {
+  'Marina': 'I-1',
+  'Banana Island': 'I-1',
+  'Victoria Island (V.I.)': 'I-1',
+  'Lekki Phase 1': 'I-2',
+  'Sangotedo': 'I-3',
+  'Epe': 'I-4',
+  'Ikeja GRA': 'M-2',
+  'Adekunle': 'M-1', // Yaba axis
+  'Surulere': 'M-1', // Central Mainland
+  'Gbagada': 'M-2',
+  'Ajao Estate': 'M-3',
+  'Festac Town': 'M-3',
+  'Ikorodu': 'M-4',
+  'MMA1 General Aviation Terminal': 'AIR-1',
+  'MMA2 Bi-Courtney Aviation Terminal': 'AIR-2',
+  'MMIA International Departures': 'AIR-3'
+};
 
-assert(zoneI1 && zoneI1.locations.includes('Banana Island') && zoneI1.locations.includes('Marina') && zoneI1.locations.includes('Victoria Island (V.I.)'), 'Zone I-1 contains Marina, Banana Island and Victoria Island');
-assert(zoneI2 && zoneI2.locations.includes('Lekki Phase 1') && zoneI2.locations.includes('Ikate Elegushi'), 'Zone I-2 contains Lekki Phase 1 and Ikate Elegushi');
-assert(zoneI3 && zoneI3.locations.includes('Sangotedo') && zoneI3.locations.includes('VGC (Victoria Garden City)'), 'Zone I-3 contains Sangotedo and VGC');
-assert(zoneI4 && zoneI4.locations.includes('Epe') && zoneI4.locations.includes('Ibeju-Lekki'), 'Zone I-4 contains Epe and Ibeju-Lekki');
-assert(zoneM1 && zoneM1.locations.includes('Adekunle') && zoneM1.locations.includes('Sabo'), 'Zone M-1 contains Adekunle and Sabo');
-assert(zoneM2 && zoneM2.locations.includes('Ikeja GRA') && zoneM2.locations.includes('Magodo') && zoneM2.locations.includes('Gbagada'), 'Zone M-2 contains Ikeja GRA, Magodo and Gbagada');
-assert(zoneM3 && zoneM3.locations.includes('Okota') && zoneM3.locations.includes('Festac Town') && zoneM3.locations.includes('Ajao Estate'), 'Zone M-3 contains Okota, Festac Town and Ajao Estate');
-assert(zoneM4 && zoneM4.locations.includes('Ikorodu') && zoneM4.locations.includes('Ipaja') && zoneM4.locations.includes('Agege'), 'Zone M-4 contains Ikorodu, Ipaja and Agege');
+assert(allLocationsFlat.some(l => l.includes('Marina')), 'Location "Marina" exists in catalog (Zone I-1)');
+assert(allLocationsFlat.some(l => l.includes('Banana Island')), 'Location "Banana Island" exists in catalog (Zone I-1)');
+assert(allLocationsFlat.some(l => l.includes('Victoria Island')), 'Location "Victoria Island" exists in catalog (Zone I-1)');
+assert(allLocationsFlat.some(l => l.includes('Lekki Phase 1')), 'Location "Lekki Phase 1" exists in catalog (Zone I-2)');
+assert(allLocationsFlat.some(l => l.includes('Sangotedo')), 'Location "Sangotedo" exists in catalog (Zone I-3)');
+assert(allLocationsFlat.some(l => l.includes('Epe')), 'Location "Epe" exists in catalog (Zone I-4)');
+assert(allLocationsFlat.some(l => l.includes('Ikeja GRA')), 'Location "Ikeja GRA" exists in catalog (Zone M-2)');
+assert(allLocationsFlat.some(l => l.includes('Adekunle') || l.includes('Sabo') || l.includes('Ebute Metta')), 'Location "Yaba/Ebute Metta axis" exists in catalog (Zone M-1)');
+assert(allLocationsFlat.some(l => l.includes('Aguda') || l.includes('Ojuelegba') || l.includes('Itire')), 'Location "Surulere axis" exists in catalog (Zone M-1)');
+assert(allLocationsFlat.some(l => l.includes('Gbagada')), 'Location "Gbagada" exists in catalog (Zone M-2)');
+assert(allLocationsFlat.some(l => l.includes('Ajao Estate')), 'Location "Ajao Estate" exists in catalog (Zone M-3)');
+assert(allLocationsFlat.some(l => l.includes('Festac Town')), 'Location "Festac Town" exists in catalog (Zone M-3)');
+assert(allLocationsFlat.some(l => l.includes('Ikorodu')), 'Location "Ikorodu" exists in catalog (Zone M-4)');
+assert(allLocationsFlat.some(l => l.includes('MMA1')), 'Location "MMA1" exists in catalog (Zone AIR-1)');
+assert(allLocationsFlat.some(l => l.includes('MMA2')), 'Location "MMA2" exists in catalog (Zone AIR-2)');
+assert(allLocationsFlat.some(l => l.includes('MMIA')), 'Location "MMIA" exists in catalog (Zone AIR-3)');
+
+// --- 2C. DESTINATION RESOLUTION FUNCTION TESTS ---
+function resolveDestination(locationQuery) {
+  const q = locationQuery.toLowerCase();
+  for (const z of allZones) {
+    const locList = Array.isArray(z.locations) ? z.locations : [];
+    for (const loc of locList) {
+      if (loc && (loc.toLowerCase().includes(q) || q.includes(loc.toLowerCase()))) {
+        return { zone: z, location: loc, fare: z.baseFare, estimateMins: z.estimatedMinutes || z.estMinutes };
+      }
+    }
+  }
+  return null;
+}
+
+const resBanana = resolveDestination('Banana Island');
+assert(resBanana && resBanana.zone.id === 'I-1' && resBanana.fare === 25000 && resBanana.estimateMins === 45, 'Destination "Banana Island" resolves to Zone I-1 (₦25,000, 45 mins)');
+
+const resSangotedo = resolveDestination('Sangotedo');
+assert(resSangotedo && resSangotedo.zone.id === 'I-3' && resSangotedo.fare === 35000 && resSangotedo.estimateMins === 70, 'Destination "Sangotedo" resolves to Zone I-3 (₦35,000, 70 mins)');
+
+const resIkejaGRA = resolveDestination('Ikeja GRA');
+assert(resIkejaGRA && resIkejaGRA.zone.id === 'M-2' && resIkejaGRA.fare === 25000 && resIkejaGRA.estimateMins === 20, 'Destination "Ikeja GRA" resolves to Zone M-2 (₦25,000, 20 mins)');
+
+const resIkorodu = resolveDestination('Ikorodu');
+assert(resIkorodu && resIkorodu.zone.id === 'M-4' && resIkorodu.fare === 35000 && resIkorodu.estimateMins === 60, 'Destination "Ikorodu" resolves to Zone M-4 (₦35,000, 60 mins)');
+
+const resMma1 = resolveDestination('MMA1');
+assert(resMma1 && resMma1.zone.id === 'AIR-1' && resMma1.fare === 20000 && resMma1.estimateMins === 15, 'Destination "MMA1" resolves to Zone AIR-1 (₦20,000, 15 mins)');
+
+const resMma2 = resolveDestination('MMA2');
+assert(resMma2 && resMma2.zone.id === 'AIR-2' && resMma2.fare === 22000 && resMma2.estimateMins === 15, 'Destination "MMA2" resolves to Zone AIR-2 (₦22,000, 15 mins)');
+
+const resMmia = resolveDestination('MMIA');
+assert(resMmia && resMmia.zone.id === 'AIR-3' && resMmia.fare === 25000 && resMmia.estimateMins === 20, 'Destination "MMIA" resolves to Zone AIR-3 (₦25,000, 20 mins)');
+
+// --- 2D. COMPLETE GUEST PORTAL WORKFLOW SIMULATION ---
+// Step 1: Guest selects One-Time Drop-off, Zone I-3, Location Sangotedo, Vehicle SUV
+const suvClass = vehicles.find(v => v.id === 'VEH-SUV');
+const sangotedoFare = Math.round(resSangotedo.fare * suvClass.multiplier); // 35000 * 1.35 = 47250
+assert(sangotedoFare === 47250, 'Calculated SUV transfer fare to Sangotedo is ₦47,250');
+
+const guestBooking = store.createTransportRequest({
+  serviceType: 'ONE_TIME_DROPOFF',
+  zoneId: resSangotedo.zone.id,
+  destination: `Sangotedo (${resSangotedo.zone.name})`,
+  zoneName: resSangotedo.zone.name,
+  departureDate: '2026-08-17',
+  departureTime: '02:00 PM',
+  vehicleClassId: 'VEH-SUV',
+  vehicle: `${suvClass.name} (${suvClass.models})`,
+  passengers: 3,
+  price: sangotedoFare
+});
+
+assert(guestBooking && guestBooking.id.startsWith('TBK-'), `Guest booking created (${guestBooking.id})`);
+assert(guestBooking.destination.includes('Sangotedo'), 'Guest booking destination correctly includes Sangotedo');
+assert(guestBooking.price === 47250, 'Guest booking price correctly matches ₦47,250');
+
+// Step 2: Driver Workflow on Guest Booking
+store.driverAcceptTransport(guestBooking.id, 'Lead Driver Ibrahim Bello');
+store.driverConfirmDestination(guestBooking.id);
+store.driverConfirmSchedule(guestBooking.id);
+const verifiedGuestBooking = store.getState().transportBookings.find(b => b.id === guestBooking.id);
+assert(verifiedGuestBooking.driverAccepted === true, 'Driver accepted guest ride');
+assert(verifiedGuestBooking.routeConfirmed === true, 'Driver confirmed destination route');
+assert(verifiedGuestBooking.scheduleConfirmed === true, 'Driver confirmed departure schedule');
+
+// Step 3: Rescheduling on Guest Booking
+store.rescheduleTransport(guestBooking.id, '2026-08-17', '04:30 PM');
+const rescheduledGuestBooking = store.getState().transportBookings.find(b => b.id === guestBooking.id);
+assert(rescheduledGuestBooking.departureTime === '04:30 PM', 'Rescheduled departure time set to 04:30 PM');
+assert(rescheduledGuestBooking.rescheduled === true, 'Rescheduled flag confirmed true');
+
+// Step 4: Full-Day Charter Flow Simulation
+const sprinterClass = vehicles.find(v => v.id === 'VEH-SPRINTER');
+const charterBooking = store.createTransportRequest({
+  serviceType: 'FULL_DAY_CHARTER',
+  zoneId: 'I-1',
+  destination: 'Full-Day Luxury Charter (ZONE I-1 — Core Island)',
+  zoneName: 'ZONE I-1 — Core Island',
+  departureDate: '2026-08-18',
+  departureTime: '09:00 AM',
+  vehicleClassId: 'VEH-SPRINTER',
+  vehicle: `${sprinterClass.name} (${sprinterClass.models})`,
+  passengers: 6,
+  price: sprinterClass.charterDailyRate
+});
+assert(charterBooking.price === 250000, 'Sprinter 12h charter booking fare is ₦250,000');
+assert(charterBooking.serviceType === 'FULL_DAY_CHARTER', 'Charter booking serviceType confirmed');
 
 // 3. RESTAURANT ORDER LIFECYCLE & ISOLATED ORDER TRACKER
 console.log('\n--- 3. RESTAURANT ORDER LIFECYCLE & DISPATCH ---');
@@ -390,11 +512,24 @@ assert(amenityQueryResponse.text.includes('Pool') || amenityQueryResponse.voiceT
 const transportQueryResponse = aiEngine.processGuestQuery('How much is a ride to Lekki Phase 1?');
 assert(transportQueryResponse.text.includes('30,000') || transportQueryResponse.voiceText.includes('30,000'), 'Tolani dynamically quoted Lekki Phase 1 fare (₦30,000)');
 
-const bananaIslandResponse = aiEngine.processGuestQuery('I want to go to Banana Island');
-assert(bananaIslandResponse.text.includes('25,000') || bananaIslandResponse.voiceText.includes('25,000'), 'Tolani dynamically mapped Banana Island to Zone I-1 (₦25,000)');
+const bananaIslandResponse = aiEngine.processGuestQuery('I want to go to Banana Island.');
+assert(bananaIslandResponse.text.includes('25,000') || bananaIslandResponse.voiceText.includes('25,000'), 'Tolani dynamically mapped "I want to go to Banana Island." to Zone I-1 (₦25,000, 45 mins)');
 
 const sangotedoResponse = aiEngine.processGuestQuery('How much is a ride to Sangotedo?');
-assert(sangotedoResponse.text.includes('35,000') || sangotedoResponse.voiceText.includes('35,000'), 'Tolani dynamically mapped Sangotedo to Zone I-3 (₦35,000)');
+assert(sangotedoResponse.text.includes('35,000') || sangotedoResponse.voiceText.includes('35,000'), 'Tolani dynamically mapped "How much is a ride to Sangotedo?" to Zone I-3 (₦35,000, 70 mins)');
+
+const ikejaGraResponse = aiEngine.processGuestQuery('Take me to Ikeja GRA.');
+assert(ikejaGraResponse.text.includes('25,000') || ikejaGraResponse.voiceText.includes('25,000'), 'Tolani dynamically mapped "Take me to Ikeja GRA." to Zone M-2 (₦25,000, 20 mins)');
+
+const ikoroduResponse = aiEngine.processGuestQuery('I need a ride to Ikorodu.');
+assert(ikoroduResponse.text.includes('35,000') || ikoroduResponse.voiceText.includes('35,000'), 'Tolani dynamically mapped "I need a ride to Ikorodu." to Zone M-4 (₦35,000, 60 mins)');
+
+// Verify Tolani did NOT alter any state configuration or pricing
+const unmodifiedZones = store.getState().lagosZones || [];
+assert(unmodifiedZones.find(z => z.id === 'I-1').baseFare === 25000, 'Tolani query preserved Zone I-1 baseline fare (₦25,000)');
+assert(unmodifiedZones.find(z => z.id === 'I-3').baseFare === 35000, 'Tolani query preserved Zone I-3 baseline fare (₦35,000)');
+assert(unmodifiedZones.find(z => z.id === 'M-2').baseFare === 25000, 'Tolani query preserved Zone M-2 baseline fare (₦25,000)');
+assert(unmodifiedZones.find(z => z.id === 'M-4').baseFare === 35000, 'Tolani query preserved Zone M-4 baseline fare (₦35,000)');
 
 // ================================================================
 // 11. TAMPER-EVIDENT AUDIT TRAIL

@@ -411,7 +411,9 @@ export class HotelCapitolAI {
       q.includes('taxi') || q.includes('airport') || q.includes('airport pickup') || q.includes('airport drop') || 
       q.includes('driver') || q.includes('car to') || q.includes('need a car') || q.includes('ride') ||
       q.includes('uber') || q.includes('mma2') || q.includes('mma1') || q.includes('mmia') || q.includes('chauffeur') || 
-      q.includes('transfer') || q.includes('charter') || q.includes('book a car') || q.includes('transport')
+      q.includes('transfer') || q.includes('charter') || q.includes('book a car') || q.includes('transport') ||
+      q.includes('take me to') || q.includes('drive me to') || q.includes('want to go to') || q.includes('drop me at') ||
+      q.includes('trip to') || q.includes('need a ride')
     ) {
       return { intent: 'VIP_TRANSPORTATION', service: SERVICES.VIP_TRANSPORTATION, department: 'TRANSPORTATION' };
     }
@@ -605,7 +607,7 @@ export class HotelCapitolAI {
     }
 
     // 3. Transportation Fare Question
-    if (q.includes('ride') || q.includes('fare') || q.includes('car') || q.includes('cost') || q.includes('how much') || q.includes('transport') || q.includes('banana island') || q.includes('sangotedo') || q.includes('airport') || intent === 'VIP_TRANSPORTATION') {
+    if (q.includes('ride') || q.includes('fare') || q.includes('car') || q.includes('cost') || q.includes('how much') || q.includes('transport') || q.includes('take me to') || q.includes('want to go') || q.includes('drive me to') || q.includes('banana island') || q.includes('sangotedo') || q.includes('airport') || intent === 'VIP_TRANSPORTATION') {
       const state = store.getState();
       const zones = state.lagosZones || [];
       
