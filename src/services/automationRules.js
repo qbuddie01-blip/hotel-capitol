@@ -380,4 +380,6 @@ export class AutomationEngine {
 }
 
 export const automationEngine = new AutomationEngine();
-window.hotelCapitolAutomation = automationEngine;
+if (typeof window !== 'undefined') {
+  window.hotelCapitolAutomation = automationEngine;
+}
