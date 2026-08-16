@@ -21,6 +21,7 @@ let activeTrackedOrderId = null;
 // Transportation state
 let selectedTransportMode = 'ONE_TIME_DROPOFF'; // 'ONE_TIME_DROPOFF' | 'FULL_DAY_CHARTER'
 let selectedZoneId = 'AIR-2';
+let selectedDestinationLocation = 'MMA2 Bi-Courtney Aviation Terminal';
 let selectedVehicleId = 'VEH-SEDAN';
 let selectedDepartureDate = new Date().toISOString().slice(0, 10);
 let selectedDepartureTime = '11:30 AM';
@@ -407,6 +408,16 @@ export function initGuestPortal() {
 
   window.setTransportZone = (zoneId) => {
     selectedZoneId = zoneId;
+    const state = store.getState();
+    const zone = (state.lagosZones || []).find(z => z.id === zoneId);
+    if (zone && Array.isArray(zone.locations) && zone.locations.length > 0) {
+      selectedDestinationLocation = zone.locations[0];
+    }
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.setTransportLocation = (loc) => {
+    selectedDestinationLocation = loc;
     if (window.renderApp) window.renderApp();
   };
 
@@ -447,12 +458,17 @@ export function initGuestPortal() {
     const zone = state.lagosZones.find(z => z.id === selectedZoneId) || state.lagosZones[0];
     const veh = state.vehicleClasses.find(v => v.id === selectedVehicleId) || state.vehicleClasses[0];
 
+    const locList = Array.isArray(zone.locations) ? zone.locations : (typeof zone.locations === 'string' ? zone.locations.split(',').map(s => s.trim()) : []);
+    const destinationLabel = isCharter 
+      ? `Full-Day Luxury Charter (${zone.name})` 
+      : (selectedDestinationLocation ? `${selectedDestinationLocation} (${zone.name})` : (locList[0] || zone.name));
+
     const fare = isCharter ? veh.charterDailyRate : Math.round(zone.baseFare * veh.multiplier);
 
     const booking = store.createTransportRequest({
       serviceType: selectedTransportMode,
       zoneId: zone.id,
-      destination: isCharter ? `Full-Day Luxury Charter (${zone.name})` : zone.name,
+      destination: destinationLabel,
       zoneName: zone.name,
       departureDate: selectedDepartureDate,
       departureTime: selectedDepartureTime,
@@ -2187,14 +2203,7 @@ function renderTransportSection(guest) {
           <span>📍</span> <span>ONE-TIME DROP-OFF / TRANSFER</span>
         </button>
         <button 
-          class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedTransportMode === 'FULL_DAY_CHARTER' ? 'bg-gold text-black shadow-lg' : 'text-slate-300 hover:text-white'}"
-          onclick="window.setTransportMode('FULL_DAY_CHARTER')"
-        >
-          <span>👑</span> <span>FULL-DAY LUXURY CHARTER (12 HRS)</span>
-        </button>
-      </div>
-
-      <!-- Booking Configuration Panel -->
+          class      <!-- Booking Configuration Panel -->
       <div class="glass-panel-gold p-6 sm:p-8 rounded-2xl border-2 border-gold/50 shadow-2xl">
         <h3 class="font-serif text-lg text-white font-bold mb-4 flex items-center gap-2">
           <span>🚗</span> <span>Customize Your Executive Journey</span>
@@ -2203,30 +2212,73 @@ function renderTransportSection(guest) {
         <!-- Step A: Destination / Zonal Selector -->
         <div class="mb-6">
           <label class="block text-xs font-bold text-gold uppercase tracking-wider mb-2">
-            ${isCharter ? 'Primary Operating Region:' : 'Select Lagos Destination Zone:'}
+            ${isCharter ? 'Primary Operating Region:' : '1. Select Lagos Destination Zone:'}
           </label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
-            ${zones.map(z => `
-              <div 
-                class="p-3 rounded-xl border cursor-pointer transition-all text-xs flex flex-col justify-between ${selectedZoneId === z.id ? 'bg-gold/20 border-gold shadow-md text-white' : 'bg-navy-950/70 border-white/10 text-slate-300 hover:border-gold/50'}"
-                onclick="window.setTransportZone('${z.id}')"
-              >
-                <div>
-                  <div class="font-bold ${selectedZoneId === z.id ? 'text-gold' : 'text-white'}">${z.name}</div>
-                  <div class="text-[11px] text-slate-400 mt-0.5">${z.category} · ~${z.estMinutes} mins</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto pr-1">
+            ${zones.map(z => {
+              const catStr = z.category || (z.region === 'ISLAND' ? 'Lagos Island' : z.region === 'MAINLAND' ? 'Lagos Mainland' : 'Airport Hub');
+              const estMins = z.estimatedMinutes || z.estMinutes || 30;
+              const locs = Array.isArray(z.locations) ? z.locations : (typeof z.locations === 'string' ? z.locations.split(',').map(s => s.trim()) : []);
+              const previewLocs = locs.slice(0, 3).join(', ') + (locs.length > 3 ? '...' : '');
+              const isSelected = selectedZoneId === z.id;
+              
+              return `
+                <div 
+                  class="p-3.5 rounded-xl border cursor-pointer transition-all text-xs flex flex-col justify-between ${isSelected ? 'bg-gold/20 border-2 border-gold shadow-md text-white' : 'bg-navy-950/70 border-white/10 text-slate-300 hover:border-gold/50'}"
+                  onclick="window.setTransportZone('${z.id}')"
+                >
+                  <div>
+                    <div class="font-bold ${isSelected ? 'text-gold' : 'text-white'}">${z.name}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">${catStr} · ~${estMins} mins</div>
+                    <div class="text-[10px] text-slate-400 mt-1 italic line-clamp-1">${previewLocs}</div>
+                  </div>
+                  <div class="mt-2.5 pt-1.5 border-t border-white/10 flex items-center justify-between">
+                    <span class="text-[10px] text-slate-400">${locs.length} locations</span>
+                    <span class="font-bold text-gold font-serif text-xs">Base: ₦${z.baseFare.toLocaleString()}</span>
+                  </div>
                 </div>
-                <div class="mt-2 text-right font-bold text-gold">
-                  Base: ₦${z.baseFare.toLocaleString()}
-                </div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
+
+        <!-- Step A2: Specific Location Selector (When not Full-Day Charter) -->
+        ${!isCharter ? `
+          <div class="mb-6 p-4 rounded-xl bg-navy-950/90 border border-gold/40">
+            <div class="flex items-center justify-between mb-2.5 flex-wrap gap-2">
+              <label class="block text-xs font-bold text-gold uppercase tracking-wider">
+                2. Select Specific Drop-Off Location in ${selectedZone.name}:
+              </label>
+              <span class="text-[11px] text-slate-400">
+                ${(Array.isArray(selectedZone.locations) ? selectedZone.locations : []).length} Available Locations
+              </span>
+            </div>
+
+            <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
+              ${(Array.isArray(selectedZone.locations) ? selectedZone.locations : (typeof selectedZone.locations === 'string' ? selectedZone.locations.split(',').map(s => s.trim()) : [])).map(loc => {
+                const isLocSelected = selectedDestinationLocation === loc;
+                return `
+                  <button 
+                    class="py-1.5 px-3 rounded-lg text-xs transition-all cursor-pointer ${isLocSelected ? 'bg-gold text-navy-950 font-bold shadow-md' : 'bg-navy-900 text-slate-300 border border-white/10 hover:border-gold/50 hover:text-white'}"
+                    onclick="window.setTransportLocation('${loc.replace(/'/g, "\\'")}')"
+                    type="button"
+                  >
+                    ${isLocSelected ? '✓ ' : ''}${loc}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+            
+            <div class="mt-2.5 pt-2 border-t border-white/10 text-[11px] text-slate-300">
+              Selected Destination: <strong class="text-gold font-semibold">${selectedDestinationLocation || (Array.isArray(selectedZone.locations) ? selectedZone.locations[0] : selectedZone.name)}</strong>
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Step B: Vehicle Class Selector -->
         <div class="mb-6">
           <label class="block text-xs font-bold text-gold uppercase tracking-wider mb-2">
-            Select Chauffeur Vehicle Class:
+            ${isCharter ? '2.' : '3.'} Select Chauffeur Vehicle Class:
           </label>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             ${vehicles.map(v => {
@@ -2238,7 +2290,7 @@ function renderTransportSection(guest) {
                   onclick="window.setTransportVehicle('${v.id}')"
                 >
                   <div>
-                    <div class="text-2xl mb-1">${v.icon}</div>
+                    <div class="text-2xl mb-1">${v.icon || '🚘'}</div>
                     <div class="font-serif font-bold text-white text-sm">${v.name}</div>
                     <div class="text-[11px] text-slate-300 mt-0.5">${v.models}</div>
                     <div class="text-[10px] text-slate-400 mt-1">${v.capacity} Passengers · AC & WiFi</div>
@@ -2260,7 +2312,7 @@ function renderTransportSection(guest) {
             <input 
               type="date" 
               value="${selectedDepartureDate}" 
-              class="input-custom text-xs py-2"
+              class="input-custom text-xs py-2" 
               onchange="window.setTransportDate(this.value)"
             />
           </div>
@@ -2293,7 +2345,7 @@ function renderTransportSection(guest) {
         <div class="p-4 rounded-xl bg-navy-950 border border-gold/40 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <div class="text-xs text-slate-300">
-              Trip: <strong class="text-white">${isCharter ? 'Full-Day Charter' : selectedZone.name}</strong> · Vehicle: <strong class="text-gold">${selectedVehicle.name}</strong>
+              Destination: <strong class="text-white">${isCharter ? 'Full-Day Charter (' + selectedZone.name + ')' : (selectedDestinationLocation || selectedZone.name)}</strong> · Vehicle: <strong class="text-gold">${selectedVehicle.name}</strong>
             </div>
             <div class="text-base font-serif font-bold text-white mt-0.5">
               Calculated Total: <span class="text-gold">₦${calculatedFare.toLocaleString()}</span> <span class="text-xs text-slate-400 font-normal font-sans">(Billed to Suite Folio)</span>
@@ -2301,7 +2353,7 @@ function renderTransportSection(guest) {
           </div>
 
           <button 
-            class="btn-primary py-3 px-8 text-xs font-bold shadow-xl whitespace-nowrap w-full sm:w-auto"
+            class="btn-primary py-3 px-8 text-xs font-bold shadow-xl whitespace-nowrap w-full sm:w-auto cursor-pointer"
             onclick="window.openTransportBookingReview()"
           >
             Review & Confirm Transit →
@@ -2419,13 +2471,12 @@ function renderTransportSection(guest) {
                 <strong class="text-white">${isCharter ? 'Full-Day Charter (12 Hours)' : 'One-Time Transfer'}</strong>
               </div>
               <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
-                <span>Destination / Zone:</span>
-                <strong class="text-gold">${isCharter ? selectedZone.name + ' (Charter Base)' : selectedZone.name}</strong>
+                <span>Destination:</span>
+                <strong class="text-gold">${isCharter ? selectedZone.name + ' (Charter Base)' : (selectedDestinationLocation ? selectedDestinationLocation + ' (' + selectedZone.name + ')' : selectedZone.name)}</strong>
               </div>
               <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
                 <span>Vehicle Class:</span>
                 <strong class="text-white">${selectedVehicle.name} (${selectedVehicle.models})</strong>
-              </div>
               <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
                 <span>Departure Schedule:</span>
                 <strong class="text-white">${selectedDepartureDate} at ${selectedDepartureTime}</strong>
@@ -2441,8 +2492,8 @@ function renderTransportSection(guest) {
             </div>
 
             <div class="flex items-center justify-end gap-3">
-              <button class="btn-secondary text-xs py-2.5 px-4" onclick="window.closeTransportBookingReview()">Back to Edit</button>
-              <button class="btn-primary text-xs py-2.5 px-6 font-bold" onclick="window.confirmTransportBooking()">Confirm & Dispatch Driver →</button>
+              <button class="btn-secondary text-xs py-2.5 px-4 cursor-pointer" onclick="window.closeTransportBookingReview()">Back to Edit</button>
+              <button class="btn-primary text-xs py-2.5 px-6 font-bold cursor-pointer" onclick="window.confirmTransportBooking()">Confirm & Dispatch Driver →</button>
             </div>
           </div>
         </div>

@@ -605,28 +605,55 @@ export class HotelCapitolAI {
     }
 
     // 3. Transportation Fare Question
-    if (q.includes('ride') || q.includes('fare') || q.includes('car') || q.includes('cost') || q.includes('how much') || q.includes('transport') || intent === 'VIP_TRANSPORTATION') {
+    if (q.includes('ride') || q.includes('fare') || q.includes('car') || q.includes('cost') || q.includes('how much') || q.includes('transport') || q.includes('banana island') || q.includes('sangotedo') || q.includes('airport') || intent === 'VIP_TRANSPORTATION') {
       const state = store.getState();
       const zones = state.lagosZones || [];
       
-      let targetZoneId = null;
-      if (q.includes('lekki phase 1') || q.includes('marwa') || q.includes('ikate')) targetZoneId = 'I-2';
-      else if (q.includes('lekki') || q.includes('ajah') || q.includes('vgc')) targetZoneId = 'I-3';
-      else if (q.includes('victoria island') || q.includes('ikoyi') || q.includes('marina') || q.includes(' vi ') || q.startsWith('vi ')) targetZoneId = 'I-1';
-      else if (q.includes('mma2') || q.includes('terminal 2')) targetZoneId = 'AIR-2';
-      else if (q.includes('mma1') || q.includes('terminal 1')) targetZoneId = 'AIR-1';
-      else if (q.includes('mmia') || q.includes('international airport') || q.includes('intl airport')) targetZoneId = 'AIR-3';
-      else if (q.includes('ikeja') || q.includes('gra') || q.includes('magodo') || q.includes('alausa')) targetZoneId = 'M-2';
-      else if (q.includes('yaba') || q.includes('surulere') || q.includes('gbagada')) targetZoneId = 'M-1';
+      let matchedZone = null;
+      let matchedLocationName = null;
 
-      const matchedZone = targetZoneId ? zones.find(z => z.id === targetZoneId) : null;
+      // 1. Dynamic lookup in authoritative location catalogs
+      for (const zone of zones) {
+        const locList = Array.isArray(zone.locations) ? zone.locations : (typeof zone.locations === 'string' ? zone.locations.split(',').map(s => s.trim()) : []);
+        for (const loc of locList) {
+          if (loc && q.includes(loc.toLowerCase())) {
+            matchedZone = zone;
+            matchedLocationName = loc;
+            break;
+          }
+        }
+        if (matchedZone) break;
+      }
 
-      if (matchedZone && (q.includes('how much') || q.includes('fare') || q.includes('price') || q.includes('cost') || q.includes('rate') || q.includes('how long'))) {
-        const msg = `The published chauffeur transfer rate for ${matchedZone.name} is ₦${matchedZone.baseFare.toLocaleString()}, with an estimated journey duration of ${matchedZone.estimatedMinutes} minutes.`;
-        response.text = `**VIP Transportation Fare Quote**\n• **Destination**: ${matchedZone.name}\n• **Base Fare**: ₦${matchedZone.baseFare.toLocaleString()}\n• **Estimated Time**: ${matchedZone.estimatedMinutes} mins\n• **Locations**: ${matchedZone.locations}\n\nI have opened the **VIP Chauffeur Selector** below for booking.`;
-        response.voiceText = msg;
+      // 2. Lookup by zone name / aliases
+      if (!matchedZone) {
+        if (q.includes('lekki phase 1') || q.includes('marwa') || q.includes('ikate')) matchedZone = zones.find(z => z.id === 'I-2');
+        else if (q.includes('lekki') || q.includes('ajah') || q.includes('vgc')) matchedZone = zones.find(z => z.id === 'I-3');
+        else if (q.includes('victoria island') || q.includes('ikoyi') || q.includes('marina') || q.includes(' vi ') || q.startsWith('vi ') || q.includes('isale eko')) matchedZone = zones.find(z => z.id === 'I-1');
+        else if (q.includes('mma2') || q.includes('terminal 2')) matchedZone = zones.find(z => z.id === 'AIR-2');
+        else if (q.includes('mma1') || q.includes('terminal 1')) matchedZone = zones.find(z => z.id === 'AIR-1');
+        else if (q.includes('mmia') || q.includes('international airport') || q.includes('intl airport')) matchedZone = zones.find(z => z.id === 'AIR-3');
+        else if (q.includes('ikeja') || q.includes('gra') || q.includes('magodo') || q.includes('alausa')) matchedZone = zones.find(z => z.id === 'M-2');
+        else if (q.includes('yaba') || q.includes('surulere') || q.includes('gbagada') || q.includes('ebute metta')) matchedZone = zones.find(z => z.id === 'M-1');
+        else if (q.includes('isolo') || q.includes('mushin') || q.includes('festac')) matchedZone = zones.find(z => z.id === 'M-3');
+        else if (q.includes('ikorodu') || q.includes('alimosho') || q.includes('ipaja')) matchedZone = zones.find(z => z.id === 'M-4');
+        else if (q.includes('epe') || q.includes('ibeju')) matchedZone = zones.find(z => z.id === 'I-4');
+      }
+
+      if (matchedZone && (q.includes('how much') || q.includes('fare') || q.includes('price') || q.includes('cost') || q.includes('rate') || q.includes('how long') || q.includes('want to go') || q.includes('ride to') || q.includes('take me to') || q.includes('drop me at') || q.includes('trip to') || intent === 'VIP_TRANSPORTATION')) {
+        const locList = Array.isArray(matchedZone.locations) ? matchedZone.locations : (typeof matchedZone.locations === 'string' ? matchedZone.locations.split(',').map(s => s.trim()) : []);
+        
+        let voiceMsg = '';
+        if (matchedLocationName) {
+          voiceMsg = `The published chauffeur transfer rate to ${matchedLocationName} in ${matchedZone.name} is ₦${matchedZone.baseFare.toLocaleString()}, with an estimated duration of ${matchedZone.estimatedMinutes || matchedZone.estMinutes || 30} minutes.`;
+        } else {
+          voiceMsg = `The published chauffeur transfer rate for ${matchedZone.name} is ₦${matchedZone.baseFare.toLocaleString()}, with an estimated duration of ${matchedZone.estimatedMinutes || matchedZone.estMinutes || 30} minutes.`;
+        }
+
+        response.text = `**VIP Transportation Fare Quote**\n• **Destination**: ${matchedLocationName ? matchedLocationName + ' (' + matchedZone.name + ')' : matchedZone.name}\n• **Base Fare**: ₦${matchedZone.baseFare.toLocaleString()}\n• **Estimated Time**: ${matchedZone.estimatedMinutes || matchedZone.estMinutes || 30} mins\n• **Key Locations**: ${locList.join(' • ')}\n\nI have opened the **VIP Chauffeur Selector** below for booking.`;
+        response.voiceText = voiceMsg;
         response.actionType = AMARA_ACTIONS.OPEN_TRANSPORTATION_OPTIONS;
-        response.actionPayload = { zoneId: matchedZone.id };
+        response.actionPayload = { zoneId: matchedZone.id, location: matchedLocationName || locList[0] };
         this.logAndReturn(userQuery, response);
         return response;
       }

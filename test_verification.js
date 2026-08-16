@@ -100,6 +100,40 @@ const reschedBooking = store.getState().transportBookings.find(b => b.id === boo
 assert(reschedBooking.departureTime === '02:30 PM', 'Rescheduled departure time updated');
 assert(reschedBooking.rescheduled === true, 'Rescheduled flag set');
 
+// --- 2B. AUTHORITATIVE LOCATION CATALOG DATA TESTS ---
+const allZones = store.getState().lagosZones || [];
+let allHaveValidLocations = true;
+let noNullOrUndefined = true;
+
+for (const z of allZones) {
+  if (!Array.isArray(z.locations) || z.locations.length === 0) allHaveValidLocations = false;
+  if (!z.id || !z.name || z.baseFare === undefined || z.name.includes('undefined') || (z.category && z.category.includes('undefined'))) noNullOrUndefined = false;
+  for (const loc of (z.locations || [])) {
+    if (!loc || loc.includes('undefined') || loc.includes('null')) noNullOrUndefined = false;
+  }
+}
+assert(allHaveValidLocations === true, 'All 11 transportation zones contain non-empty location arrays');
+assert(noNullOrUndefined === true, 'No zone or location contains undefined or null values');
+
+// Verify key locations in specific zones
+const zoneI1 = allZones.find(z => z.id === 'I-1');
+const zoneI2 = allZones.find(z => z.id === 'I-2');
+const zoneI3 = allZones.find(z => z.id === 'I-3');
+const zoneI4 = allZones.find(z => z.id === 'I-4');
+const zoneM1 = allZones.find(z => z.id === 'M-1');
+const zoneM2 = allZones.find(z => z.id === 'M-2');
+const zoneM3 = allZones.find(z => z.id === 'M-3');
+const zoneM4 = allZones.find(z => z.id === 'M-4');
+
+assert(zoneI1 && zoneI1.locations.includes('Banana Island') && zoneI1.locations.includes('Marina') && zoneI1.locations.includes('Victoria Island (V.I.)'), 'Zone I-1 contains Marina, Banana Island and Victoria Island');
+assert(zoneI2 && zoneI2.locations.includes('Lekki Phase 1') && zoneI2.locations.includes('Ikate Elegushi'), 'Zone I-2 contains Lekki Phase 1 and Ikate Elegushi');
+assert(zoneI3 && zoneI3.locations.includes('Sangotedo') && zoneI3.locations.includes('VGC (Victoria Garden City)'), 'Zone I-3 contains Sangotedo and VGC');
+assert(zoneI4 && zoneI4.locations.includes('Epe') && zoneI4.locations.includes('Ibeju-Lekki'), 'Zone I-4 contains Epe and Ibeju-Lekki');
+assert(zoneM1 && zoneM1.locations.includes('Adekunle') && zoneM1.locations.includes('Sabo'), 'Zone M-1 contains Adekunle and Sabo');
+assert(zoneM2 && zoneM2.locations.includes('Ikeja GRA') && zoneM2.locations.includes('Magodo') && zoneM2.locations.includes('Gbagada'), 'Zone M-2 contains Ikeja GRA, Magodo and Gbagada');
+assert(zoneM3 && zoneM3.locations.includes('Okota') && zoneM3.locations.includes('Festac Town') && zoneM3.locations.includes('Ajao Estate'), 'Zone M-3 contains Okota, Festac Town and Ajao Estate');
+assert(zoneM4 && zoneM4.locations.includes('Ikorodu') && zoneM4.locations.includes('Ipaja') && zoneM4.locations.includes('Agege'), 'Zone M-4 contains Ikorodu, Ipaja and Agege');
+
 // 3. RESTAURANT ORDER LIFECYCLE & ISOLATED ORDER TRACKER
 console.log('\n--- 3. RESTAURANT ORDER LIFECYCLE & DISPATCH ---');
 const newOrder = store.createOrder({
@@ -355,6 +389,12 @@ assert(amenityQueryResponse.text.includes('Pool') || amenityQueryResponse.voiceT
 // Ask Tolani for Transport Fare
 const transportQueryResponse = aiEngine.processGuestQuery('How much is a ride to Lekki Phase 1?');
 assert(transportQueryResponse.text.includes('30,000') || transportQueryResponse.voiceText.includes('30,000'), 'Tolani dynamically quoted Lekki Phase 1 fare (₦30,000)');
+
+const bananaIslandResponse = aiEngine.processGuestQuery('I want to go to Banana Island');
+assert(bananaIslandResponse.text.includes('25,000') || bananaIslandResponse.voiceText.includes('25,000'), 'Tolani dynamically mapped Banana Island to Zone I-1 (₦25,000)');
+
+const sangotedoResponse = aiEngine.processGuestQuery('How much is a ride to Sangotedo?');
+assert(sangotedoResponse.text.includes('35,000') || sangotedoResponse.voiceText.includes('35,000'), 'Tolani dynamically mapped Sangotedo to Zone I-3 (₦35,000)');
 
 // ================================================================
 // 11. TAMPER-EVIDENT AUDIT TRAIL

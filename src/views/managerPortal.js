@@ -1555,47 +1555,56 @@ function renderTransportationTab(state, currentRole) {
         </div>
 
         <div class="flex flex-col gap-3">
-          ${zones.map(zone => `
-            <div class="p-4 rounded-xl bg-navy-950 border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="badge-gold text-[10px] font-bold">${zone.id}</span>
-                  <strong class="text-white text-sm">${zone.name}</strong>
-                  <span class="text-slate-400 text-xs">(${zone.region})</span>
+          ${zones.map(zone => {
+            const locList = Array.isArray(zone.locations) ? zone.locations : (typeof zone.locations === 'string' ? zone.locations.split(',').map(s => s.trim()) : []);
+            const formattedLocs = locList.join(' • ');
+            const regionStr = zone.category || (zone.region === 'ISLAND' ? 'Lagos Island' : zone.region === 'MAINLAND' ? 'Lagos Mainland' : 'Airport Hub');
+            
+            return `
+              <div class="p-4 rounded-xl bg-navy-950 border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span class="badge-gold text-[10px] font-bold">${zone.id}</span>
+                    <strong class="text-white text-sm">${zone.name}</strong>
+                    <span class="text-slate-400 text-xs">(${regionStr})</span>
+                  </div>
+                  
+                  <div class="text-xs text-slate-300 mt-1">
+                    <span class="text-gold font-semibold">Locations:</span> ${formattedLocs || 'Standard coverage area'}
+                  </div>
                 </div>
-                <div class="text-xs text-slate-300">${zone.locations}</div>
+
+                <div class="flex items-center gap-3 flex-wrap">
+                  <div class="flex flex-col">
+                    <label class="text-[10px] text-slate-400">Base Fare (₦):</label>
+                    <input 
+                      type="number" 
+                      id="zone-fare-${zone.id}" 
+                      class="input-custom text-xs py-1 px-2.5 w-28 text-gold font-bold" 
+                      value="${zone.baseFare}" 
+                    />
+                  </div>
+
+                  <div class="flex flex-col">
+                    <label class="text-[10px] text-slate-400">Est. Mins:</label>
+                    <input 
+                      type="number" 
+                      id="zone-mins-${zone.id}" 
+                      class="input-custom text-xs py-1 px-2.5 w-16" 
+                      value="${zone.estimatedMinutes || zone.estMinutes || 30}" 
+                    />
+                  </div>
+
+                  <button 
+                    class="btn-primary text-xs py-2 px-4 font-bold cursor-pointer ${!canManage ? 'opacity-50 cursor-not-allowed' : ''}"
+                    onclick="${canManage ? `window.saveZonePrice('${zone.id}')` : 'alert(\'Permission Denied\')'}"
+                  >
+                    Save Fare
+                  </button>
+                </div>
               </div>
-
-              <div class="flex items-center gap-3">
-                <div class="flex flex-col">
-                  <label class="text-[10px] text-slate-400">Base Fare (₦):</label>
-                  <input 
-                    type="number" 
-                    id="zone-fare-${zone.id}" 
-                    class="input-custom text-xs py-1 px-2.5 w-28 text-gold font-bold" 
-                    value="${zone.baseFare}" 
-                  />
-                </div>
-
-                <div class="flex flex-col">
-                  <label class="text-[10px] text-slate-400">Est. Mins:</label>
-                  <input 
-                    type="number" 
-                    id="zone-mins-${zone.id}" 
-                    class="input-custom text-xs py-1 px-2.5 w-16" 
-                    value="${zone.estimatedMinutes}" 
-                  />
-                </div>
-
-                <button 
-                  class="btn-primary text-xs py-2 px-4 font-bold ${!canManage ? 'opacity-50 cursor-not-allowed' : ''}"
-                  onclick="${canManage ? `window.saveZonePrice('${zone.id}')` : 'alert(\'Permission Denied\')'}"
-                >
-                  Save Fare
-                </button>
-              </div>
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       </div>
 

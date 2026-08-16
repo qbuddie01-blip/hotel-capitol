@@ -528,92 +528,210 @@ const defaultState = {
     {
       id: 'I-1',
       region: 'ISLAND',
+      category: 'Lagos Island',
       name: 'ZONE I-1 — Core Island',
-      locations: 'Victoria Island (VI), Ikoyi, Lagos Island, Idumota, Balogun, Marina, Obalende, Oniru',
+      locations: [
+        'Marina',
+        'Broad Street',
+        'CMS',
+        'Apongbon',
+        'Onikan',
+        'Obalende',
+        'Banana Island',
+        'Parkview',
+        'Awolowo Road',
+        'Falomo',
+        'Victoria Island (V.I.)',
+        'Oniru',
+        'Victoria Island Annex'
+      ],
       baseFare: 25000,
-      estimatedMinutes: 45
+      estimatedMinutes: 45,
+      estMinutes: 45
     },
     {
       id: 'I-2',
       region: 'ISLAND',
-      name: 'ZONE I-2 — Lekki Phase 1 / Marwa Axis',
-      locations: 'Lekki Phase 1, Jakande, Lekki-Epe Expressway Corridor, Osapa London, Agungi, Igbo Efon, Ikate',
+      category: 'Lagos Island',
+      name: 'ZONE I-2 — Lekki Phase 1 / Elegushi / Osapa Axis',
+      locations: [
+        'Lekki Phase 1',
+        'Lekki Phase 2',
+        'Ikate Elegushi',
+        'Agungi',
+        'Osapa',
+        'Igbo Efon',
+        'Ikota'
+      ],
       baseFare: 30000,
-      estimatedMinutes: 55
+      estimatedMinutes: 55,
+      estMinutes: 55
     },
     {
       id: 'I-3',
       region: 'ISLAND',
-      name: 'ZONE I-3 — Extended Lekki / Ajah Axis',
-      locations: 'Chevron, VGC, Ajah, Sangotedo, Badore, Orchid Road, Abraham Adesanya',
+      category: 'Lagos Island',
+      name: 'ZONE I-3 — Extended Lekki / Chevron / VGC / Ajah',
+      locations: [
+        'Chevron',
+        'VGC (Victoria Garden City)',
+        'Ajah',
+        'Sangotedo',
+        'Awoyaya',
+        'Abijo'
+      ],
       baseFare: 35000,
-      estimatedMinutes: 70
+      estimatedMinutes: 70,
+      estMinutes: 70
     },
     {
       id: 'I-4',
       region: 'ISLAND',
-      name: 'ZONE I-4 — Remote Island / East',
-      locations: 'Lakowe, Epe, Ibeju-Lekki, Free Trade Zone, Areas beyond Sangotedo',
+      category: 'Lagos Island',
+      name: 'ZONE I-4 — Remote Island / Ibeju-Lekki & Epe',
+      locations: [
+        'Ibeju-Lekki',
+        'Epe',
+        'Lakowe',
+        'Free Trade Zone',
+        'Eleko Beach Axis'
+      ],
       baseFare: 50000,
-      estimatedMinutes: 90
+      estimatedMinutes: 90,
+      estMinutes: 90
     },
     // Lagos Mainland Zones
     {
       id: 'M-1',
       region: 'MAINLAND',
-      name: 'ZONE M-1 — Central Mainland',
-      locations: 'Yaba, Surulere, Ebute Metta, Jibowu, Shomolu, Bariga, Akoka, Gbagada, Ilupeju, Palmgrove, Onipan',
+      category: 'Lagos Mainland',
+      name: 'ZONE M-1 — Central Mainland (Yaba & Surulere)',
+      locations: [
+        'Adekunle',
+        'Alagomeji',
+        'Sabo',
+        'Fadayi',
+        'Iwaya',
+        'Otto/Iddo',
+        'Itire',
+        'Ikate (Surulere)',
+        'Aguda',
+        'Ojuelegba',
+        'Ebute Metta',
+        'Jibowu'
+      ],
       baseFare: 22000,
-      estimatedMinutes: 30
+      estimatedMinutes: 30,
+      estMinutes: 30
     },
     {
       id: 'M-2',
       region: 'MAINLAND',
-      name: 'ZONE M-2 — Ikeja Hub / North',
-      locations: 'Ikeja, Ikeja GRA, Allen Avenue, Opebi, Ogba, Magodo, Maryland, Ojota, Ketu, Alausa, Ojodu Berger',
+      category: 'Lagos Mainland',
+      name: 'ZONE M-2 — Ikeja Zone / Kosofe & Shomolu',
+      locations: [
+        'Ikeja GRA',
+        'Alausa',
+        'Oregun',
+        'Ojodu',
+        'Magodo',
+        'Maryland',
+        'Gbagada',
+        'Bariga',
+        'Ketu',
+        'Alapere',
+        'Oworonsoki',
+        'Shomolu'
+      ],
       baseFare: 25000,
-      estimatedMinutes: 20
+      estimatedMinutes: 20,
+      estMinutes: 20
     },
     {
       id: 'M-3',
       region: 'MAINLAND',
-      name: 'ZONE M-3 — Industrial / West Axis',
-      locations: 'Isolo, Okota, Amuwo Odofin, Festac Town, Ago Palace, Apapa, Mile 2, Ajao Estate',
+      category: 'Lagos Mainland',
+      name: 'ZONE M-3 — Oshodi-Isolo, Mushin & Industrial Axis',
+      locations: [
+        'Ajao Estate',
+        'Okota',
+        'Ilasamaja',
+        'Mushin',
+        'Festac Town',
+        'Amuwo-Odofin',
+        'Ago Palace',
+        'Apapa',
+        'Mile 2'
+      ],
       baseFare: 28000,
-      estimatedMinutes: 40
+      estimatedMinutes: 40,
+      estMinutes: 40
     },
     {
       id: 'M-4',
       region: 'MAINLAND',
-      name: 'ZONE M-4 — Outskirts / Deep Mainland',
-      locations: 'Agege, Iyana Ipaja, Egbeda, Ikotun, Igando, Alagbado, Ikorodu, Sango Ota, Badagry',
+      category: 'Lagos Mainland',
+      name: 'ZONE M-4 — Alimosho, Western Outskirts & Ikorodu',
+      locations: [
+        'Ipaja',
+        'Egbe',
+        'Idimu',
+        'Ikotun',
+        'Ayobo',
+        'Agege',
+        'Ojo',
+        'Ikorodu',
+        'Alagbado',
+        'Sango Ota',
+        'Badagry'
+      ],
       baseFare: 35000,
-      estimatedMinutes: 60
+      estimatedMinutes: 60,
+      estMinutes: 60
     },
     // Airport Transfer Hubs
     {
       id: 'AIR-1',
       region: 'AIRPORT',
+      category: 'Airport Hub',
       name: 'Murtala Muhammed Domestic Terminal 1 (MMA1)',
-      locations: 'MMA1 General Aviation Terminal, Ikeja',
+      locations: [
+        'MMA1 General Aviation Terminal',
+        'Old Domestic Terminal',
+        'Ikeja Aviation Hub'
+      ],
       baseFare: 20000,
-      estimatedMinutes: 15
+      estimatedMinutes: 15,
+      estMinutes: 15
     },
     {
       id: 'AIR-2',
       region: 'AIRPORT',
+      category: 'Airport Hub',
       name: 'Murtala Muhammed Domestic Terminal 2 (MMA2)',
-      locations: 'MMA2 Bi-Courtney Aviation Terminal, Ikeja',
+      locations: [
+        'MMA2 Bi-Courtney Aviation Terminal',
+        'Domestic Arrivals & Departures',
+        'Ikeja Terminal 2'
+      ],
       baseFare: 22000,
-      estimatedMinutes: 15
+      estimatedMinutes: 15,
+      estMinutes: 15
     },
     {
       id: 'AIR-3',
       region: 'AIRPORT',
+      category: 'Airport Hub',
       name: 'Murtala Muhammed International Airport (MMIA)',
-      locations: 'MMIA International Departures & Arrivals, Ikeja',
+      locations: [
+        'MMIA International Departures',
+        'MMIA International Arrivals',
+        'Cargo Terminal',
+        'VIP Protocol Terminal'
+      ],
       baseFare: 25000,
-      estimatedMinutes: 20
+      estimatedMinutes: 20,
+      estMinutes: 20
     }
   ],
 
