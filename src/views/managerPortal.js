@@ -634,38 +634,86 @@ export function renderManagerPortal() {
   return `
     <div class="container-custom py-6">
       
-      <!-- TOP ADMIN COMMAND HEADER & RBAC USER SELECTOR -->
-      <div class="glass-panel p-6 rounded-2xl mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-gold/40 shadow-xl" style="background: linear-gradient(135deg, rgba(12, 25, 42, 0.95) 0%, rgba(6, 13, 22, 0.95) 100%);">
-        <div>
-          <div class="flex items-center gap-2.5 mb-1.5 flex-wrap">
-            <span class="text-[11px] font-bold uppercase tracking-luxury text-gold">Hotel Capitol Administration & Governance</span>
-            <span class="badge-gold text-xs font-bold">${currentRole.replace(/_/g, ' ')}</span>
-            <span class="text-xs text-slate-400">· Active Session: <strong>${activeStaff.name}</strong></span>
-          </div>
-          <h1 class="text-2xl sm:text-3xl font-serif text-white font-bold">Admin & Support Console</h1>
-          <p class="text-xs text-slate-300 mt-1">Centralized operational oversight, content publishing, media library, and AI governance.</p>
-        </div>
-
-        <!-- RBAC User Switcher & Actions -->
-        <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
-          <div class="flex flex-col text-right">
-            <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Switch Admin Role:</span>
-            <select 
-              class="input-custom text-xs py-1.5 px-3 font-semibold bg-navy-950 border-gold/40 text-gold rounded-lg cursor-pointer"
-              onchange="window.switchActiveAdminStaff(this.value)"
+      <!-- TOP ADMIN COMMAND HEADER WITH BALANCED THREE-COLUMN BRANDING (Spec #7 & #17) -->
+      <div class="glass-panel p-5 sm:p-6 rounded-2xl mb-6 border border-gold/40 shadow-xl" style="background: linear-gradient(135deg, rgba(12, 25, 42, 0.95) 0%, rgba(6, 13, 22, 0.95) 100%);">
+        
+        <!-- Top Row: Intercom (Left) | Centered Profile (Center) | Hotel Logo + Back Button (Right) -->
+        <div class="flex items-center justify-between gap-4 pb-4 border-b border-white/10 flex-wrap sm:flex-nowrap">
+          
+          <!-- Left: Staff Intercom Quick Radio Button -->
+          <div class="flex items-center gap-2">
+            <button 
+              class="glass-panel py-1.5 px-3 rounded-xl border border-gold/40 hover:border-gold cursor-pointer transition-all flex items-center gap-2"
+              onclick="window.toggleIntercomModal(true)"
+              title="Open Staff Radio Intercom"
             >
-              ${state.staffMembers.filter(s => s.adminRole || ['STF-05', 'STF-04', 'STF-02', 'STF-03', 'STF-06'].includes(s.id)).map(st => `
-                <option value="${st.id}" ${st.id === state.activeStaffId ? 'selected' : ''}>
-                  ${st.name} (${st.adminRole || st.role})
-                </option>
-              `).join('')}
-            </select>
+              ${renderIntercomRoundBadge(24)}
+              <div class="flex flex-col text-left hide-mobile">
+                <span class="text-[11px] font-bold text-emerald-400">Intercom</span>
+                <span class="text-[9px] text-slate-400">Staff Radio</span>
+              </div>
+            </button>
           </div>
 
-          <button class="btn-primary text-xs py-2 px-4 font-bold" onclick="window.navigatePortal('guest')">
-            Guest Portal View →
-          </button>
+          <!-- Center: Visually Centered Profile Image & Frame (Spec #7) -->
+          <div class="flex items-center gap-3 justify-center text-center">
+            <div class="relative">
+              <img 
+                src="${activeStaff.avatar}" 
+                alt="${activeStaff.name}" 
+                class="w-12 h-12 rounded-2xl object-cover border-2 border-gold shadow-lg"
+              />
+              <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-navy-950"></span>
+            </div>
+            <div class="flex flex-col text-left">
+              <div class="flex items-center gap-1.5">
+                <strong class="text-sm font-bold text-white">${activeStaff.name}</strong>
+                <span class="badge-gold text-[9px] py-0.5">${currentRole.replace(/_/g, ' ')}</span>
+              </div>
+              <span class="text-[11px] text-slate-300">${activeStaff.role}</span>
+            </div>
+          </div>
+
+          <!-- Right: Hotel Capitol Logo + Back Button (Spec #17) -->
+          <div class="flex items-center gap-3">
+            <div class="hide-mobile">
+              ${renderHotelCapitolLogo({ variant: 'compact', height: 32, color: 'var(--gold-400)' })}
+            </div>
+            <button class="btn-admin-back" onclick="window.navigateManagerTab('overview')" title="Return to Dashboard">
+              <span>←</span> <span>Back</span>
+            </button>
+          </div>
+
         </div>
+
+        <!-- Lower Row: Title & RBAC User Switcher -->
+        <div class="pt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-luxury text-gold">Administrative & Governance Console</div>
+            <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">Hotel Operations Command</h1>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Switch Admin:</span>
+              <select 
+                class="input-custom text-xs py-1 px-2.5 font-semibold bg-navy-950 border-gold/40 text-gold rounded-lg cursor-pointer"
+                onchange="window.switchActiveAdminStaff(this.value)"
+              >
+                ${state.staffMembers.filter(s => s.adminRole || ['STF-05', 'STF-04', 'STF-02', 'STF-03', 'STF-06'].includes(s.id)).map(st => `
+                  <option value="${st.id}" ${st.id === state.activeStaffId ? 'selected' : ''}>
+                    ${st.name} (${st.adminRole || st.role})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <button class="btn-secondary text-xs py-1.5 px-3.5 font-bold" onclick="window.navigatePortal('guest')">
+              Guest Portal →
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <!-- MAIN NAVIGATION TABS -->
@@ -792,7 +840,7 @@ function renderOverviewTab(state, activeOrders, pendingRequests, activeTransport
         </div>
       </div>
 
-      <!-- RECENT ACTIVITY FEED & LIVE SUMMARY -->
+      <!-- RECENT ACTIVITY FEED & LIVE SUMMARY (Spec #5: Spaced CTA Buttons) -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         <!-- Live Orders Stream -->
@@ -823,8 +871,9 @@ function renderOverviewTab(state, activeOrders, pendingRequests, activeTransport
             </div>
           </div>
 
-          <div class="pt-4 mt-4 border-t border-white/10 flex justify-end">
-            <button class="btn-secondary text-xs py-1.5 px-4" onclick="window.navigateManagerTab('orders')">
+          <!-- Spaced Section-Level CTA Button -->
+          <div class="pt-5 mt-6 border-t border-white/10 flex justify-end">
+            <button class="btn-secondary text-xs py-2 px-5 font-bold shadow-md" onclick="window.navigateManagerTab('orders')">
               Manage All Orders →
             </button>
           </div>
@@ -854,8 +903,9 @@ function renderOverviewTab(state, activeOrders, pendingRequests, activeTransport
             </div>
           </div>
 
-          <div class="pt-4 mt-4 border-t border-white/10 flex justify-end">
-            <button class="btn-secondary text-xs py-1.5 px-4" onclick="window.navigateManagerTab('audit')">
+          <!-- Spaced Section-Level CTA Button -->
+          <div class="pt-5 mt-6 border-t border-white/10 flex justify-end">
+            <button class="btn-secondary text-xs py-2 px-5 font-bold shadow-md" onclick="window.navigateManagerTab('audit')">
               View Full Audit Trail →
             </button>
           </div>
@@ -1002,14 +1052,14 @@ function renderRestaurantContentTab(state, currentRole) {
                 <div class="flex items-center justify-between gap-2 text-xs pt-1">
                   ${item.status !== 'PUBLISHED' ? `
                     <button 
-                      class="text-xs text-emerald-400 underline font-semibold bg-transparent border-none cursor-pointer"
+                      class="btn-link-green"
                       onclick="window.publishMenuItemAction('${item.id}')"
                     >
                       ✓ Publish Live
                     </button>
                   ` : `
                     <button 
-                      class="text-xs text-slate-400 underline bg-transparent border-none cursor-pointer"
+                      class="btn-link-blue"
                       onclick="window.archiveMenuItemAction('${item.id}')"
                     >
                       Archive Item
@@ -1017,7 +1067,7 @@ function renderRestaurantContentTab(state, currentRole) {
                   `}
 
                   <button 
-                    class="text-xs text-red-400 underline bg-transparent border-none cursor-pointer"
+                    class="btn-link-red"
                     onclick="window.deleteMenuItemAction('${item.id}')"
                   >
                     Delete
@@ -1183,7 +1233,7 @@ function renderAmenitiesContentTab(state, currentRole) {
                 <button class="btn-secondary text-xs py-1.5 px-3" onclick="window.openVersionModal('AMENITY', '${a.id}', '${a.name}')">
                   📜 History
                 </button>
-                <button class="text-xs text-red-400 underline bg-transparent border-none cursor-pointer ml-2" onclick="window.deleteAmenityAction('${a.id}')">
+                <button class="btn-link-red ml-2" onclick="window.deleteAmenityAction('${a.id}')">
                   Delete
                 </button>
               </div>
@@ -1303,13 +1353,13 @@ function renderMediaLibraryTab(state, currentRole) {
 
               <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-xs">
                 <button 
-                  class="text-[11px] text-gold font-medium bg-transparent border-none cursor-pointer underline"
+                  class="btn-link-blue"
                   onclick="navigator.clipboard.writeText('${item.url}'); automationEngine.showToast('Copied', 'Image URL copied to clipboard.', 'info');"
                 >
                   Copy URL
                 </button>
                 <button 
-                  class="text-[11px] text-red-400 bg-transparent border-none cursor-pointer underline"
+                  class="btn-link-red"
                   onclick="window.deleteMediaAssetAction('${item.id}')"
                 >
                   Delete

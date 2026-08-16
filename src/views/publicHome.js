@@ -50,11 +50,22 @@ export function renderPublicHome() {
 
           <!-- Live Check-in Demo Link Generator (From Spec #7) -->
           <div class="glass-panel-gold p-6 rounded-2xl w-full max-w-xl text-left">
-            <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
               <span class="text-xs font-bold text-gold uppercase tracking-wider flex items-center gap-1.5">
                 ${getIcon('sparkles', 16)} Instant Guest Access Link
               </span>
-              <span class="text-xs text-slate-300">WhatsApp / SMS / Email</span>
+              <!-- Recognizable Social Contact Icons -->
+              <div class="flex items-center gap-1.5">
+                <span class="social-contact-pill" title="WhatsApp Instant Access Link">
+                  ${getIcon('whatsapp', 16)}
+                </span>
+                <span class="social-contact-pill" title="SMS Access Link">
+                  ${getIcon('sms', 16)}
+                </span>
+                <span class="social-contact-pill" title="Email Reservation Key">
+                  ${getIcon('mail', 16)}
+                </span>
+              </div>
             </div>
             
             <p class="text-xs text-slate-300 mb-3">
@@ -105,13 +116,16 @@ export function renderPublicHome() {
                   ${getIcon('utensils', 24)}
                 </div>
                 <h3 class="text-lg font-serif text-white mb-2">Gourmet Dining & Room Service</h3>
-                <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                <p class="text-xs text-slate-300 leading-relaxed mb-6">
                   Experience authentic Nigerian specialties including our Firewood Jollof Fiesta and Prime Grilled Suya, alongside international gourmet cuisine delivered directly to your suite.
                 </p>
               </div>
-              <button class="text-xs text-gold font-semibold text-left bg-transparent border-none cursor-pointer flex items-center gap-1 hover:text-white" onclick="window.navigatePortal('guest')">
-                View Digital Menu →
-              </button>
+              <div>
+                <button class="public-feature-pill-btn w-full justify-between" onclick="window.navigatePortal('guest')">
+                  <span>View Digital Menu</span>
+                  <span class="text-gold font-bold">→</span>
+                </button>
+              </div>
             </div>
 
             <!-- Feature 2 -->
@@ -121,13 +135,16 @@ export function renderPublicHome() {
                   ${getIcon('bot', 24)}
                 </div>
                 <h3 class="text-lg font-serif text-white mb-2">24/7 Hotel Capitol AI Concierge</h3>
-                <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                <p class="text-xs text-slate-300 leading-relaxed mb-6">
                   Speak or text with our native AI concierge. Request extra towels, schedule 6:00 AM breakfast, book VIP airport transit, or discover curated Ikeja hotspots.
                 </p>
               </div>
-              <button class="text-xs text-gold font-semibold text-left bg-transparent border-none cursor-pointer flex items-center gap-1 hover:text-white" onclick="window.toggleAIAssistant(true)">
-                Start AI Voice Chat →
-              </button>
+              <div>
+                <button class="public-feature-pill-btn w-full justify-between" onclick="window.toggleAIAssistant(true)">
+                  <span>Start AI Voice Chat</span>
+                  <span class="text-gold font-bold">→</span>
+                </button>
+              </div>
             </div>
 
             <!-- Feature 3 -->
@@ -137,13 +154,16 @@ export function renderPublicHome() {
                   ${getIcon('car', 24)}
                 </div>
                 <h3 class="text-lg font-serif text-white mb-2">VIP Airport Chauffeur</h3>
-                <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                <p class="text-xs text-slate-300 leading-relaxed mb-6">
                   Seamless executive transfers to Murtala Muhammed Airport (MMA2) in luxury sedans and armored SUVs with transparent upfront pricing.
                 </p>
               </div>
-              <button class="text-xs text-gold font-semibold text-left bg-transparent border-none cursor-pointer flex items-center gap-1 hover:text-white" onclick="window.navigatePortal('guest')">
-                Book Executive Transit →
-              </button>
+              <div>
+                <button class="public-feature-pill-btn w-full justify-between" onclick="window.navigatePortal('guest')">
+                  <span>Book Executive Transit</span>
+                  <span class="text-gold font-bold">→</span>
+                </button>
+              </div>
             </div>
 
           </div>

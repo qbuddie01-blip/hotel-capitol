@@ -8,12 +8,34 @@ import { getIcon, renderIntercomRoundBadge } from '../assets/icons.js';
 import { store } from '../store/state.js';
 import { automationEngine } from '../services/automationRules.js';
 
-let activeStaffTab = 'tasks'; // 'tasks' | 'rooms' | 'requests' | 'schedule' | 'performance'
+let activeStaffTab = 'tasks'; // 'tasks' | 'rooms' | 'requests' | 'schedule' | 'performance' | 'profile'
+let staffIntercomState = 'ready'; // 'ready' | 'active' | 'delivered'
 
 export function initStaffPortal() {
   window.navigateStaffTab = (tab) => {
     activeStaffTab = tab;
     if (window.renderApp) window.renderApp();
+  };
+
+  window.triggerStaffIntercom = () => {
+    staffIntercomState = 'active';
+    if (window.renderApp) window.renderApp();
+    automationEngine.playChime('bell');
+    
+    // Open Intercom modal
+    window.toggleIntercomModal(true);
+
+    // Simulate active transition to delivered upon transmission
+    setTimeout(() => {
+      staffIntercomState = 'delivered';
+      if (window.renderApp) window.renderApp();
+      automationEngine.showToast('Intercom Connected', 'Tolani Radio link established on secure staff channel.', 'success');
+      
+      setTimeout(() => {
+        staffIntercomState = 'ready';
+        if (window.renderApp) window.renderApp();
+      }, 3000);
+    }, 2000);
   };
 
   window.toggleTaskStatus = (taskId) => {
@@ -119,11 +141,25 @@ export function renderStaffPortal() {
     tabContent = renderStaffScheduleTab(state.schedule, state.shiftSwapRequests, staff);
   } else if (activeStaffTab === 'performance') {
     tabContent = renderStaffPerformanceTab(staff);
+  } else if (activeStaffTab === 'profile') {
+    tabContent = renderStaffPersonalProfileTab(staff);
   }
 
   return `
     <div class="container-custom py-6">
       
+      <!-- TOP NAVIGATION BAR WITH BACK BUTTON -->
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-luxury text-gold">Hotel Capitol Operations</span>
+          <span class="badge-gold text-[10px]">${staff.department.toUpperCase()}</span>
+        </div>
+
+        <button class="btn-admin-back" onclick="window.navigatePortal('guest')">
+          <span>←</span> <span>Back to Guest Portal</span>
+        </button>
+      </div>
+
       <!-- REAL-TIME VOICE REQUEST CONFIRMATION PROMPT BANNER -->
       ${state.serviceRequests.filter(r => r.status === 'AWAITING_STAFF_CONFIRMATION').map(pendingReq => `
         <div class="glass-panel-gold p-4 sm:p-5 rounded-2xl mb-6 border-2 border-gold flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in" style="background: linear-gradient(135deg, rgba(32, 18, 4, 0.95) 0%, rgba(10, 22, 38, 0.95) 100%); box-shadow: 0 0 25px rgba(220, 173, 84, 0.35);">
@@ -158,53 +194,63 @@ export function renderStaffPortal() {
         </div>
       `).join('')}
 
-      <!-- STAFF HEADER & TIMECLOCK CARD (Spec #23 & #26) -->
-      <div class="glass-panel p-6 rounded-2xl mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-gold/30">
-        
-        <div class="flex items-center gap-4">
-          <img src="${staff.avatar}" class="w-16 h-16 rounded-2xl object-cover border-2 border-gold shadow-lg" alt="${staff.name}" />
-          <div>
+      <!-- STAFF HEADER & TIMECLOCK CARD (Omitted on Profile Tab to prevent duplicate presentation) -->
+      ${activeStaffTab !== 'profile' ? `
+        <div class="glass-panel p-6 rounded-2xl mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-gold/30">
+          
+          <div class="flex items-center gap-4">
+            <img src="${staff.avatar}" class="w-16 h-16 rounded-2xl object-cover border-2 border-gold shadow-lg" alt="${staff.name}" />
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">${staff.name}</h1>
+                <span class="badge-gold text-xs">${staff.role}</span>
+              </div>
+              <p class="text-xs text-slate-300 mt-1">
+                Department: <strong class="text-gold uppercase">${staff.department}</strong> · Shift: <strong>${staff.shift}</strong>
+              </p>
+            </div>
+          </div>
+
+          <!-- Attendance & Timeclock Box -->
+          <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+            <div class="text-left md:text-right">
+              <div class="text-xs text-slate-400">Attendance Status:</div>
+              <div class="flex items-center gap-1 text-xs font-bold text-emerald-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                ${staff.clockedIn ? `Signed In (${staff.clockInTime}) · ${staff.clockStatus}` : 'Signed Out'}
+              </div>
+            </div>
+
             <div class="flex items-center gap-2">
-              <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">${staff.name}</h1>
-              <span class="badge-gold text-xs">${staff.role}</span>
-            </div>
-            <p class="text-xs text-slate-300 mt-1">
-              Department: <strong class="text-gold uppercase">${staff.department}</strong> · Shift: <strong>${staff.shift}</strong>
-            </p>
-          </div>
-        </div>
-
-        <!-- Attendance & Timeclock Box -->
-        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-          <div class="text-left md:text-right">
-            <div class="text-xs text-slate-400">Attendance Status:</div>
-            <div class="flex items-center gap-1 text-xs font-bold text-emerald-400">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              ${staff.clockedIn ? `Signed In (${staff.clockInTime}) · ${staff.clockStatus}` : 'Signed Out'}
+              <button 
+                class="glass-panel text-xs py-1.5 px-3 flex items-center gap-2 border border-gold/40 hover:border-gold cursor-pointer transition-all rounded-xl"
+                onclick="window.triggerStaffIntercom()"
+                title="Open Staff Intercom & Radio"
+              >
+                ${renderIntercomRoundBadge(22)} <span class="text-slate-200 font-semibold hide-mobile">Intercom</span>
+              </button>
+              <button 
+                class="${staff.clockedIn ? 'btn-danger' : 'btn-primary'} text-xs py-2 px-4 font-bold"
+                onclick="window.hotelCapitolStore.toggleClockIn('${staff.id}'); renderStaffPortal();"
+              >
+                ${staff.clockedIn ? 'Clock Out' : 'Clock In'}
+              </button>
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
-            <button 
-              class="glass-panel text-xs py-1.5 px-3 flex items-center gap-2 border border-gold/40 hover:border-gold cursor-pointer transition-all rounded-xl"
-              onclick="window.toggleIntercomModal(true)"
-              title="Open Staff Intercom & Radio"
-            >
-              ${renderIntercomRoundBadge(22)} <span class="text-slate-200 font-semibold hide-mobile">Intercom</span>
-            </button>
-            <button 
-              class="${staff.clockedIn ? 'btn-danger' : 'btn-primary'} text-xs py-2 px-4 font-bold"
-              onclick="window.hotelCapitolStore.toggleClockIn('${staff.id}'); renderStaffPortal();"
-            >
-              ${staff.clockedIn ? 'Clock Out' : 'Clock In'}
-            </button>
-          </div>
         </div>
-
-      </div>
+      ` : ''}
 
       <!-- NAVIGATION TABS with Golden Outlay & Glowing Borders (Horizontal Smooth Scroll on Mobile) -->
       <div class="category-tabs-scroll">
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'profile' ? 'active' : ''}"
+          onclick="window.navigateStaffTab('profile')"
+        >
+          <span>👤</span>
+          <span>My Profile</span>
+        </button>
+
         <button 
           class="menu-btn-gold ${activeStaffTab === 'tasks' ? 'active' : ''}"
           onclick="window.navigateStaffTab('tasks')"
@@ -245,6 +291,13 @@ export function renderStaffPortal() {
           <span>AI Performance (${staff.performanceScore}%)</span>
         </button>
       </div>
+
+      <!-- TAB VIEW -->
+      ${tabContent}
+
+    </div>
+  `;
+}
 
       <!-- TAB VIEW -->
       ${tabContent}
@@ -722,6 +775,114 @@ function renderStaffPerformanceTab(staff) {
         </div>
         <p class="text-xs text-slate-200 leading-relaxed">${staff.aiNotes}</p>
       </div>
+    </div>
+  `;
+}
+
+// 6. SINGLE AUTHORITATIVE STAFF PERSONAL PROFILE TAB (Spec #9-#16)
+function renderStaffPersonalProfileTab(staff) {
+  const isListening = staffIntercomState === 'active';
+  const isDelivered = staffIntercomState === 'delivered';
+  const ringColor = isListening ? '#ef4444' : '#10b981';
+  const glowColor = isListening ? 'rgba(239, 68, 68, 0.75)' : 'rgba(16, 185, 129, 0.75)';
+
+  return `
+    <div class="staff-profile-container animate-fade-in">
+      
+      <!-- Single Authoritative Staff Profile Card -->
+      <div class="staff-profile-card">
+        
+        <!-- 1. Profile Image with Gold Frame -->
+        <div class="relative mb-4">
+          <img 
+            src="${staff.avatar}" 
+            alt="${staff.name}" 
+            class="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl object-cover border-2 border-gold shadow-2xl" 
+            style="box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(220, 173, 84, 0.3);"
+          />
+          <div class="absolute -bottom-2 -right-2 bg-navy-950 px-2.5 py-1 rounded-full border border-gold/40 text-[10px] font-bold text-gold">
+            ${staff.adminRole || 'FRONT_DESK'}
+          </div>
+        </div>
+
+        <!-- 2. Staff Name, Job Title & Department -->
+        <h2 class="text-2xl sm:text-3xl font-serif text-white font-bold mb-1">${staff.name}</h2>
+        <div class="text-xs sm:text-sm font-semibold text-gold mb-1">${staff.role}</div>
+        <div class="text-xs text-slate-300 uppercase tracking-wider mb-5">
+          Department: <strong class="text-white">${staff.department}</strong>
+        </div>
+
+        <!-- 3. Clock In CTA -->
+        <div class="w-full max-w-xs mb-3">
+          <button 
+            class="${staff.clockedIn ? 'btn-danger' : 'btn-primary'} w-full py-3 text-sm font-bold shadow-xl"
+            onclick="window.hotelCapitolStore.toggleClockIn('${staff.id}'); renderStaffPortal();"
+          >
+            ${staff.clockedIn ? '⏰ Clock Out of Duty' : '⏰ Clock In for Duty'}
+          </button>
+        </div>
+
+        <!-- 4. Large Prominent Intercom Control Directly Below Clock In -->
+        <div class="my-3 flex flex-col items-center">
+          <button 
+            class="staff-large-intercom-btn ${isListening ? 'active' : ''}"
+            onclick="window.triggerStaffIntercom()"
+            title="Open Live 2-Way Staff Intercom Radio"
+          >
+            <div class="relative flex items-center justify-center" style="width: 44px; height: 44px;">
+              <div class="absolute inset-0 rounded-full ${isListening ? 'intercom-ring-active' : 'intercom-ring-ready'}" style="border: 2.5px solid ${ringColor}; box-shadow: 0 0 16px ${glowColor}, inset 0 0 8px ${glowColor};"></div>
+              ${renderIntercomRoundBadge(28)}
+            </div>
+            <div class="flex flex-col text-left">
+              <span class="text-xs font-bold ${isListening ? 'text-red-400' : 'text-emerald-300'} flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full ${isListening ? 'bg-red-500 animate-ping' : 'bg-emerald-400 animate-pulse'}"></span>
+                ${isListening ? 'LISTENING / ACTIVE' : isDelivered ? 'MESSAGE DELIVERED' : '2-WAY INTERCOM READY'}
+              </span>
+              <span class="text-[10px] text-slate-300">Push-to-Talk Staff Radio</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- 5. Profile Information & Operational Details (Compact, Moved Upward) -->
+        <div class="w-full mt-4 text-left p-4 rounded-2xl bg-navy-950/80 border border-white/10">
+          <div class="text-xs font-bold uppercase tracking-luxury text-gold pb-2 border-b border-white/10 mb-3 flex items-center justify-between">
+            <span>Profile Information</span>
+            <span class="text-slate-400 text-[11px]">ID: ${staff.id}</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-300">
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Shift Schedule:</span>
+              <strong class="text-white">${staff.shift}</strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Attendance:</span>
+              <strong class="${staff.clockedIn ? 'text-emerald-400' : 'text-slate-400'}">
+                ${staff.clockedIn ? `In (${staff.clockInTime})` : 'Off Duty'}
+              </strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Appraisal Score:</span>
+              <strong class="text-gold font-bold">${staff.performanceScore}%</strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Tasks Completed:</span>
+              <strong class="text-white">${staff.tasksCompleted} / ${staff.totalTasks}</strong>
+            </div>
+          </div>
+
+          <!-- AI Operational Coaching Note -->
+          <div class="mt-3 pt-3 border-t border-white/10 text-xs">
+            <span class="text-gold font-semibold">Supervisor & AI Coaching:</span>
+            <p class="text-slate-300 mt-1 italic leading-relaxed">"${staff.aiNotes}"</p>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   `;
 }

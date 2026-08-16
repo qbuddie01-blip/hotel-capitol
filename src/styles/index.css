@@ -1640,3 +1640,242 @@ dialog::backdrop {
   .show-mobile-only { display: none !important; }
   .bottom-nav { display: none !important; }
 }
+
+/* ==========================================================================
+   HOTEL CAPITOL — GLOBAL NORMALIZATION & SEMANTIC LINK BUTTONS
+   ========================================================================== */
+
+/* Universal Button Reset to eliminate unwanted browser-default white buttons */
+button:not(.btn-primary):not(.btn-secondary):not(.menu-btn-gold):not(.category-pill-btn):not(.btn-danger):not(.quick-service-btn):not(.btn-admin-back):not(.public-feature-pill-btn):not(.mobile-review-order-btn):not(.staff-large-intercom-btn) {
+  background-color: transparent;
+  border-color: transparent;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Archive Item — Elegant Sky Blue Link Button */
+.btn-link-blue {
+  background: transparent !important;
+  border: none !important;
+  color: #60a5fa !important; /* Sky Blue */
+  font-family: var(--font-sans) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  transition: all var(--transition-fast) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.btn-link-blue:hover {
+  color: #93c5fd !important;
+  background: rgba(96, 165, 250, 0.14) !important;
+}
+
+/* Delete Action — Destructive Red, NO Border, NO White Background */
+.btn-link-red {
+  background: transparent !important;
+  border: none !important;
+  color: #f87171 !important; /* Danger Red */
+  font-family: var(--font-sans) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  transition: all var(--transition-fast) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.btn-link-red:hover {
+  color: #fca5a5 !important;
+  background: rgba(248, 113, 113, 0.14) !important;
+}
+
+/* Publish Live — Emerald Green Link Button */
+.btn-link-green {
+  background: transparent !important;
+  border: none !important;
+  color: #34d399 !important; /* Emerald Green */
+  font-family: var(--font-sans) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  transition: all var(--transition-fast) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.btn-link-green:hover {
+  color: #6ee7b7 !important;
+  background: rgba(52, 211, 153, 0.14) !important;
+}
+
+/* Admin Console Top-Right Back Button */
+.btn-admin-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
+  background: rgba(11, 23, 36, 0.85);
+  border: 1.5px solid rgba(220, 173, 84, 0.45);
+  border-radius: var(--radius-full);
+  color: var(--gold-300);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+
+.btn-admin-back:hover {
+  border-color: var(--gold-200);
+  color: #ffffff;
+  background: rgba(20, 42, 66, 0.95);
+  transform: translateX(-2px);
+  box-shadow: 0 4px 16px rgba(220, 173, 84, 0.35);
+}
+
+/* Public Website Feature Card CTAs with Thin Spherical / Pill-style Borders */
+.public-feature-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid rgba(220, 173, 84, 0.45);
+  background: rgba(11, 23, 36, 0.6);
+  color: var(--gold-400);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-decoration: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.public-feature-pill-btn:hover {
+  border-color: var(--gold-200);
+  color: #ffffff;
+  background: rgba(220, 173, 84, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(220, 173, 84, 0.35);
+}
+
+/* Public Website Social Contact Icon Pills */
+.social-contact-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(220, 173, 84, 0.4);
+  background: rgba(11, 23, 36, 0.85);
+  color: var(--gold-300);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.social-contact-pill:hover {
+  border-color: var(--gold-200);
+  color: #ffffff;
+  background: rgba(220, 173, 84, 0.25);
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(220, 173, 84, 0.4);
+}
+
+/* Staff Profile Centered Single Authoritative Presentation */
+.staff-profile-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+}
+
+.staff-profile-card {
+  width: 100%;
+  padding: 2rem 1.5rem;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, rgba(12, 25, 42, 0.95) 0%, rgba(6, 13, 22, 0.95) 100%);
+  border: 1.5px solid rgba(220, 173, 84, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 25px rgba(220, 173, 84, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.staff-large-intercom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.85rem;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 30, 20, 0.9) 100%);
+  border: 2px solid #10b981;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.45), inset 0 0 10px rgba(16, 185, 129, 0.2);
+  transition: all var(--transition-normal);
+  margin: 1.15rem 0;
+}
+
+.staff-large-intercom-btn:hover {
+  border-color: #34d399;
+  box-shadow: 0 0 32px rgba(16, 185, 129, 0.7), inset 0 0 16px rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.staff-large-intercom-btn.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(40, 10, 10, 0.9) 100%);
+  border-color: #ef4444;
+  box-shadow: 0 0 28px rgba(239, 68, 68, 0.6), inset 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
+.intercom-ring-ready {
+  animation: greenPulse 2.5s infinite;
+}
+
+.intercom-ring-active {
+  animation: redPulse 1.2s infinite;
+}
+
+@keyframes greenPulse {
+  0% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.5), inset 0 0 4px rgba(16, 185, 129, 0.3); }
+  50% { box-shadow: 0 0 22px rgba(16, 185, 129, 0.85), inset 0 0 10px rgba(16, 185, 129, 0.5); }
+  100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.5), inset 0 0 4px rgba(16, 185, 129, 0.3); }
+}
+
+@keyframes redPulse {
+  0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.6), inset 0 0 6px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 28px rgba(239, 68, 68, 0.95), inset 0 0 14px rgba(239, 68, 68, 0.7); }
+  100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.6), inset 0 0 6px rgba(239, 68, 68, 0.4); }
+}
+
