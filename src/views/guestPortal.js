@@ -1048,10 +1048,10 @@ function renderRestaurantSection(guest) {
           </div>
 
           <!-- Category Selector -->
-          <div class="category-tabs-scroll">
+          <div class="category-pills-bar mb-6">
             ${categories.map(cat => `
               <button 
-                class="menu-btn-gold ${selectedCategory === cat ? 'active' : ''}"
+                class="category-pill-btn ${selectedCategory === cat ? 'active' : ''}"
                 onclick="window.setMenuCategory('${cat}')"
               >
                 <span>${cat === 'Food' ? '🍲' : cat === 'Drinks' ? '🍹' : cat === 'Breakfast' ? '🍳' : cat === 'Desserts' ? '🍰' : '🥨'}</span>
@@ -1061,46 +1061,55 @@ function renderRestaurantSection(guest) {
           </div>
 
           <!-- Menu Items List -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="menu-catalog-grid">
             ${filteredMenu.map(item => {
               const selectedAddonIds = orderDraftExtras[item.id] || [];
               return `
-                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col justify-between border-2 border-gold/30 hover:border-gold transition-all" style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(220, 173, 84, 0.15);">
+                <div class="food-card">
                   
-                  <div class="h-44 w-full relative overflow-hidden bg-navy-950 rounded-t-2xl">
-                    <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" />
-                    <div class="absolute top-2.5 left-2.5 bg-navy-950/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-200 border border-white/10">
-                      ${item.category || 'Specialty'}
+                  <!-- 1. Dedicated Image Container -->
+                  <div class="food-card-media">
+                    <img src="${item.image}" alt="${item.name}" class="food-card-img" />
+                    <div class="food-card-media-badges-left">
+                      <span class="food-pill-badge food-pill-category">
+                        ${item.category || 'Specialty'}
+                      </span>
+                      <span class="food-pill-badge food-pill-published">Available</span>
                     </div>
                   </div>
 
-                  <div class="p-4 flex-1 flex flex-col justify-between">
+                  <!-- 2. Strict Vertical Hierarchy Body -->
+                  <div class="food-card-body">
                     <div>
-                      <!-- Title & Price Row -->
-                      <div class="flex items-start justify-between gap-2 mb-1.5 flex-wrap">
-                        <h3 class="font-serif text-base text-white font-bold flex-1 min-w-[140px]">${item.name}</h3>
-                        <div class="bg-amber-500/15 border border-gold/40 px-2.5 py-1 rounded-full text-xs font-bold text-gold whitespace-nowrap shadow-sm">
+                      <!-- Header: Title & Price -->
+                      <div class="food-card-header">
+                        <h3 class="food-card-title">${item.name}</h3>
+                        <div class="food-card-price">
                           ₦${item.price.toLocaleString()}
                         </div>
                       </div>
 
-                      <!-- Preparation Time Metadata -->
-                      <div class="flex items-center gap-2 mb-2 text-xs text-slate-300">
-                        <span class="inline-flex items-center gap-1.5 bg-navy-950/90 px-2.5 py-0.5 rounded-md border border-white/10 text-[11px] text-slate-300 font-medium">
-                          ${getIcon('clock', 12)} <span>~${item.prepTimeMinutes || 20} mins prep</span>
+                      <!-- Preparation Time & Delivery SLA -->
+                      <div class="food-card-meta">
+                        <span class="food-card-meta-item">
+                          ${getIcon('clock', 12)} ~${item.prepTimeMinutes || 20}m prep
+                        </span>
+                        <span class="food-card-meta-item">
+                          🚴 ~${item.estimatedDeliveryMinutes || 15}m delivery
                         </span>
                       </div>
 
-                      <p class="text-xs text-slate-200 leading-relaxed mb-4">${item.desc}</p>
+                      <!-- Description -->
+                      <p class="food-card-desc">${item.desc}</p>
                       
                       <!-- Configurable Add-ons / Extras -->
                       ${item.addons && item.addons.length > 0 ? `
-                        <div class="mb-4 bg-navy-950/70 p-3 rounded-xl border border-white/5">
-                          <div class="text-xs font-bold text-gold mb-2 flex items-center justify-between">
+                        <div class="food-card-extras-box">
+                          <div class="food-card-extras-header">
                             <span>Optional Extras & Add-ons:</span>
-                            <span class="text-slate-400 font-normal">Select below</span>
+                            <span class="text-slate-400 font-normal text-[10px]">Select below</span>
                           </div>
-                          <div class="flex flex-col gap-1.5">
+                          <div class="food-card-extras-list">
                             ${item.addons.map(addon => {
                               const isChecked = selectedAddonIds.includes(addon.id);
                               return `
@@ -1131,9 +1140,12 @@ function renderRestaurantSection(guest) {
                       />
                     </div>
 
-                    <button class="btn-primary w-full py-2 text-xs font-bold mt-2" onclick="window.addToCart('${item.id}')">
-                      Add to Tray (${item.addons && selectedAddonIds.length > 0 ? `${selectedAddonIds.length} extras` : 'Standard'})
-                    </button>
+                    <!-- Action Button -->
+                    <div class="food-card-actions">
+                      <button class="btn-primary w-full py-2.5 text-xs font-bold" onclick="window.addToCart('${item.id}')">
+                        + Add to Tray (${item.addons && selectedAddonIds.length > 0 ? `${selectedAddonIds.length} extras` : 'Standard'})
+                      </button>
+                    </div>
 
                   </div>
 
@@ -1223,6 +1235,16 @@ function renderRestaurantSection(guest) {
         </div>
 
       </div>
+
+      <!-- Mobile Sticky Review Order CTA Bar -->
+      ${cart.length > 0 ? `
+        <div class="mobile-review-order-bar show-mobile-only">
+          <button class="mobile-review-order-btn" onclick="window.proceedToRestaurantUpsellOrReview()">
+            <span>🛒 REVIEW ORDER • ${cart.length} ${cart.length === 1 ? 'ITEM' : 'ITEMS'}</span>
+            <span>₦${cartTotal.toLocaleString()} →</span>
+          </button>
+        </div>
+      ` : ''}
 
     </div>
   `;

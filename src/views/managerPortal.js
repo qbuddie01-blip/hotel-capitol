@@ -901,14 +901,10 @@ function renderRestaurantContentTab(state, currentRole) {
       </div>
 
       <!-- Category Filter Tabs -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+      <div class="category-pills-bar">
         ${categories.map(cat => `
           <button 
-            class="px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
-              menuCategoryFilter === cat 
-                ? 'bg-gold text-navy-950 border-gold shadow-md' 
-                : 'bg-navy-950/80 text-slate-300 border-white/10 hover:border-gold/50'
-            }"
+            class="category-pill-btn ${menuCategoryFilter === cat ? 'active' : ''}"
             onclick="window.updateMenuCategoryFilter('${cat}')"
           >
             ${cat} (${cat === 'ALL' ? state.menu.length : state.menu.filter(m => m.category === cat).length})
@@ -917,57 +913,67 @@ function renderRestaurantContentTab(state, currentRole) {
       </div>
 
       <!-- Menu Items Data Table / Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="menu-catalog-grid">
         ${filteredMenu.map(item => `
-          <div class="glass-panel rounded-2xl overflow-hidden border-2 ${item.available ? 'border-gold/30 hover:border-gold' : 'border-slate-700 opacity-75'} flex flex-col justify-between transition-all" style="box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+          <div class="food-card ${!item.available ? 'unavailable' : ''}">
             
-            <!-- Image & Status Overlay -->
-            <div class="h-44 w-full relative bg-navy-950 overflow-hidden">
-              <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" />
-              <div class="absolute top-2.5 left-2.5 flex gap-1.5">
-                <span class="bg-navy-950/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-200 border border-white/10">
+            <!-- 1. Dedicated Image Container -->
+            <div class="food-card-media">
+              <img src="${item.image}" alt="${item.name}" class="food-card-img" />
+              
+              <!-- Badges Over Media -->
+              <div class="food-card-media-badges-left">
+                <span class="food-pill-badge food-pill-category">
                   ${item.category}
                 </span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                  item.status === 'PUBLISHED' ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40' :
-                  item.status === 'DRAFT' ? 'bg-amber-950/90 text-amber-300 border-amber-500/40' :
-                  'bg-slate-900 text-slate-400 border-slate-700'
-                }">
+                <span class="food-pill-badge food-pill-${(item.status || 'PUBLISHED').toLowerCase()}">
                   ${item.status || 'PUBLISHED'}
                 </span>
               </div>
 
-              <div class="absolute top-2.5 right-2.5">
-                <span class="badge-gold text-[10px] font-bold">Ver #${item.version || 1}</span>
+              <div class="food-card-media-badges-right">
+                <span class="food-pill-badge food-pill-version">Ver #${item.version || 1}</span>
               </div>
             </div>
 
-            <!-- Card Content -->
-            <div class="p-5 flex-1 flex flex-col justify-between">
-              <div>
-                <div class="flex items-start justify-between gap-2 mb-1.5">
-                  <h3 class="font-serif text-base text-white font-bold">${item.name}</h3>
-                  <div class="text-gold font-bold text-sm whitespace-nowrap">₦${item.price.toLocaleString()}</div>
-                </div>
-
-                <div class="flex items-center gap-3 text-xs text-slate-400 mb-2">
-                  <span>⏱️ ${item.prepTimeMinutes || 20}m prep</span>
-                  <span>🚀 ${item.estimatedDeliveryMinutes || 15}m delivery</span>
-                </div>
-
-                <p class="text-xs text-slate-300 leading-relaxed mb-4">${item.desc}</p>
-
-                <!-- Addons Snippet -->
-                ${item.addons && item.addons.length > 0 ? `
-                  <div class="text-[11px] text-slate-400 mb-3 bg-navy-950/60 p-2.5 rounded-lg border border-white/5">
-                    <strong class="text-gold font-medium">Extras (${item.addons.length}):</strong> 
-                    ${item.addons.map(a => `${a.name} (+₦${a.price.toLocaleString()})`).slice(0, 2).join(', ')}${item.addons.length > 2 ? '...' : ''}
-                  </div>
-                ` : ''}
+            <!-- 2. Strict Vertical Hierarchy Body -->
+            <div class="food-card-body">
+              
+              <!-- Dish Name & Price Header Row -->
+              <div class="food-card-header">
+                <h3 class="food-card-title">${item.name}</h3>
+                <div class="food-card-price">₦${item.price.toLocaleString()}</div>
               </div>
 
-              <!-- Action Buttons Strip -->
-              <div class="pt-4 border-t border-white/10 flex flex-col gap-2">
+              <!-- Preparation & Delivery Metadata Row -->
+              <div class="food-card-meta">
+                <span class="food-card-meta-item">⏱️ ${item.prepTimeMinutes || 20}m prep</span>
+                <span class="food-card-meta-item">🚴 ${item.estimatedDeliveryMinutes || 15}m delivery</span>
+              </div>
+
+              <!-- Description -->
+              <p class="food-card-desc">${item.desc}</p>
+
+              <!-- Extras / Addons Snippet -->
+              ${item.addons && item.addons.length > 0 ? `
+                <div class="food-card-extras-box">
+                  <div class="food-card-extras-header">
+                    <span>Extras & Add-ons (${item.addons.length}):</span>
+                  </div>
+                  <div class="food-card-extras-list">
+                    ${item.addons.slice(0, 3).map(a => `
+                      <div class="food-card-extras-item">
+                        <span>• ${a.name}</span>
+                        <span class="text-gold font-medium">+₦${a.price.toLocaleString()}</span>
+                      </div>
+                    `).join('')}
+                    ${item.addons.length > 3 ? `<div class="text-[10px] text-slate-400 italic">+${item.addons.length - 3} more options available</div>` : ''}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Action Buttons Footer -->
+              <div class="food-card-actions">
                 <div class="flex items-center justify-between gap-2">
                   <button 
                     class="btn-secondary text-xs py-1.5 px-3 flex-1 ${!canManage ? 'opacity-50 cursor-not-allowed' : ''}"
@@ -993,7 +999,7 @@ function renderRestaurantContentTab(state, currentRole) {
                   </button>
                 </div>
 
-                <div class="flex items-center justify-between gap-2 text-xs">
+                <div class="flex items-center justify-between gap-2 text-xs pt-1">
                   ${item.status !== 'PUBLISHED' ? `
                     <button 
                       class="text-xs text-emerald-400 underline font-semibold bg-transparent border-none cursor-pointer"
@@ -1139,18 +1145,20 @@ function renderAmenitiesContentTab(state, currentRole) {
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         ${amenities.map(a => `
-          <div class="glass-panel rounded-2xl overflow-hidden border-2 border-gold/30 flex flex-col justify-between">
-            <div class="h-44 w-full relative bg-navy-950">
-              <img src="${a.image}" alt="${a.name}" class="w-full h-full object-cover" />
-              <div class="absolute top-2.5 left-2.5 bg-navy-950/90 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-bold text-slate-200 border border-white/10">
-                ${a.category}
+          <div class="food-card">
+            <div class="food-card-media">
+              <img src="${a.image}" alt="${a.name}" class="food-card-img" />
+              <div class="food-card-media-badges-left">
+                <span class="food-pill-badge food-pill-category">
+                  ${a.category}
+                </span>
               </div>
-              <div class="absolute top-2.5 right-2.5">
-                <span class="badge-gold text-[10px] font-bold">Ver #${a.version || 1}</span>
+              <div class="food-card-media-badges-right">
+                <span class="food-pill-badge food-pill-version">Ver #${a.version || 1}</span>
               </div>
             </div>
 
-            <div class="p-5 flex-1 flex flex-col justify-between">
+            <div class="food-card-body">
               <div>
                 <h3 class="font-serif text-base text-white font-bold mb-1">${a.name}</h3>
                 <p class="text-xs text-slate-300 leading-relaxed mb-3">${a.description}</p>
