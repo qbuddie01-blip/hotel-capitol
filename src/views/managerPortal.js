@@ -13,8 +13,9 @@ import { aiEngine } from '../services/aiEngine.js';
 import { automationEngine } from '../services/automationRules.js';
 import { learningEngine } from '../services/learningEngine.js';
 
-let managerActiveTab = 'overview'; 
-// 'overview' | 'content-restaurant' | 'content-breakfast' | 'content-amenities' | 'content-services' | 'content-media' | 'orders' | 'transportation' | 'learning' | 'staff' | 'audit' | 'settings'
+let managerActiveTab = 'profile'; 
+// 'profile' | 'overview' | 'content-restaurant' | 'content-breakfast' | 'content-amenities' | 'content-services' | 'content-media' | 'orders' | 'transportation' | 'learning' | 'staff' | 'audit' | 'settings'
+let adminIntercomState = 'ready'; // 'ready' | 'active' | 'delivered'
 
 // Modal UI States
 let activeEditMenuItemId = null;
@@ -37,6 +38,27 @@ export function initManagerPortal() {
   window.navigateManagerTab = (tab) => {
     managerActiveTab = tab;
     if (window.renderApp) window.renderApp();
+  };
+
+  window.triggerAdminIntercom = () => {
+    adminIntercomState = 'active';
+    if (window.renderApp) window.renderApp();
+    automationEngine.playChime('bell');
+    
+    // Open Intercom modal
+    window.toggleIntercomModal(true);
+
+    // Simulate active transition to delivered upon transmission
+    setTimeout(() => {
+      adminIntercomState = 'delivered';
+      if (window.renderApp) window.renderApp();
+      automationEngine.showToast('Intercom Connected', 'Executive Radio link established on secure operations channel.', 'success');
+      
+      setTimeout(() => {
+        adminIntercomState = 'ready';
+        if (window.renderApp) window.renderApp();
+      }, 3000);
+    }, 2000);
   };
 
   window.switchActiveAdminStaff = (staffId) => {
@@ -605,7 +627,9 @@ export function renderManagerPortal() {
   const totalRevenue = (state.orders || []).reduce((sum, o) => sum + o.totalAmount, 0) + transportBookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
   let tabContent = '';
-  if (managerActiveTab === 'overview') {
+  if (managerActiveTab === 'profile') {
+    tabContent = renderAdminPersonalProfileTab(state, activeStaff, currentRole);
+  } else if (managerActiveTab === 'overview') {
     tabContent = renderOverviewTab(state, activeOrders, pendingRequests, activeTransport, pendingSuggestions, staffOnDuty, totalRevenue);
   } else if (managerActiveTab === 'content-restaurant') {
     tabContent = renderRestaurantContentTab(state, currentRole);
@@ -632,93 +656,40 @@ export function renderManagerPortal() {
   }
 
   return `
-    <div class="container-custom py-6">
+    <div class="container-custom py-4 sm:py-6">
       
-      <!-- TOP ADMIN COMMAND HEADER WITH BALANCED THREE-COLUMN BRANDING (Spec #7 & #17) -->
-      <div class="glass-panel p-5 sm:p-6 rounded-2xl mb-6 border border-gold/40 shadow-xl" style="background: linear-gradient(135deg, rgba(12, 25, 42, 0.95) 0%, rgba(6, 13, 22, 0.95) 100%);">
-        
-        <!-- Top Row: Intercom (Left) | Centered Profile (Center) | Hotel Logo + Back Button (Right) -->
-        <div class="flex items-center justify-between gap-4 pb-4 border-b border-white/10 flex-wrap sm:flex-nowrap">
-          
-          <!-- Left: Staff Intercom Quick Radio Button -->
+      <!-- TOP ADMIN COMMAND SUB-BAR WITH RBAC SWITCHER -->
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl mb-6 border border-gold/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4" style="background: linear-gradient(135deg, rgba(12, 25, 42, 0.95) 0%, rgba(6, 13, 22, 0.95) 100%);">
+        <div>
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-[11px] font-bold uppercase tracking-luxury text-gold">Hotel Capitol Administration & Governance</span>
+            <span class="badge-gold text-xs font-bold">${currentRole.replace(/_/g, ' ')}</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">Admin & Support Console</h1>
+          <p class="text-xs text-slate-300 mt-0.5">Centralized operational oversight, content publishing, media library, and AI governance.</p>
+        </div>
+
+        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
           <div class="flex items-center gap-2">
-            <button 
-              class="glass-panel py-1.5 px-3 rounded-xl border border-gold/40 hover:border-gold cursor-pointer transition-all flex items-center gap-2"
-              onclick="window.toggleIntercomModal(true)"
-              title="Open Staff Radio Intercom"
+            <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Switch Admin:</span>
+            <select 
+              class="input-custom text-xs py-1.5 px-2.5 font-semibold bg-navy-950 border-gold/40 text-gold rounded-lg cursor-pointer"
+              onchange="window.switchActiveAdminStaff(this.value)"
             >
-              ${renderIntercomRoundBadge(24)}
-              <div class="flex flex-col text-left hide-mobile">
-                <span class="text-[11px] font-bold text-emerald-400">Intercom</span>
-                <span class="text-[9px] text-slate-400">Staff Radio</span>
-              </div>
-            </button>
-          </div>
-
-          <!-- Center: Visually Centered Profile Image & Frame (Spec #7) -->
-          <div class="flex items-center gap-3 justify-center text-center">
-            <div class="relative">
-              <img 
-                src="${activeStaff.avatar}" 
-                alt="${activeStaff.name}" 
-                class="w-12 h-12 rounded-2xl object-cover border-2 border-gold shadow-lg"
-              />
-              <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-navy-950"></span>
-            </div>
-            <div class="flex flex-col text-left">
-              <div class="flex items-center gap-1.5">
-                <strong class="text-sm font-bold text-white">${activeStaff.name}</strong>
-                <span class="badge-gold text-[9px] py-0.5">${currentRole.replace(/_/g, ' ')}</span>
-              </div>
-              <span class="text-[11px] text-slate-300">${activeStaff.role}</span>
-            </div>
-          </div>
-
-          <!-- Right: Hotel Capitol Logo + Back Button (Spec #17) -->
-          <div class="flex items-center gap-3">
-            <div class="hide-mobile">
-              ${renderHotelCapitolLogo({ variant: 'compact', height: 32, color: 'var(--gold-400)' })}
-            </div>
-            <button class="btn-admin-back" onclick="window.navigateManagerTab('overview')" title="Return to Dashboard">
-              <span>←</span> <span>Back</span>
-            </button>
-          </div>
-
-        </div>
-
-        <!-- Lower Row: Title & RBAC User Switcher -->
-        <div class="pt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <div class="text-[11px] font-bold uppercase tracking-luxury text-gold">Administrative & Governance Console</div>
-            <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">Hotel Operations Command</h1>
-          </div>
-
-          <div class="flex items-center gap-3 flex-wrap">
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Switch Admin:</span>
-              <select 
-                class="input-custom text-xs py-1 px-2.5 font-semibold bg-navy-950 border-gold/40 text-gold rounded-lg cursor-pointer"
-                onchange="window.switchActiveAdminStaff(this.value)"
-              >
-                ${state.staffMembers.filter(s => s.adminRole || ['STF-05', 'STF-04', 'STF-02', 'STF-03', 'STF-06'].includes(s.id)).map(st => `
-                  <option value="${st.id}" ${st.id === state.activeStaffId ? 'selected' : ''}>
-                    ${st.name} (${st.adminRole || st.role})
-                  </option>
-                `).join('')}
-              </select>
-            </div>
-
-            <button class="btn-secondary text-xs py-1.5 px-3.5 font-bold" onclick="window.navigatePortal('guest')">
-              Guest Portal →
-            </button>
+              ${state.staffMembers.filter(s => s.adminRole || ['STF-05', 'STF-04', 'STF-02', 'STF-03', 'STF-06'].includes(s.id)).map(st => `
+                <option value="${st.id}" ${st.id === state.activeStaffId ? 'selected' : ''}>
+                  ${st.name} (${st.adminRole || st.role})
+                </option>
+              `).join('')}
+            </select>
           </div>
         </div>
-
       </div>
 
       <!-- MAIN NAVIGATION TABS -->
       <div class="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 scrollbar-thin border-b border-gold/20">
         ${[
+          { id: 'profile', label: '👤 Admin Profile' },
           { id: 'overview', label: '📊 Dashboard' },
           { id: 'content-restaurant', label: '🍽️ Restaurant Menu' },
           { id: 'content-breakfast', label: '🍳 Breakfast Service' },
@@ -747,6 +718,128 @@ export function renderManagerPortal() {
 
       <!-- MODALS -->
       ${renderModals(state, activeEditMenuItemId, activeEditAmenityId, activeEditStaffId, activeVersionModal, activeEvidenceModal, activeMediaUploadModal)}
+
+    </div>
+  `;
+}
+
+// ==========================================
+// 0. SINGLE AUTHORITATIVE ADMIN PROFILE TAB
+// ==========================================
+function renderAdminPersonalProfileTab(state, activeStaff, currentRole) {
+  const isListening = adminIntercomState === 'active';
+  const isDelivered = adminIntercomState === 'delivered';
+  const ringColor = isListening ? '#ef4444' : '#10b981';
+  const glowColor = isListening ? 'rgba(239, 68, 68, 0.75)' : 'rgba(16, 185, 129, 0.75)';
+  const staffOnDuty = state.staffMembers.filter(s => s.clockedIn).length;
+  const activeOrdersCount = state.orders.filter(o => o.status !== 'DELIVERED').length;
+
+  return `
+    <div class="staff-profile-container animate-fade-in">
+      
+      <!-- Single Authoritative Admin Profile Card -->
+      <div class="staff-profile-card">
+        
+        <!-- 1. Profile Image with Gold Frame -->
+        <div class="relative mb-4">
+          <img 
+            src="${activeStaff.avatar}" 
+            alt="${activeStaff.name}" 
+            class="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl object-cover border-2 border-gold shadow-2xl" 
+            style="object-fit: cover; object-position: center; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(220, 173, 84, 0.3);"
+          />
+          <div class="absolute -bottom-2 -right-2 bg-navy-950 px-2.5 py-1 rounded-full border border-gold/40 text-[10px] font-bold text-gold">
+            ${currentRole.replace(/_/g, ' ')}
+          </div>
+        </div>
+
+        <!-- 2. Admin Name, Job Title & Department -->
+        <h2 class="text-2xl sm:text-3xl font-serif text-white font-bold mb-1">${activeStaff.name}</h2>
+        <div class="text-xs sm:text-sm font-semibold text-gold mb-1">${activeStaff.role}</div>
+        <div class="text-xs text-slate-300 uppercase tracking-wider mb-5">
+          Department: <strong class="text-white">${activeStaff.department}</strong> · Role: <strong class="text-gold">${currentRole.replace(/_/g, ' ')}</strong>
+        </div>
+
+        <!-- 3. Clock In CTA -->
+        <div class="w-full max-w-xs mb-3">
+          <button 
+            class="${activeStaff.clockedIn ? 'btn-danger' : 'btn-primary'} w-full py-3 text-sm font-bold shadow-xl cursor-pointer"
+            onclick="window.hotelCapitolStore.toggleClockIn('${activeStaff.id}'); renderManagerPortal();"
+          >
+            ${activeStaff.clockedIn ? '⏰ Clock Out of Duty' : '⏰ Clock In for Duty'}
+          </button>
+        </div>
+
+        <!-- 4. Large Prominent Intercom Control Directly Below Clock In -->
+        <div class="my-3 flex flex-col items-center">
+          <button 
+            class="staff-large-intercom-btn ${isListening ? 'active' : ''}"
+            onclick="window.triggerAdminIntercom()"
+            title="Open Live 2-Way Executive Intercom Radio"
+          >
+            <div class="relative flex items-center justify-center" style="width: 44px; height: 44px;">
+              <div class="absolute inset-0 rounded-full ${isListening ? 'intercom-ring-active' : 'intercom-ring-ready'}" style="border: 2.5px solid ${ringColor}; box-shadow: 0 0 16px ${glowColor}, inset 0 0 8px ${glowColor};"></div>
+              ${renderIntercomRoundBadge(28)}
+            </div>
+            <div class="flex flex-col text-left">
+              <span class="text-xs font-bold ${isListening ? 'text-red-400' : 'text-emerald-300'} flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full ${isListening ? 'bg-red-500 animate-ping' : 'bg-emerald-400 animate-pulse'}"></span>
+                ${isListening ? 'LISTENING / ACTIVE' : isDelivered ? 'MESSAGE DELIVERED' : '2-WAY INTERCOM READY'}
+              </span>
+              <span class="text-[10px] text-slate-300">Push-to-Talk Executive Radio</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- 5. Profile Information & Operational Details (Compact, Moved Upward) -->
+        <div class="w-full mt-4 text-left p-4 rounded-2xl bg-navy-950/80 border border-white/10">
+          <div class="text-xs font-bold uppercase tracking-luxury text-gold pb-2 border-b border-white/10 mb-3 flex items-center justify-between">
+            <span>Executive Profile & Governance</span>
+            <span class="text-slate-400 text-[11px]">ID: ${activeStaff.id}</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-300">
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Shift Schedule:</span>
+              <strong class="text-white">${activeStaff.shift || 'Executive Operations'}</strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Attendance:</span>
+              <strong class="${activeStaff.clockedIn ? 'text-emerald-400' : 'text-slate-400'}">
+                ${activeStaff.clockedIn ? `In (${activeStaff.clockInTime || '08:00 AM'})` : 'Off Duty'}
+              </strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Governance Scope:</span>
+              <strong class="text-gold font-bold">${currentRole === 'SUPER_ADMIN' ? 'Full Authority' : 'Restricted Scope'}</strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Staff on Duty:</span>
+              <strong class="text-white">${staffOnDuty} / ${state.staffMembers.length} Active</strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Active Orders:</span>
+              <strong class="text-emerald-400">${activeOrdersCount} in Progress</strong>
+            </div>
+
+            <div class="flex items-center justify-between p-2 rounded-lg bg-navy-900 border border-white/5">
+              <span class="text-slate-400">Audit Trail:</span>
+              <strong class="text-white">${(state.auditLog || []).length} Logged Events</strong>
+            </div>
+          </div>
+
+          <!-- AI Operational Coaching Note -->
+          <div class="mt-3 pt-3 border-t border-white/10 text-xs">
+            <span class="text-gold font-semibold">Governance & Oversight Responsibilities:</span>
+            <p class="text-slate-300 mt-1 italic leading-relaxed">"${activeStaff.aiNotes || 'Authoritative oversight over dining menus, property amenities, Lagos transportation pricing, and Tolani AI learning proposals.'}"</p>
+          </div>
+        </div>
+
+      </div>
 
     </div>
   `;

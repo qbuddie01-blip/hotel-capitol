@@ -129,22 +129,11 @@ export function renderNavbar() {
             </div>
           ` : ''}
 
-          <!-- Staff Back Button (When on Staff Portal) -->
-          ${state.activeRole === 'staff' ? `
+          <!-- Universal Operational Back Button (Staff / Supervisor / Manager) -->
+          ${['staff', 'supervisor', 'manager'].includes(state.activeRole) ? `
             <button class="btn-admin-back hide-mobile" onclick="window.navigatePortal('guest')">
               <span>←</span> <span>Back</span>
             </button>
-          ` : ''}
-
-          <!-- Staff Profile Indicator (Visible in Supervisor / Manager Mode) -->
-          ${['supervisor', 'manager'].includes(state.activeRole) ? `
-            <div class="flex items-center gap-2 glass-panel-subtle px-3 py-1.5 rounded-lg border border-gold text-xs">
-              <img src="${staff.avatar}" class="w-6 h-6 rounded-full object-cover border border-gold" alt="${staff.name}" />
-              <div class="hide-mobile">
-                <div class="font-semibold text-white">${staff.name}</div>
-                <div class="text-gold-light text-xs opacity-80">${staff.role}</div>
-              </div>
-            </div>
           ` : ''}
 
           <!-- Floating Staff Intercom Trigger (Visible in Staff / Supervisor / Manager / Vendor / Public Modes, Hidden in Guest Mode) -->
