@@ -1,7 +1,17 @@
 /**
  * HOTEL CAPITOL AI — COMPREHENSIVE SYSTEM VERIFICATION TEST
- * Tests Tolani Learning Engine, Intent Classification, Lagos Zonal Pricing,
- * Restaurant Lifecycle, Voice Config, and Human Review Approvals.
+ * Tests:
+ * 1. Single Unified Tolani Voice Config
+ * 2. Lagos Zonal Transportation & Charter Pricing
+ * 3. Restaurant Order Lifecycle & Dispatch
+ * 4. Tolani Additive Learning Engine & Human Approval Gate
+ * 5. AI Intent Routing & Service Isolation
+ * 6. Admin Console: Restaurant Menu CRUD, Versioning & Rollback
+ * 7. Admin Console: Amenities, Breakfast & Service Options
+ * 8. Admin Console: Media Library & Asset Uploads
+ * 9. RBAC Action-Layer Enforcement (Real Permissions Matrix)
+ * 10. Dynamic Authoritative Tolani Knowledge Retrieval
+ * 11. Tamper-Evident Audit Logging
  */
 
 import { store } from './src/store/state.js';
@@ -9,7 +19,7 @@ import { aiEngine, TOLANI_VOICE_CONFIG } from './src/services/aiEngine.js';
 import { learningEngine } from './src/services/learningEngine.js';
 
 console.log('================================================================');
-console.log('HOTEL CAPITOL AI — TOLANI ADDITIVE SYSTEM VERIFICATION');
+console.log('HOTEL CAPITOL AI — COMPREHENSIVE SYSTEM VERIFICATION');
 console.log('================================================================\n');
 
 let passCount = 0;
@@ -134,11 +144,9 @@ assert(logEntry && (logEntry.id.startsWith('LOG-') || logEntry.id.startsWith('EV
 
 // Test 4B: Guest Correction Suggestion Generation
 const customPhrase = 'can i get fresh bed sheets and pillowcases';
-// Before learning: let's see current classification
 const initialClass = aiEngine.classifyIntent(customPhrase, 'GENERAL');
 console.log(`Initial classification for "${customPhrase}": ${initialClass.intent}`);
 
-// Create correction suggestion
 const sug = learningEngine.createCorrectionSuggestion({
   phrase: customPhrase,
   observedIntent: initialClass.intent,
@@ -151,7 +159,6 @@ assert(sug && sug.id.startsWith('SUG-'), `AI learning suggestion created (${sug.
 assert(sug.status === 'PENDING_REVIEW', 'Suggestion status is PENDING_REVIEW (not auto-promoted to production)');
 
 // Safety Rule: Production AI classification must NOT have changed yet before approval!
-const preApprovalClass = aiEngine.classifyIntent(customPhrase, 'GENERAL');
 assert(store.getState().approvedKnowledgeUpdates.filter(u => u.title && u.title.includes(customPhrase)).length === 0, 'No production knowledge update exists prior to administrator approval');
 
 // Test 4C: Human Administrator Approval Gate
@@ -182,6 +189,182 @@ assert(aiEngine.classifyIntent('I want to order lunch', 'RESTAURANT').intent ===
 assert(aiEngine.classifyIntent('I need a ride to Ikeja airport', 'VIP_TRANSPORTATION').intent === 'VIP_TRANSPORTATION', 'Ride query routes to VIP_TRANSPORTATION');
 assert(aiEngine.classifyIntent('Help with my bags', 'FRONT_DESK').intent === 'LUGGAGE_ASSISTANCE', 'Luggage query routes to LUGGAGE_ASSISTANCE');
 assert(aiEngine.classifyIntent('What time is breakfast served?', 'BREAKFAST').intent === 'ORDER_BREAKFAST', 'Breakfast query routes to ORDER_BREAKFAST');
+
+// ================================================================
+// 6. ADMIN CONSOLE: RESTAURANT MENU CRUD & VERSIONING
+// ================================================================
+console.log('\n--- 6. ADMIN CONSOLE: RESTAURANT MENU CRUD & VERSIONING ---');
+
+// Set active staff to Super Admin (Seyi Adeyemi)
+store.setActiveStaffId('STF-05');
+
+// Test 6A: Add New Menu Item
+const newDish = store.addMenuItem({
+  name: 'Chef Babatunde Seafood Okro Deluxe',
+  category: 'Food',
+  price: 16500,
+  prepTimeMinutes: 25,
+  estimatedDeliveryMinutes: 15,
+  desc: 'Fresh Atlantic jumbo prawns, calamari, and blue crab with pounded yam.',
+  image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+  status: 'PUBLISHED',
+  available: true,
+  featured: true
+});
+assert(newDish && (newDish.id.startsWith('M-') || newDish.id.startsWith('MENU-')), `New menu item created with ID ${newDish.id}`);
+assert(newDish.price === 16500, 'Menu item price initialized correctly');
+assert(newDish.version === 1, 'Initial version is Version 1');
+
+// Test 6B: Update Menu Item Price & Record Version
+const updatedDish = store.updateMenuItem(newDish.id, { price: 18000, prepTimeMinutes: 30 }, null, 'Seasonal seafood market adjustment');
+assert(updatedDish.price === 18000, 'Price updated to ₦18,000');
+assert(updatedDish.version === 2, 'Version incremented to Version 2');
+assert(updatedDish.versionHistory.length === 1, 'Version history contains 1 prior snapshot');
+assert(updatedDish.versionHistory[0].previousSnapshot.price === 16500, 'Version history captured previous price (₦16,500)');
+
+// Test 6C: Version Rollback / Restore
+const restoredDish = store.restoreMenuItemVersion(newDish.id, 1);
+assert(restoredDish.price === 16500, `Version 1 restored successfully (price restored to ₦${restoredDish.price})`);
+assert(restoredDish.version === 3, 'Restoring creates a new audited Version 3');
+
+// Test 6D: Archive & Publish State Transitions
+store.archiveMenuItem(newDish.id);
+assert(store.getState().menu.find(m => m.id === newDish.id).status === 'ARCHIVED', 'Menu item archived');
+
+store.publishMenuItem(newDish.id);
+assert(store.getState().menu.find(m => m.id === newDish.id).status === 'PUBLISHED', 'Menu item published live');
+
+// ================================================================
+// 7. ADMIN CONSOLE: AMENITIES, BREAKFAST & SERVICE OPTIONS
+// ================================================================
+console.log('\n--- 7. ADMIN CONSOLE: AMENITIES, BREAKFAST & SERVICE OPTIONS ---');
+
+// Test 7A: Add Amenity & Update
+const newAmenity = store.addAmenity({
+  name: 'Capitol Rooftop Infinity Pool',
+  category: 'Recreation & Leisure',
+  openingHours: '06:00 AM - 10:00 PM Daily',
+  location: '6th Floor Rooftop Deck',
+  description: 'Panoramic heated pool overlooking Ikeja GRA skyline.',
+  rules: 'Resident keycard required. No glassware poolside.',
+  contact: 'Ext 40 (Pool Bar)',
+  image: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=600&q=80',
+  status: 'PUBLISHED',
+  available: true
+});
+assert(newAmenity && newAmenity.id.startsWith('AMN-'), `Amenity created with ID ${newAmenity.id}`);
+
+store.updateAmenity(newAmenity.id, { openingHours: '06:00 AM - 11:00 PM Daily' }, null, 'Extended evening hours');
+const updatedAmenity = store.getState().amenities.find(a => a.id === newAmenity.id);
+assert(updatedAmenity.openingHours === '06:00 AM - 11:00 PM Daily', 'Amenity hours updated');
+assert(updatedAmenity.version === 2, 'Amenity version incremented to 2');
+
+// Test 7B: Breakfast Configuration
+store.updateBreakfastConfig({
+  servingFrom: '06:00 AM',
+  servingUntil: '11:30 AM',
+  standardPrice: 9000
+}, null, 'Weekend schedule adjustment');
+const bConf = store.getState().breakfastConfig;
+assert(bConf.servingFrom === '06:00 AM' && bConf.servingUntil === '11:30 AM', 'Breakfast hours updated');
+assert(bConf.standardPrice === 9000, 'Breakfast standard price updated to ₦9,000');
+
+// Test 7C: Service Options (Porter In Room & Main Lobby - NO Storage Vault)
+const porterOpts = store.getState().serviceOptions.porter;
+assert(porterOpts.locations.length === 2, 'Porter options contain strictly 2 locations');
+assert(porterOpts.locations.some(l => l.name === 'In Room'), 'Porter location "In Room" exists');
+assert(porterOpts.locations.some(l => l.name === 'Main Lobby'), 'Porter location "Main Lobby" exists');
+assert(!porterOpts.locations.some(l => l.name.toLowerCase().includes('vault')), 'Storage Vault is strictly excluded');
+
+// ================================================================
+// 8. ADMIN CONSOLE: MEDIA LIBRARY MANAGEMENT
+// ================================================================
+console.log('\n--- 8. ADMIN CONSOLE: MEDIA LIBRARY MANAGEMENT ---');
+
+const mediaAsset = store.addMediaAsset({
+  title: 'Capitol Suya Platter High-Res',
+  fileName: 'capitol_suya_deluxe.jpg',
+  fileType: 'image/jpeg',
+  fileSize: '420 KB',
+  dimensions: '1920x1080',
+  url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
+  category: 'Restaurant'
+});
+assert(mediaAsset && mediaAsset.id.startsWith('MED-'), `Media asset registered (${mediaAsset.id})`);
+assert(store.getState().mediaLibrary.some(m => m.id === mediaAsset.id), 'Media asset present in media library catalog');
+
+store.deleteMediaAsset(mediaAsset.id);
+assert(!store.getState().mediaLibrary.some(m => m.id === mediaAsset.id), 'Media asset deleted cleanly');
+
+// ================================================================
+// 9. RBAC ACTION-LAYER PERMISSION ENFORCEMENT
+// ================================================================
+console.log('\n--- 9. RBAC ACTION-LAYER PERMISSION ENFORCEMENT ---');
+
+const superAdmin = store.getState().staffMembers.find(s => s.id === 'STF-05'); // Seyi Adeyemi
+const contentManager = store.getState().staffMembers.find(s => s.id === 'STF-06'); // Chidinma Eze
+const transportManager = store.getState().staffMembers.find(s => s.id === 'STF-03'); // Ibrahim Bello
+const restaurantManager = store.getState().staffMembers.find(s => s.id === 'STF-02'); // Chef Babatunde
+
+// 9A: Super Admin has all permissions
+assert(store.hasPermission('MANAGE_MENU', superAdmin) === true, 'Super Admin can manage menu');
+assert(store.hasPermission('APPROVE_TOLANI_LEARNING', superAdmin) === true, 'Super Admin can approve Tolani learning');
+assert(store.hasPermission('MANAGE_TRANSPORT_PRICING', superAdmin) === true, 'Super Admin can manage transport pricing');
+
+// 9B: Content Manager can manage menu and media, but NOT AI approvals or transport pricing
+assert(store.hasPermission('MANAGE_MENU', contentManager) === true, 'Content Manager can manage menu');
+assert(store.hasPermission('MANAGE_MEDIA', contentManager) === true, 'Content Manager can manage media library');
+assert(store.hasPermission('APPROVE_TOLANI_LEARNING', contentManager) === false, 'Content Manager CANNOT approve Tolani learning');
+assert(store.hasPermission('MANAGE_TRANSPORT_PRICING', contentManager) === false, 'Content Manager CANNOT edit transport pricing');
+
+// 9C: Transport Manager can manage transport pricing, but NOT menu
+assert(store.hasPermission('MANAGE_TRANSPORT_PRICING', transportManager) === true, 'Transport Manager can edit transport pricing');
+assert(store.hasPermission('PUBLISH_MENU', transportManager) === false, 'Transport Manager CANNOT publish menu');
+
+// 9D: Action Layer Throws when Unauthorized Actor attempts mutation
+let blocked = false;
+try {
+  store.setActiveStaffId('STF-06'); // Content Manager
+  store.updateZonePricing('AIR-2', 50000, 30, null, 'Unauthorized attempt');
+} catch (e) {
+  blocked = true;
+}
+assert(blocked === true, 'Store mutation blocked with Permission Denied when unauthorized role attempts transport pricing update');
+
+// ================================================================
+// 10. DYNAMIC AUTHORITATIVE TOLANI KNOWLEDGE RETRIEVAL
+// ================================================================
+console.log('\n--- 10. DYNAMIC AUTHORITATIVE TOLANI KNOWLEDGE RETRIEVAL ---');
+
+// Reset to Super Admin
+store.setActiveStaffId('STF-05');
+
+// Update Signature Jollof price to ₦14,500
+const jollofItem = store.getState().menu.find(m => m.name.includes('Jollof')) || store.getState().menu[0];
+store.updateMenuItem(jollofItem.id, { price: 14500, prepTimeMinutes: 22 }, null, 'Authoritative tariff update');
+
+// Ask Tolani for price of Signature Jollof
+const priceQueryResponse = aiEngine.processGuestQuery('What is the price of the Capitol Signature Jollof?');
+assert(priceQueryResponse.text.includes('14,500') || priceQueryResponse.voiceText.includes('14,500'), `Tolani dynamically spoke current published price (₦14,500)`);
+assert(priceQueryResponse.text.includes('22 minutes') || priceQueryResponse.voiceText.includes('22 minutes'), 'Tolani dynamically spoke current published prep time (22 mins)');
+
+// Ask Tolani for Amenity hours
+const amenityQueryResponse = aiEngine.processGuestQuery('What time does the pool close?');
+assert(amenityQueryResponse.text.includes('Pool') || amenityQueryResponse.voiceText.includes('Pool'), 'Tolani dynamically answered pool hours query from authoritative amenity catalog');
+
+// Ask Tolani for Transport Fare
+const transportQueryResponse = aiEngine.processGuestQuery('How much is a ride to Lekki Phase 1?');
+assert(transportQueryResponse.text.includes('30,000') || transportQueryResponse.voiceText.includes('30,000'), 'Tolani dynamically quoted Lekki Phase 1 fare (₦30,000)');
+
+// ================================================================
+// 11. TAMPER-EVIDENT AUDIT TRAIL
+// ================================================================
+console.log('\n--- 11. TAMPER-EVIDENT AUDIT LOGGING ---');
+const recentAudits = store.getState().auditLog || [];
+assert(recentAudits.length > 5, `Audit trail contains ${recentAudits.length} chronological audit entries`);
+assert(recentAudits.some(a => a.action.toUpperCase().includes('MENU') || (a.module && a.module.toUpperCase().includes('MENU'))), 'Audit trail logged Menu updates');
+assert(recentAudits.some(a => a.action.toUpperCase().includes('AMENITY') || (a.module && a.module.toUpperCase().includes('AMENITIES'))), 'Audit trail logged Amenity updates');
+assert(recentAudits.some(a => a.action.toUpperCase().includes('BREAKFAST') || (a.module && a.module.toUpperCase().includes('BREAKFAST'))), 'Audit trail logged Breakfast updates');
 
 console.log('\n================================================================');
 console.log(`VERIFICATION SUMMARY: ${passCount} PASSED / ${failCount} FAILED`);

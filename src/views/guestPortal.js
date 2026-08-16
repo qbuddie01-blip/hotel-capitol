@@ -2690,33 +2690,69 @@ function renderNearbySection() {
 
 // 9. HOTEL AMENITIES & INFO
 function renderHotelInfoSection() {
+  const state = store.getState();
+  const publishedAmenities = (state.amenities || []).filter(a => a.status === 'PUBLISHED' && a.available !== false);
+
   return `
-    <div class="max-w-3xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl">
-      <div class="mb-6">
-        <span class="text-xs font-bold uppercase tracking-luxury text-gold">Facility Directory</span>
-        <h2 class="text-2xl font-serif text-white mt-1">Hotel Capitol Amenities</h2>
+    <div class="max-w-4xl mx-auto flex flex-col gap-6 animate-fade-in">
+      <div class="glass-panel p-6 sm:p-8 rounded-2xl flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-luxury text-gold">Facility Directory & Guest Privileges</span>
+          <h2 class="text-2xl font-serif text-white mt-1">Hotel Capitol Amenities</h2>
+          <p class="text-xs text-slate-300">Live operational hours, location guides, and instructions for hotel resident facilities.</p>
+        </div>
+        <button 
+          class="intercom-pill-btn"
+          onclick="window.activateTolaniIntercom('AMENITIES', 'Amenities & Facilities')"
+          title="Ask Tolani about amenities"
+        >
+          ${renderIntercomRoundBadge(18)}
+          <span>Ask Tolani</span>
+        </button>
       </div>
 
-      <div class="flex flex-col gap-4">
-        <div class="p-4 rounded-xl bg-navy-950 border border-gold/30">
-          <div class="font-serif font-bold text-white text-sm mb-1">📶 High-Speed Fiber WiFi</div>
-          <div class="text-xs text-slate-300">Network: <strong class="text-white">Capitol-VIP-Guest</strong> | Pass: <strong class="text-gold">CapitolLagos2026</strong></div>
-        </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        ${publishedAmenities.map(amenity => `
+          <div class="glass-panel rounded-2xl overflow-hidden border-2 border-gold/30 flex flex-col justify-between" style="box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+            ${amenity.image ? `
+              <div class="h-40 w-full relative overflow-hidden bg-navy-950">
+                <img src="${amenity.image}" alt="${amenity.name}" class="w-full h-full object-cover" />
+                <div class="absolute top-2.5 left-2.5 bg-navy-950/85 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-200 border border-white/10">
+                  ${amenity.category}
+                </div>
+                ${amenity.featured ? '<div class="absolute top-2.5 right-2.5 badge-gold text-[10px]">⭐ Featured</div>' : ''}
+              </div>
+            ` : ''}
 
-        <div class="p-4 rounded-xl bg-navy-950 border border-white/10">
-          <div class="font-serif font-bold text-white text-sm mb-1">🏊 Poolside Terrace & Cabanas</div>
-          <div class="text-xs text-slate-300">Open daily 06:30 AM – 10:00 PM (1st Floor Terrace). Towels and cocktail service available poolside.</div>
-        </div>
+            <div class="p-5 flex-1 flex flex-col justify-between">
+              <div>
+                <h3 class="font-serif text-base text-white font-bold mb-1">${amenity.name}</h3>
+                <p class="text-xs text-slate-300 leading-relaxed mb-3">${amenity.description}</p>
+                
+                <div class="flex flex-col gap-1.5 p-3 rounded-xl bg-navy-950/70 border border-white/5 text-xs text-slate-300 mb-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">🕒 Hours:</span>
+                    <strong class="text-gold font-medium">${amenity.openingHours}</strong>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">📍 Location:</span>
+                    <strong class="text-white">${amenity.location}</strong>
+                  </div>
+                  ${amenity.rules ? `
+                    <div class="pt-1.5 border-t border-white/5 text-[11px] text-slate-300">
+                      <strong>Policy:</strong> ${amenity.rules}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
 
-        <div class="p-4 rounded-xl bg-navy-950 border border-white/10">
-          <div class="font-serif font-bold text-white text-sm mb-1">🏋️ Executive Fitness Center</div>
-          <div class="text-xs text-slate-300">24/7 Access with room keycard (2nd Floor). Cardio machines, free weights, and chilled mineral water.</div>
-        </div>
-
-        <div class="p-4 rounded-xl bg-navy-950 border border-white/10">
-          <div class="font-serif font-bold text-white text-sm mb-1">⏰ Check-In & Departure Times</div>
-          <div class="text-xs text-slate-300">Standard Check-in: 02:00 PM | Standard Checkout: 12:00 PM. Late checkout can be requested via Hotel Capitol AI.</div>
-        </div>
+              <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+                <span>📞 ${amenity.contact || 'Ext 0 / Front Desk'}</span>
+                <span class="text-emerald-400 font-medium">✓ Complimentary Resident Access</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
       </div>
     </div>
   `;

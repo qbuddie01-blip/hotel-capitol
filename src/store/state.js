@@ -3,7 +3,39 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V8';
+export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V9';
+
+// Real Role-Based Access Control Definitions
+export const ADMIN_ROLES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  HOTEL_ADMIN: 'HOTEL_ADMIN',
+  CONTENT_MANAGER: 'CONTENT_MANAGER',
+  TRANSPORT_MANAGER: 'TRANSPORT_MANAGER',
+  RESTAURANT_MANAGER: 'RESTAURANT_MANAGER',
+  FRONT_DESK: 'FRONT_DESK'
+};
+
+export const ROLE_PERMISSIONS = {
+  SUPER_ADMIN: ['ALL'],
+  HOTEL_ADMIN: [
+    'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
+    'MANAGE_MEDIA', 'MANAGE_SERVICES', 'MANAGE_TRANSPORT_PRICING', 'DISPATCH_TRANSPORT',
+    'APPROVE_TOLANI_LEARNING', 'ROLLBACK_TOLANI_LEARNING', 'MANAGE_STAFF', 'VIEW_AUDIT_LOGS', 'MANAGE_SETTINGS'
+  ],
+  CONTENT_MANAGER: [
+    'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
+    'MANAGE_MEDIA', 'MANAGE_SERVICES', 'VIEW_AUDIT_LOGS'
+  ],
+  TRANSPORT_MANAGER: [
+    'VIEW_DASHBOARD', 'MANAGE_TRANSPORT_PRICING', 'DISPATCH_TRANSPORT', 'VIEW_AUDIT_LOGS'
+  ],
+  RESTAURANT_MANAGER: [
+    'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_ORDERS', 'VIEW_AUDIT_LOGS'
+  ],
+  FRONT_DESK: [
+    'VIEW_DASHBOARD', 'MANAGE_ORDERS', 'DISPATCH_TRANSPORT'
+  ]
+};
 
 // Initial seed demo state
 const defaultState = {
@@ -114,9 +146,15 @@ const defaultState = {
       desc: 'Authentic firewood-infused Nigerian smoky Jollof rice, served with fried sweet plantain (dodo), fresh coleslaw, and grilled choice protein.',
       price: 9500,
       prepTimeMinutes: 25,
+      estimatedDeliveryMinutes: 15,
       image: 'https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Halal', 'Spicy'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-01', name: 'Extra Fried Plantain (Dodo)', price: 1500 },
         { id: 'ADD-02', name: 'Extra Jumbo Tiger Prawn (1 pc)', price: 3500 },
@@ -132,9 +170,15 @@ const defaultState = {
       desc: 'Succulent aged beef sirloin strips coated in authentic Yaji spice, served with sliced sweet onions, fresh plum tomatoes, cabbage, and fresh lime wedges.',
       price: 11000,
       prepTimeMinutes: 20,
+      estimatedDeliveryMinutes: 15,
       image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Halal', 'Gluten-Free', 'Spicy'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-01', name: 'Extra Fried Plantain (Dodo)', price: 1500 },
         { id: 'ADD-05', name: 'Extra Beef Suya Skewer', price: 2800 },
@@ -148,9 +192,15 @@ const defaultState = {
       desc: 'Rich traditional whipped okro delicacy packed with jumbo tiger prawns, Atlantic blue crab, calamari, fresh fish fillet, and served with smooth pounded yam.',
       price: 14500,
       prepTimeMinutes: 30,
+      estimatedDeliveryMinutes: 15,
       image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Halal', 'Seafood', 'Spicy'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-02', name: 'Extra Jumbo Tiger Prawn (1 pc)', price: 3500 },
         { id: 'ADD-09', name: 'Extra Portion Pounded Yam', price: 1500 },
@@ -164,9 +214,15 @@ const defaultState = {
       desc: 'Triple-decker brioche with herb-roasted chicken breast, crispy beef bacon, fried farm egg, sharp aged cheddar, lettuce, tomato, and garlic truffle aioli.',
       price: 8500,
       prepTimeMinutes: 15,
+      estimatedDeliveryMinutes: 15,
       image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: false,
+      featured: false,
+      dietary: ['Halal'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-06', name: 'Extra Crispy Beef Bacon', price: 2200 },
         { id: 'ADD-07', name: 'Extra Gourmet Sausage', price: 2000 },
@@ -180,9 +236,15 @@ const defaultState = {
       desc: 'Whole fresh Atlantic croaker marinated in Capitol secret aromatic spice rub, charcoal grilled to perfection, served with spicy pepper sauce and fried yam wedges.',
       price: 16000,
       prepTimeMinutes: 35,
+      estimatedDeliveryMinutes: 15,
       image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Halal', 'Seafood', 'Spicy'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-01', name: 'Extra Fried Plantain (Dodo)', price: 1500 },
         { id: 'ADD-08', name: 'Extra Yam Fries with Pepper Dip', price: 2200 }
@@ -195,9 +257,15 @@ const defaultState = {
       desc: 'The quintessential Nigerian luxury cocktail: aromatic bitters, citrus blend, grenadine, cucumber slices, fresh mint, and orange wheels.',
       price: 3500,
       prepTimeMinutes: 5,
+      estimatedDeliveryMinutes: 10,
       image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Vegetarian'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-D1', name: 'Add Extra Shot of Spiced Rum', price: 2500 }
       ]
@@ -209,9 +277,15 @@ const defaultState = {
       desc: 'Cold-pressed 100% natural Valencia oranges and sweet ripe sweet pineapple. Zero added sugars or preservatives.',
       price: 3000,
       prepTimeMinutes: 5,
+      estimatedDeliveryMinutes: 10,
       image: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: false,
+      dietary: ['Vegan', 'Gluten-Free'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-D2', name: 'Add Ginger & Turmeric Boost', price: 1000 }
       ]
@@ -223,9 +297,15 @@ const defaultState = {
       desc: 'Premium Aged Rum, Passionfruit purée, infused Hibiscus Zobo reduction, fresh lime, and ginger froth.',
       price: 6500,
       prepTimeMinutes: 8,
+      estimatedDeliveryMinutes: 10,
       image: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: [],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: []
     },
     {
@@ -235,9 +315,15 @@ const defaultState = {
       desc: 'Classic French Champagne with vibrant apple and citrus notes, fine bubbles, and elegant finish. Chilled in silver ice bucket.',
       price: 95000,
       prepTimeMinutes: 10,
+      estimatedDeliveryMinutes: 10,
       image: 'https://images.unsplash.com/photo-1584225064785-c62a8b43d148?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: false,
+      featured: true,
+      dietary: [],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: []
     },
     {
@@ -247,9 +333,15 @@ const defaultState = {
       desc: 'Two farm eggs any style, Cumberland beef sausages, grilled beef bacon, baked beans, sautéed mushrooms, grilled herb tomato, golden hash browns, and toasted sourdough.',
       price: 8500,
       prepTimeMinutes: 20,
+      estimatedDeliveryMinutes: 15,
       image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Halal'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-06', name: 'Extra Crispy Beef Bacon', price: 2200 },
         { id: 'ADD-07', name: 'Extra Gourmet Sausage', price: 2000 },
@@ -265,9 +357,15 @@ const defaultState = {
       desc: 'Steamed yellow yam and golden fried plantains served with traditional spiced egg and bell pepper stew, tender beef suya skewer, and rich Nigerian spiced cocoa or tea.',
       price: 8500,
       prepTimeMinutes: 20,
+      estimatedDeliveryMinutes: 15,
       image: 'https://images.unsplash.com/photo-1584776296944-ab6fb57b0bdd?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Halal', 'Spicy'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-01', name: 'Extra Fried Plantain (Dodo)', price: 1500 },
         { id: 'ADD-05', name: 'Extra Beef Suya Skewer', price: 2800 },
@@ -281,9 +379,15 @@ const defaultState = {
       desc: 'Decadent Belgian dark chocolate lava cake with warm molten center, accompanied by Madagascar Bourbon Vanilla bean gelato and berry compote.',
       price: 5500,
       prepTimeMinutes: 15,
+      estimatedDeliveryMinutes: 10,
       image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Vegetarian'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: [
         { id: 'ADD-D3', name: 'Extra Scoop Bourbon Vanilla Gelato', price: 1800 }
       ]
@@ -295,9 +399,15 @@ const defaultState = {
       desc: 'Tender diced chicken gizzards sautéed with ripe plantain cubes in a rich habanero, sweet bell pepper, and onion glaze.',
       price: 6500,
       prepTimeMinutes: 18,
+      estimatedDeliveryMinutes: 12,
       image: 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80',
       available: true,
       popular: true,
+      featured: true,
+      dietary: ['Halal', 'Spicy'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: [],
       addons: []
     }
   ],
@@ -740,6 +850,297 @@ const defaultState = {
     autoAnalyze: true
   },
 
+  // --- AUTHORITATIVE HOTEL CONTENT & CONFIGURATION ---
+  breakfastConfig: {
+    serviceName: 'Hotel Capitol Royal Breakfast Service',
+    servingFrom: '06:30 AM',
+    servingUntil: '11:00 AM',
+    standardPrice: 8500,
+    complimentaryRooms: ['402', '205', '401', '310'],
+    status: 'PUBLISHED',
+    version: 1,
+    versionHistory: []
+  },
+
+  amenities: [
+    {
+      id: 'AMN-01',
+      name: 'Capitol Rooftop Infinity Pool',
+      category: 'Recreation & Leisure',
+      description: 'Heated open-air rooftop infinity pool overlooking Ikeja skyline with luxury daybeds and cocktail bar service.',
+      openingHours: '06:00 AM - 10:00 PM Daily',
+      location: '5th Floor Rooftop Pavilion',
+      rules: 'Resident suites & members only. Proper swimwear required. Poolside attendant on duty.',
+      guestInstructions: 'Pool towels are provided on-site. Room charging available for poolside cocktails.',
+      contact: 'Ext 502 / Concierge',
+      image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: true,
+      version: 1,
+      versionHistory: []
+    },
+    {
+      id: 'AMN-02',
+      name: 'Executive Fitness Centre & Gym',
+      category: 'Health & Fitness',
+      description: 'State-of-the-art cardiovascular machines, Olympic free weights, resistance cables, and certified personal trainers.',
+      openingHours: '24 Hours Daily (Keycard Access)',
+      location: '2nd Floor West Wing',
+      rules: 'Athletic footwear required. Wipe down equipment after use. Personal training upon booking.',
+      guestInstructions: 'Complimentary chilled water and fresh sweat towels available in gym foyer.',
+      contact: 'Ext 204 / Fitness Desk',
+      image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: true,
+      version: 1,
+      versionHistory: []
+    },
+    {
+      id: 'AMN-03',
+      name: 'High-Speed Fiber VIP Wi-Fi (1Gbps)',
+      category: 'Connectivity & Tech',
+      description: 'Dedicated enterprise fiber-optic internet connection across all guest suites, lounges, and meeting rooms.',
+      openingHours: '24/7 Always Active',
+      location: 'Property-Wide Coverage',
+      rules: 'Network Name: HotelCapitol_VIP_Guest. Password provided on keycard wallet.',
+      guestInstructions: 'Connect to SSID and enter password "CapitolStay2026". 24/7 IT assistance available.',
+      contact: 'Ext 0 / Front Desk',
+      image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: false,
+      version: 1,
+      versionHistory: []
+    },
+    {
+      id: 'AMN-04',
+      name: 'Diplomatic Business Centre & Boardrooms',
+      category: 'Business & Events',
+      description: 'Private 12-seat executive boardroom with 4K interactive teleconference screens, high-speed color printing, and secretarial support.',
+      openingHours: '07:00 AM - 11:00 PM Daily',
+      location: '1st Floor Executive Concourse',
+      rules: 'Advance booking recommended for boardrooms. Walk-in workstations open for residents.',
+      guestInstructions: 'Reserve boardroom through Concierge or Admin console. Audio/Visual setup included.',
+      contact: 'Ext 108 / Business Desk',
+      image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: true,
+      version: 1,
+      versionHistory: []
+    },
+    {
+      id: 'AMN-05',
+      name: 'The Capitol Penthouse Cigar & Whiskey Lounge',
+      category: 'Nightlife & Lounges',
+      description: 'Exclusive hotel-resident rooftop lounge offering rare single malt scotch, aged rum, authentic Cuban cigars, and live jazz.',
+      openingHours: '05:00 PM - 02:00 AM Daily',
+      location: '5th Floor Penthouse Deck',
+      rules: 'Adults 21+ only. Smart casual dress code required. Resident signature charging permitted.',
+      guestInstructions: 'Table reservations recommended on Friday and Saturday evenings.',
+      contact: 'Ext 501 / Penthouse Bar',
+      image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: true,
+      version: 1,
+      versionHistory: []
+    },
+    {
+      id: 'AMN-06',
+      name: 'Luxury Spa & Holistic Wellness Haven',
+      category: 'Wellness & Spa',
+      description: 'Therapeutic deep-tissue Swedish massage, Moroccan hammam rituals, hot stone treatments, and botanical skin therapies.',
+      openingHours: '09:00 AM - 09:00 PM Daily',
+      location: 'Ground Floor Garden Wing',
+      rules: 'Appointments required. In-suite massage service available for Presidential Suite.',
+      guestInstructions: 'Book through Tolani AI concierge or call Spa Reception at Ext 105.',
+      contact: 'Ext 105 / Spa Desk',
+      image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: true,
+      version: 1,
+      versionHistory: []
+    },
+    {
+      id: 'AMN-07',
+      name: 'Valet Parking & Secure Chauffeur Bay',
+      category: 'Transportation & Access',
+      description: '24-hour secured underground parking with CCTV surveillance, electric vehicle charging, and professional valet service.',
+      openingHours: '24/7 Always Active',
+      location: 'Basement & Main Porte-Cochère',
+      rules: 'Complimentary for registered hotel guests. Hand keys to uniformed valet attendant.',
+      guestInstructions: 'Call Front Desk 10 minutes prior to departure to have vehicle brought to front entrance.',
+      contact: 'Ext 101 / Valet Bay',
+      image: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: false,
+      version: 1,
+      versionHistory: []
+    },
+    {
+      id: 'AMN-08',
+      name: 'Executive Express Laundry & Dry Cleaning',
+      category: 'Housekeeping & Valet',
+      description: 'Same-day luxury laundry, delicate dry cleaning, garment pressing, and shoe shine service.',
+      openingHours: '07:00 AM - 08:00 PM Daily',
+      location: 'Service Concourse / Suite Pickup',
+      rules: 'Express 3-hour turnaround available upon request. Regular service delivered by 6:00 PM.',
+      guestInstructions: 'Place laundry bag in wardrobe and request collection via Tolani or Room Attendant.',
+      contact: 'Ext 102 / Valet Laundry',
+      image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=800&q=80',
+      status: 'PUBLISHED',
+      available: true,
+      featured: false,
+      version: 1,
+      versionHistory: []
+    }
+  ],
+
+  serviceOptions: {
+    porter: {
+      locations: [
+        { id: 'LOC-ROOM', name: 'In Room', desc: 'Luggage assistance inside your private suite', available: true },
+        { id: 'LOC-LOBBY', name: 'Main Lobby', desc: 'Luggage collection at front desk reception', available: true }
+      ],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: []
+    },
+    housekeeping: {
+      items: [
+        { id: 'HK-01', name: 'Fresh Egyptian Cotton Bath Towels (Pair)', category: 'Towels', estMinutes: 10, available: true },
+        { id: 'HK-02', name: 'Luxury Bed Linens & Duvet Restock', category: 'Linens', estMinutes: 15, available: true },
+        { id: 'HK-03', name: 'Complimentary Bottled Spring Water (4 Bottles)', category: 'Water', estMinutes: 5, available: true },
+        { id: 'HK-04', name: 'Full Suite Deep Cleaning & Turn-Down', category: 'Room Cleaning', estMinutes: 25, available: true },
+        { id: 'HK-05', name: 'Luxury Botanical Toiletry Kit', category: 'Toiletries', estMinutes: 8, available: true },
+        { id: 'HK-06', name: 'Insecticide & Room Fresh Air Sanitizer Spray', category: 'Sanitizer', estMinutes: 8, available: true }
+      ],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: []
+    },
+    concierge: {
+      categories: ['Salons & Barbers', 'Supermarkets', 'Nightlife & Lounges', 'Tourist & Cultural'],
+      status: 'PUBLISHED',
+      version: 1,
+      versionHistory: []
+    }
+  },
+
+  mediaLibrary: [
+    {
+      id: 'MED-01',
+      title: 'Capitol Signature Jollof Rice Fiesta',
+      fileName: 'jollof_fiesta_platter.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '245 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?auto=format&fit=crop&w=600&q=80',
+      category: 'Restaurant',
+      uploadedAt: '2026-08-15 10:00 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    },
+    {
+      id: 'MED-02',
+      title: 'Prime Grilled Beef Suya Skewers',
+      fileName: 'suya_platter.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '310 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80',
+      category: 'Restaurant',
+      uploadedAt: '2026-08-15 10:15 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    },
+    {
+      id: 'MED-03',
+      title: 'Lagos Island Seafood Okro with Poundo',
+      fileName: 'seafood_okro.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '280 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      category: 'Restaurant',
+      uploadedAt: '2026-08-15 10:20 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    },
+    {
+      id: 'MED-04',
+      title: 'The English Royal Breakfast',
+      fileName: 'english_breakfast.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '290 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=600&q=80',
+      category: 'Breakfast',
+      uploadedAt: '2026-08-15 10:25 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    },
+    {
+      id: 'MED-05',
+      title: 'The Naija Executive Breakfast',
+      fileName: 'naija_breakfast.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '325 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1584776296944-ab6fb57b0bdd?auto=format&fit=crop&w=600&q=80',
+      category: 'Breakfast',
+      uploadedAt: '2026-08-15 10:30 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    },
+    {
+      id: 'MED-06',
+      title: 'Hotel Capitol Signature Chapman',
+      fileName: 'signature_chapman.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '190 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
+      category: 'Drinks',
+      uploadedAt: '2026-08-15 10:35 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    },
+    {
+      id: 'MED-07',
+      title: 'Capitol Rooftop Infinity Pool',
+      fileName: 'rooftop_pool.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '410 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80',
+      category: 'Amenities',
+      uploadedAt: '2026-08-15 10:40 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    },
+    {
+      id: 'MED-08',
+      title: 'Executive Fitness Centre & Gym',
+      fileName: 'fitness_gym.jpg',
+      fileType: 'image/jpeg',
+      fileSize: '380 KB',
+      dimensions: '1200x800',
+      url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
+      category: 'Amenities',
+      uploadedAt: '2026-08-15 10:45 AM',
+      uploadedBy: 'Chidinma Eze (Content Manager)',
+      usedInCount: 1
+    }
+  ],
+
+  contentVersions: [],
+
   nearbyRecommendations: [
     {
       id: 'LOC-01',
@@ -811,7 +1212,9 @@ const defaultState = {
       id: 'STF-01',
       name: 'Amara Nwosu',
       role: 'Head of Housekeeping',
+      adminRole: 'FRONT_DESK',
       department: 'housekeeping',
+      active: true,
       shift: 'Morning (07:00 - 15:30)',
       clockedIn: true,
       clockInTime: '06:52 AM',
@@ -828,7 +1231,9 @@ const defaultState = {
       id: 'STF-02',
       name: 'Chef Babatunde Adele',
       role: 'Executive Kitchen Chef',
+      adminRole: 'RESTAURANT_MANAGER',
       department: 'kitchen',
+      active: true,
       shift: 'Morning (06:00 - 14:30)',
       clockedIn: true,
       clockInTime: '05:50 AM',
@@ -845,7 +1250,9 @@ const defaultState = {
       id: 'STF-03',
       name: 'Ibrahim Bello',
       role: 'Lead Concierge & Transport',
+      adminRole: 'TRANSPORT_MANAGER',
       department: 'concierge',
+      active: true,
       shift: 'Morning (08:00 - 16:30)',
       clockedIn: true,
       clockInTime: '07:55 AM',
@@ -862,7 +1269,9 @@ const defaultState = {
       id: 'STF-04',
       name: 'Tariq Alabi',
       role: 'Duty Operations Supervisor',
+      adminRole: 'HOTEL_ADMIN',
       department: 'management',
+      active: true,
       shift: 'Full Day (08:00 - 18:00)',
       clockedIn: true,
       clockInTime: '07:45 AM',
@@ -879,7 +1288,9 @@ const defaultState = {
       id: 'STF-05',
       name: 'Seyi Adeyemi',
       role: 'General Operations Manager',
+      adminRole: 'SUPER_ADMIN',
       department: 'management',
+      active: true,
       shift: 'Executive (08:00 - 19:00)',
       clockedIn: true,
       clockInTime: '07:30 AM',
@@ -891,6 +1302,25 @@ const defaultState = {
       onTimeRate: '100%',
       feedback: 'Outstanding',
       aiNotes: 'High leadership oversight; approved 3 supplier purchase orders on time.'
+    },
+    {
+      id: 'STF-06',
+      name: 'Chidinma Eze',
+      role: 'Digital & Content Manager',
+      adminRole: 'CONTENT_MANAGER',
+      department: 'marketing',
+      active: true,
+      shift: 'Morning (09:00 - 17:30)',
+      clockedIn: true,
+      clockInTime: '08:50 AM',
+      clockStatus: 'On Time',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      performanceScore: 95,
+      tasksCompleted: 42,
+      totalTasks: 44,
+      onTimeRate: '98%',
+      feedback: 'Outstanding',
+      aiNotes: 'Successfully curated luxury photography and updated seasonal dining menus.'
     }
   ],
 
@@ -1260,7 +1690,7 @@ class StateStore {
 
   // --- Convenience Helper Actions ---
 
-  addAudit(action, entity, details, actor = null) {
+  addAudit(action, entity, details, actor = null, module = 'General', previousValue = null, newValue = null, reason = null, version = null) {
     const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
     const date = new Date().toISOString().split('T')[0];
     const newEntry = {
@@ -1269,7 +1699,12 @@ class StateStore {
       actor: actor || (this.state.activeRole === 'guest' ? `Guest in Suite ${this.getActiveGuest()?.roomNumber || '402'}` : 'Staff/Supervisor'),
       action,
       entity,
-      details
+      details,
+      module,
+      previousValue,
+      newValue,
+      reason,
+      version
     };
     this.setState(s => ({
       ...s,
@@ -1907,6 +2342,461 @@ class StateStore {
     this.addAudit('Transportation Rescheduled', bookingId, `Departure rescheduled to ${newDate} at ${newTime}`);
   }
 
+  // --- REAL ROLE-BASED ACCESS CONTROL (RBAC) ---
+  hasPermission(permissionKey, staff = null) {
+    const currentStaff = staff || this.getActiveStaff();
+    if (!currentStaff) return false;
+    // Check if staff is active
+    if (currentStaff.active === false) return false;
+    const role = currentStaff.adminRole || (currentStaff.id === 'STF-05' ? 'SUPER_ADMIN' : 'HOTEL_ADMIN');
+    const perms = ROLE_PERMISSIONS[role] || [];
+    return perms.includes('ALL') || perms.includes(permissionKey);
+  }
+
+  checkPermissionOrThrow(permissionKey, staff = null) {
+    if (!this.hasPermission(permissionKey, staff)) {
+      const currentStaff = staff || this.getActiveStaff();
+      throw new Error(`Access Denied: Role "${currentStaff?.adminRole || 'UNKNOWN'}" lacks permission "${permissionKey}".`);
+    }
+  }
+
+  // --- CONTENT VERSIONING HELPER ---
+  recordContentVersion(entityType, entityId, entityName, prevData, newData, actorName, actorRole, reason = 'Administrative update') {
+    const nextVer = (prevData?.version || 1) + 1;
+    const versionEntry = {
+      id: `VER-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+      version: nextVer,
+      entityType,
+      entityId,
+      entityName: entityName || entityId,
+      timestamp: new Date().toISOString(),
+      dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      changedBy: actorName || 'Authorized Admin',
+      role: actorRole || 'ADMIN',
+      reason,
+      previousSnapshot: prevData ? JSON.parse(JSON.stringify(prevData)) : null,
+      newSnapshot: JSON.parse(JSON.stringify(newData))
+    };
+    return versionEntry;
+  }
+
+  // --- RESTAURANT & DINING CONTENT MANAGEMENT ---
+  addMenuItem(itemData, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_MENU', staff);
+    const actor = staff || this.getActiveStaff();
+    const newId = itemData.id || `M-${String(this.state.menu.length + 1).padStart(2, '0')}`;
+    const newItem = {
+      id: newId,
+      category: itemData.category || 'Food',
+      name: itemData.name,
+      desc: itemData.desc || '',
+      price: Number(itemData.price) || 0,
+      prepTimeMinutes: Number(itemData.prepTimeMinutes) || 20,
+      estimatedDeliveryMinutes: Number(itemData.estimatedDeliveryMinutes) || 15,
+      image: itemData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      available: itemData.available ?? true,
+      popular: itemData.popular ?? false,
+      featured: itemData.featured ?? false,
+      dietary: itemData.dietary || [],
+      status: itemData.status || 'PUBLISHED', // 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+      version: 1,
+      versionHistory: [],
+      addons: itemData.addons || []
+    };
+
+    this.setState(s => ({
+      ...s,
+      menu: [...s.menu, newItem]
+    }));
+
+    this.addAudit('MENU_ITEM_CREATED', `${newItem.name} (${newItem.id})`, `Created new menu item: ₦${newItem.price.toLocaleString()} [Status: ${newItem.status}]`, actor.name, 'Restaurant Menu', null, newItem, 'Created new dish');
+    return newItem;
+  }
+
+  updateMenuItem(itemId, patchData, staff = null, reason = 'Menu item updated') {
+    this.checkPermissionOrThrow('MANAGE_MENU', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = this.state.menu.find(m => m.id === itemId);
+    if (!existing) throw new Error(`Menu item with ID ${itemId} not found.`);
+
+    const versionEntry = this.recordContentVersion('MENU_ITEM', itemId, existing.name, existing, { ...existing, ...patchData }, actor.name, actor.adminRole, reason);
+
+    const updatedItem = {
+      ...existing,
+      ...patchData,
+      version: versionEntry.version,
+      versionHistory: [versionEntry, ...(existing.versionHistory || [])]
+    };
+
+    this.setState(s => ({
+      ...s,
+      menu: s.menu.map(m => m.id === itemId ? updatedItem : m)
+    }));
+
+    this.addAudit('MENU_ITEM_UPDATED', `${updatedItem.name} (${itemId})`, `Updated item details. Reason: ${reason}`, actor.name, 'Restaurant Menu', existing, updatedItem, reason, versionEntry.version);
+    return updatedItem;
+  }
+
+  publishMenuItem(itemId, staff = null) {
+    this.checkPermissionOrThrow('PUBLISH_MENU', staff);
+    return this.updateMenuItem(itemId, { status: 'PUBLISHED' }, staff, 'Published to Guest Portal and Tolani');
+  }
+
+  archiveMenuItem(itemId, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_MENU', staff);
+    return this.updateMenuItem(itemId, { status: 'ARCHIVED', available: false }, staff, 'Archived menu item');
+  }
+
+  restoreMenuItemVersion(itemId, targetVersion, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_MENU', staff);
+    const existing = this.state.menu.find(m => m.id === itemId);
+    if (!existing) throw new Error(`Menu item ${itemId} not found.`);
+    
+    let targetSnapshot = null;
+    for (const v of (existing.versionHistory || [])) {
+      if (v.previousSnapshot && v.previousSnapshot.version === targetVersion) {
+        targetSnapshot = v.previousSnapshot;
+        break;
+      }
+      if (v.newSnapshot && v.newSnapshot.version === targetVersion) {
+        targetSnapshot = v.newSnapshot;
+        break;
+      }
+      if (v.version === targetVersion) {
+        targetSnapshot = v.previousSnapshot || v.newSnapshot;
+        break;
+      }
+    }
+
+    if (!targetSnapshot) throw new Error(`Version ${targetVersion} not found in history for item ${itemId}.`);
+
+    return this.updateMenuItem(itemId, {
+      name: targetSnapshot.name,
+      desc: targetSnapshot.desc,
+      price: targetSnapshot.price,
+      prepTimeMinutes: targetSnapshot.prepTimeMinutes,
+      estimatedDeliveryMinutes: targetSnapshot.estimatedDeliveryMinutes,
+      image: targetSnapshot.image,
+      available: targetSnapshot.available,
+      status: targetSnapshot.status,
+      dietary: targetSnapshot.dietary,
+      addons: targetSnapshot.addons
+    }, staff, `Restored to Version #${targetVersion}`);
+  }
+
+  deleteMenuItem(itemId, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_MENU', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = this.state.menu.find(m => m.id === itemId);
+    if (!existing) return;
+
+    this.setState(s => ({
+      ...s,
+      menu: s.menu.filter(m => m.id !== itemId)
+    }));
+
+    this.addAudit('MENU_ITEM_DELETED', `${existing.name} (${itemId})`, `Deleted menu item from catalog`, actor.name, 'Restaurant Menu', existing, null, 'Administrative deletion');
+  }
+
+  // --- AMENITIES CONTENT MANAGEMENT ---
+  addAmenity(amenityData, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_AMENITIES', staff);
+    const actor = staff || this.getActiveStaff();
+    const newId = amenityData.id || `AMN-${String((this.state.amenities || []).length + 1).padStart(2, '0')}`;
+    const newAmenity = {
+      id: newId,
+      name: amenityData.name,
+      category: amenityData.category || 'Recreation & Leisure',
+      description: amenityData.description || '',
+      openingHours: amenityData.openingHours || '06:00 AM - 10:00 PM Daily',
+      location: amenityData.location || 'Main Concourse',
+      rules: amenityData.rules || 'Resident suites only.',
+      guestInstructions: amenityData.guestInstructions || '',
+      contact: amenityData.contact || 'Ext 0 / Front Desk',
+      image: amenityData.image || 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80',
+      status: amenityData.status || 'PUBLISHED',
+      available: amenityData.available ?? true,
+      featured: amenityData.featured ?? false,
+      version: 1,
+      versionHistory: []
+    };
+
+    this.setState(s => ({
+      ...s,
+      amenities: [...(s.amenities || []), newAmenity]
+    }));
+
+    this.addAudit('AMENITY_CREATED', `${newAmenity.name} (${newAmenity.id})`, `Created amenity listing [Status: ${newAmenity.status}]`, actor.name, 'Amenities', null, newAmenity, 'Created new amenity');
+    return newAmenity;
+  }
+
+  updateAmenity(amenityId, patchData, staff = null, reason = 'Amenity updated') {
+    this.checkPermissionOrThrow('MANAGE_AMENITIES', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = (this.state.amenities || []).find(a => a.id === amenityId);
+    if (!existing) throw new Error(`Amenity with ID ${amenityId} not found.`);
+
+    const versionEntry = this.recordContentVersion('AMENITY', amenityId, existing.name, existing, { ...existing, ...patchData }, actor.name, actor.adminRole, reason);
+
+    const updatedAmenity = {
+      ...existing,
+      ...patchData,
+      version: versionEntry.version,
+      versionHistory: [versionEntry, ...(existing.versionHistory || [])]
+    };
+
+    this.setState(s => ({
+      ...s,
+      amenities: (s.amenities || []).map(a => a.id === amenityId ? updatedAmenity : a)
+    }));
+
+    this.addAudit('AMENITY_UPDATED', `${updatedAmenity.name} (${amenityId})`, `Updated amenity details. Reason: ${reason}`, actor.name, 'Amenities', existing, updatedAmenity, reason, versionEntry.version);
+    return updatedAmenity;
+  }
+
+  publishAmenity(amenityId, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_AMENITIES', staff);
+    return this.updateAmenity(amenityId, { status: 'PUBLISHED' }, staff, 'Published amenity to Guest Portal and Tolani');
+  }
+
+  archiveAmenity(amenityId, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_AMENITIES', staff);
+    return this.updateAmenity(amenityId, { status: 'ARCHIVED', available: false }, staff, 'Archived amenity');
+  }
+
+  restoreAmenityVersion(amenityId, targetVersion, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_AMENITIES', staff);
+    const existing = (this.state.amenities || []).find(a => a.id === amenityId);
+    if (!existing) throw new Error(`Amenity ${amenityId} not found.`);
+    
+    let targetSnapshot = null;
+    for (const v of (existing.versionHistory || [])) {
+      if (v.previousSnapshot && v.previousSnapshot.version === targetVersion) {
+        targetSnapshot = v.previousSnapshot;
+        break;
+      }
+      if (v.newSnapshot && v.newSnapshot.version === targetVersion) {
+        targetSnapshot = v.newSnapshot;
+        break;
+      }
+      if (v.version === targetVersion) {
+        targetSnapshot = v.previousSnapshot || v.newSnapshot;
+        break;
+      }
+    }
+
+    if (!targetSnapshot) throw new Error(`Version ${targetVersion} not found for amenity ${amenityId}.`);
+
+    return this.updateAmenity(amenityId, targetSnapshot, staff, `Restored amenity to Version #${targetVersion}`);
+  }
+
+  deleteAmenity(amenityId, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_AMENITIES', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = (this.state.amenities || []).find(a => a.id === amenityId);
+    if (!existing) return;
+
+    this.setState(s => ({
+      ...s,
+      amenities: (s.amenities || []).filter(a => a.id !== amenityId)
+    }));
+
+    this.addAudit('AMENITY_DELETED', `${existing.name} (${amenityId})`, 'Deleted amenity listing', actor.name, 'Amenities', existing, null, 'Administrative deletion');
+  }
+
+  // --- BREAKFAST CONFIGURATION ---
+  updateBreakfastConfig(configPatch, staff = null, reason = 'Breakfast config updated') {
+    this.checkPermissionOrThrow('MANAGE_BREAKFAST', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = this.state.breakfastConfig || {};
+    const versionEntry = this.recordContentVersion('BREAKFAST_CONFIG', 'CONF-BREAKFAST', existing.serviceName || 'Breakfast Service', existing, { ...existing, ...configPatch }, actor.name, actor.adminRole, reason);
+
+    const updatedConfig = {
+      ...existing,
+      ...configPatch,
+      version: versionEntry.version,
+      versionHistory: [versionEntry, ...(existing.versionHistory || [])]
+    };
+
+    this.setState(s => ({
+      ...s,
+      breakfastConfig: updatedConfig
+    }));
+
+    this.addAudit('BREAKFAST_CONFIG_UPDATED', 'Breakfast Service', `Updated serving window: ${updatedConfig.servingFrom} - ${updatedConfig.servingUntil} (₦${updatedConfig.standardPrice})`, actor.name, 'Breakfast Management', existing, updatedConfig, reason, versionEntry.version);
+    return updatedConfig;
+  }
+
+  // --- SERVICE OPTIONS MANAGEMENT (PORTER & HOUSEKEEPING) ---
+  updateServiceOptions(serviceType, optionsPatch, staff = null, reason = 'Service options updated') {
+    this.checkPermissionOrThrow('MANAGE_SERVICES', staff);
+    const actor = staff || this.getActiveStaff();
+    const currentServices = this.state.serviceOptions || {};
+    const existingSection = currentServices[serviceType] || {};
+
+    const updatedSection = {
+      ...existingSection,
+      ...optionsPatch
+    };
+
+    this.setState(s => ({
+      ...s,
+      serviceOptions: {
+        ...(s.serviceOptions || {}),
+        [serviceType]: updatedSection
+      }
+    }));
+
+    this.addAudit('SERVICE_OPTIONS_UPDATED', `Service: ${serviceType.toUpperCase()}`, `Updated service options for ${serviceType}. Reason: ${reason}`, actor.name, 'Service Options', existingSection, updatedSection, reason);
+    return updatedSection;
+  }
+
+  // --- MEDIA LIBRARY MANAGEMENT ---
+  addMediaAsset(assetData, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_MEDIA', staff);
+    const actor = staff || this.getActiveStaff();
+    const newId = `MED-${String((this.state.mediaLibrary || []).length + 1).padStart(2, '0')}`;
+    const newAsset = {
+      id: newId,
+      title: assetData.title || assetData.fileName || 'Untitled Asset',
+      fileName: assetData.fileName || 'asset.jpg',
+      fileType: assetData.fileType || 'image/jpeg',
+      fileSize: assetData.fileSize || '150 KB',
+      dimensions: assetData.dimensions || '1200x800',
+      url: assetData.url,
+      category: assetData.category || 'General',
+      uploadedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      uploadedBy: actor.name ? `${actor.name} (${actor.role || actor.adminRole})` : 'Authorized Admin',
+      usedInCount: 0
+    };
+
+    this.setState(s => ({
+      ...s,
+      mediaLibrary: [newAsset, ...(s.mediaLibrary || [])]
+    }));
+
+    this.addAudit('MEDIA_ASSET_UPLOADED', `${newAsset.title} (${newAsset.id})`, `Uploaded new media asset: ${newAsset.fileName} (${newAsset.fileSize})`, actor.name, 'Media Library', null, newAsset, 'Asset uploaded');
+    return newAsset;
+  }
+
+  deleteMediaAsset(mediaId, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_MEDIA', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = (this.state.mediaLibrary || []).find(m => m.id === mediaId);
+    if (!existing) return;
+
+    this.setState(s => ({
+      ...s,
+      mediaLibrary: (s.mediaLibrary || []).filter(m => m.id !== mediaId)
+    }));
+
+    this.addAudit('MEDIA_ASSET_DELETED', `${existing.title} (${mediaId})`, `Deleted media asset from library`, actor.name, 'Media Library', existing, null, 'Asset deleted');
+  }
+
+  // --- LAGOS ZONAL TRANSPORT PRICING MANAGEMENT ---
+  updateZonePricing(zoneId, newBaseFare, estimatedMinutes, staff = null, reason = 'Zone pricing update') {
+    this.checkPermissionOrThrow('MANAGE_TRANSPORT_PRICING', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = this.state.lagosZones.find(z => z.id === zoneId);
+    if (!existing) throw new Error(`Zone ${zoneId} not found.`);
+
+    const patch = {
+      baseFare: Number(newBaseFare),
+      ...(estimatedMinutes !== undefined ? { estimatedMinutes: Number(estimatedMinutes) } : {})
+    };
+
+    this.setState(s => ({
+      ...s,
+      lagosZones: s.lagosZones.map(z => z.id === zoneId ? { ...z, ...patch } : z)
+    }));
+
+    this.addAudit('TRANSPORT_FARE_CHANGED', `Zone ${zoneId} (${existing.name})`, `Fare updated: ₦${existing.baseFare.toLocaleString()} → ₦${Number(newBaseFare).toLocaleString()}`, actor.name, 'Transportation Management', { baseFare: existing.baseFare }, patch, reason);
+  }
+
+  updateVehicleClass(vehicleId, patchData, staff = null, reason = 'Vehicle pricing update') {
+    this.checkPermissionOrThrow('MANAGE_TRANSPORT_PRICING', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = this.state.vehicleClasses.find(v => v.id === vehicleId);
+    if (!existing) throw new Error(`Vehicle class ${vehicleId} not found.`);
+
+    this.setState(s => ({
+      ...s,
+      vehicleClasses: s.vehicleClasses.map(v => v.id === vehicleId ? { ...v, ...patchData } : v)
+    }));
+
+    this.addAudit('VEHICLE_CLASS_UPDATED', `${existing.name} (${vehicleId})`, `Updated vehicle rate parameters. Reason: ${reason}`, actor.name, 'Transportation Management', existing, patchData, reason);
+  }
+
+  // --- STAFF DIRECTORY & RBAC MANAGEMENT ---
+  addStaffMember(staffData, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_STAFF', staff);
+    const actor = staff || this.getActiveStaff();
+    const newId = `STF-${String(this.state.staffMembers.length + 1).padStart(2, '0')}`;
+    const newStaff = {
+      id: newId,
+      name: staffData.name,
+      role: staffData.role || 'Hotel Staff',
+      adminRole: staffData.adminRole || 'FRONT_DESK',
+      department: staffData.department || 'concierge',
+      active: staffData.active ?? true,
+      shift: staffData.shift || 'Morning (08:00 - 16:30)',
+      clockedIn: false,
+      clockInTime: null,
+      clockStatus: 'Scheduled',
+      avatar: staffData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      performanceScore: 90,
+      tasksCompleted: 0,
+      totalTasks: 0,
+      onTimeRate: '100%',
+      feedback: 'New Staff',
+      aiNotes: 'Newly onboarded to Hotel Capitol operations.'
+    };
+
+    this.setState(s => ({
+      ...s,
+      staffMembers: [...s.staffMembers, newStaff]
+    }));
+
+    this.addAudit('STAFF_MEMBER_CREATED', `${newStaff.name} (${newStaff.id})`, `Created staff account: ${newStaff.role} [Role: ${newStaff.adminRole}]`, actor.name, 'Staff Directory', null, newStaff, 'Onboarded staff');
+    return newStaff;
+  }
+
+  updateStaffMember(staffId, patchData, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_STAFF', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = this.state.staffMembers.find(s => s.id === staffId);
+    if (!existing) throw new Error(`Staff member ${staffId} not found.`);
+
+    const updated = { ...existing, ...patchData };
+
+    this.setState(s => ({
+      ...s,
+      staffMembers: s.staffMembers.map(st => st.id === staffId ? updated : st)
+    }));
+
+    this.addAudit('STAFF_MEMBER_UPDATED', `${updated.name} (${staffId})`, `Updated staff profile and credentials`, actor.name, 'Staff Directory', existing, updated, 'Staff update');
+    return updated;
+  }
+
+  toggleStaffStatus(staffId, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_STAFF', staff);
+    const existing = this.state.staffMembers.find(s => s.id === staffId);
+    if (!existing) return;
+    const nextStatus = !existing.active;
+    return this.updateStaffMember(staffId, { active: nextStatus }, staff);
+  }
+
+  assignStaffRole(staffId, newAdminRole, staff = null) {
+    this.checkPermissionOrThrow('MANAGE_STAFF', staff);
+    const actor = staff || this.getActiveStaff();
+    const existing = this.state.staffMembers.find(s => s.id === staffId);
+    if (!existing) return;
+
+    const prevRole = existing.adminRole;
+    this.updateStaffMember(staffId, { adminRole: newAdminRole }, staff);
+    this.addAudit('STAFF_ROLE_CHANGED', `${existing.name} (${staffId})`, `Assigned RBAC role: ${prevRole} → ${newAdminRole}`, actor.name, 'Staff Directory', { role: prevRole }, { role: newAdminRole }, 'Role reassignment');
+  }
+
   updatePricingConfig(newConfig) {
     this.setState(s => ({
       ...s,
@@ -1920,4 +2810,5 @@ export const store = new StateStore();
 if (typeof window !== 'undefined') {
   window.hotelCapitolStore = store;
 }
+
 

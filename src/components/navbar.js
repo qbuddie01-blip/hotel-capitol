@@ -16,7 +16,7 @@ export function renderNavbar() {
     guest: 'Guest Portal',
     staff: 'Hotel Staff',
     supervisor: 'Supervisor',
-    manager: 'Management',
+    manager: 'Admin Console',
     vendor: 'Vendor Portal',
     public: 'Public Website'
   };

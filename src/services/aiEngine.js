@@ -546,6 +546,104 @@ export class HotelCapitolAI {
       return response;
     }
 
+    // --- 0A. AUTHORITATIVE KNOWLEDGE RESOLUTION (PRICE, PREP TIME, AMENITY SCHEDULE, TRANSPORT FARE, BREAKFAST HOURS) ---
+    // 1. Food Price / Prep Time Question
+    if (q.includes('price') || q.includes('how much is') || q.includes('cost of') || q.includes('how long') || q.includes('prep time') || q.includes('preparation time')) {
+      const state = store.getState();
+      const publishedMenu = (state.menu || []).filter(m => m.status === 'PUBLISHED' || m.available !== false);
+      const matchedItem = publishedMenu.find(m => q.includes(m.name.toLowerCase()) || 
+        (m.name.toLowerCase().includes('jollof') && q.includes('jollof')) ||
+        (m.name.toLowerCase().includes('suya') && q.includes('suya')) ||
+        (m.name.toLowerCase().includes('croaker') && q.includes('croaker')) ||
+        (m.name.toLowerCase().includes('okro') && q.includes('okro')) ||
+        (m.name.toLowerCase().includes('chapman') && q.includes('chapman')) ||
+        (m.name.toLowerCase().includes('sandwich') && q.includes('sandwich')) ||
+        (m.name.toLowerCase().includes('lava') && (q.includes('lava') || q.includes('cake'))) ||
+        (m.name.toLowerCase().includes('gizdodo') && (q.includes('gizdodo') || q.includes('gizzard'))) ||
+        (m.name.toLowerCase().includes('champagne') && q.includes('champagne')) ||
+        (m.name.toLowerCase().includes('royal breakfast') && q.includes('royal')) ||
+        (m.name.toLowerCase().includes('naija executive') && q.includes('naija'))
+      );
+
+      if (matchedItem) {
+        let msg = '';
+        if (q.includes('how long') || q.includes('prep time') || q.includes('preparation time')) {
+          msg = `${matchedItem.name} is prepared fresh to order in approximately ${matchedItem.prepTimeMinutes} minutes, with room delivery in ${matchedItem.estimatedDeliveryMinutes || 15} minutes. The published price is ₦${matchedItem.price.toLocaleString()}.`;
+        } else {
+          msg = `The published price for ${matchedItem.name} is ₦${matchedItem.price.toLocaleString()}. It is freshly prepared in approximately ${matchedItem.prepTimeMinutes} minutes.`;
+        }
+        response.text = `${msg}\n\nI have opened the **Restaurant Menu** with **${matchedItem.name}** ready for your tray.`;
+        response.voiceText = msg;
+        response.actionType = AMARA_ACTIONS.OPEN_RESTAURANT_MENU;
+        response.actionPayload = { preselectItem: matchedItem.name };
+        this.logAndReturn(userQuery, response);
+        return response;
+      }
+    }
+
+    // 2. Amenity Schedule Question
+    if (q.includes('pool') || q.includes('gym') || q.includes('fitness') || q.includes('spa') || q.includes('lounge') || q.includes('boardroom') || q.includes('laundry')) {
+      const state = store.getState();
+      const amenities = state.amenities || [];
+      const matchedAmenity = amenities.find(a => 
+        (q.includes('pool') && a.id === 'AMN-01') ||
+        ((q.includes('gym') || q.includes('fitness')) && a.id === 'AMN-02') ||
+        (q.includes('spa') && a.id === 'AMN-06') ||
+        (q.includes('lounge') && a.id === 'AMN-05') ||
+        ((q.includes('boardroom') || q.includes('business')) && a.id === 'AMN-04') ||
+        (q.includes('laundry') && a.id === 'AMN-08')
+      );
+
+      if (matchedAmenity && (q.includes('time') || q.includes('open') || q.includes('close') || q.includes('hour') || q.includes('schedule') || q.includes('where'))) {
+        const msg = `${matchedAmenity.name} is located at ${matchedAmenity.location} and operates ${matchedAmenity.openingHours}.`;
+        response.text = `**${matchedAmenity.name}**\n• **Location**: ${matchedAmenity.location}\n• **Hours**: ${matchedAmenity.openingHours}\n• **Details**: ${matchedAmenity.description}\n• **Guest Note**: ${matchedAmenity.rules}`;
+        response.voiceText = msg;
+        response.actionType = AMARA_ACTIONS.OPEN_AMENITIES;
+        this.logAndReturn(userQuery, response);
+        return response;
+      }
+    }
+
+    // 3. Transportation Fare Question
+    if (q.includes('ride') || q.includes('fare') || q.includes('car') || q.includes('cost') || q.includes('how much') || q.includes('transport') || intent === 'VIP_TRANSPORTATION') {
+      const state = store.getState();
+      const zones = state.lagosZones || [];
+      
+      let targetZoneId = null;
+      if (q.includes('lekki phase 1') || q.includes('marwa') || q.includes('ikate')) targetZoneId = 'I-2';
+      else if (q.includes('lekki') || q.includes('ajah') || q.includes('vgc')) targetZoneId = 'I-3';
+      else if (q.includes('victoria island') || q.includes('ikoyi') || q.includes('marina') || q.includes(' vi ') || q.startsWith('vi ')) targetZoneId = 'I-1';
+      else if (q.includes('mma2') || q.includes('terminal 2')) targetZoneId = 'AIR-2';
+      else if (q.includes('mma1') || q.includes('terminal 1')) targetZoneId = 'AIR-1';
+      else if (q.includes('mmia') || q.includes('international airport') || q.includes('intl airport')) targetZoneId = 'AIR-3';
+      else if (q.includes('ikeja') || q.includes('gra') || q.includes('magodo') || q.includes('alausa')) targetZoneId = 'M-2';
+      else if (q.includes('yaba') || q.includes('surulere') || q.includes('gbagada')) targetZoneId = 'M-1';
+
+      const matchedZone = targetZoneId ? zones.find(z => z.id === targetZoneId) : null;
+
+      if (matchedZone && (q.includes('how much') || q.includes('fare') || q.includes('price') || q.includes('cost') || q.includes('rate') || q.includes('how long'))) {
+        const msg = `The published chauffeur transfer rate for ${matchedZone.name} is ₦${matchedZone.baseFare.toLocaleString()}, with an estimated journey duration of ${matchedZone.estimatedMinutes} minutes.`;
+        response.text = `**VIP Transportation Fare Quote**\n• **Destination**: ${matchedZone.name}\n• **Base Fare**: ₦${matchedZone.baseFare.toLocaleString()}\n• **Estimated Time**: ${matchedZone.estimatedMinutes} mins\n• **Locations**: ${matchedZone.locations}\n\nI have opened the **VIP Chauffeur Selector** below for booking.`;
+        response.voiceText = msg;
+        response.actionType = AMARA_ACTIONS.OPEN_TRANSPORTATION_OPTIONS;
+        response.actionPayload = { zoneId: matchedZone.id };
+        this.logAndReturn(userQuery, response);
+        return response;
+      }
+    }
+
+    // 4. Breakfast Hours Question
+    if (q.includes('breakfast') && (q.includes('time') || q.includes('hour') || q.includes('when') || q.includes('window'))) {
+      const state = store.getState();
+      const bConf = state.breakfastConfig || { servingFrom: '06:30 AM', servingUntil: '11:00 AM' };
+      const msg = `Our Daily Breakfast Service is served from ${bConf.servingFrom} until ${bConf.servingUntil}. Suite #${roomNumber} is entitled to complimentary royal breakfast.`;
+      response.text = `**Hotel Capitol Breakfast Hours**\n• **Serving Window**: ${bConf.servingFrom} – ${bConf.servingUntil} Daily\n• **Entitlement**: ${guest?.breakfastEntitlement || 'Complimentary'}\n\nI have opened our **Daily Breakfast Menu** for your selection.`;
+      response.voiceText = msg;
+      response.actionType = AMARA_ACTIONS.OPEN_BREAKFAST_MENU;
+      this.logAndReturn(userQuery, response);
+      return response;
+    }
+
     // --- 0. ORDER STATUS & LIVE TRACKING INQUIRY ---
     if (intent === 'CHECK_ORDER_STATUS') {
       const activeOrders = store.getState().orders.filter(o => o.guestId === (guest ? guest.id : '') && o.status !== 'DELIVERED');
