@@ -478,12 +478,29 @@ export class HotelCapitolAI {
       return response;
     }
 
-    // --- 3. CONCIERGE & PORTER WORKFLOW (Sections 17-20) ---
+    // --- 3. CONCIERGE & PORTER WORKFLOW (Sections 17-20: In Room & Main Lobby Only) ---
     // STRICT RULE: Luggage requests MUST route to PORTER, NEVER VIP_TRANSPORTATION
     if (service === SERVICES.CONCIERGE_PORTER || intent === 'LUGGAGE_ASSISTANCE') {
       this.context.conversationState = CONV_STATES.SHOWING_OPTIONS;
       this.context.currentStatus = 'IDLE';
       this.context.currentDepartment = 'PORTER';
+
+      // If location is already specified in the speech/text
+      if (q.includes('in room') || q.includes('my room') || q.includes('to room') || q.includes('inside room')) {
+        const voiceMsg = `Certainly, ${guestName}. I've arranged porter assistance directly to Suite #${roomNumber}. A member of our team is on the way.`;
+        response.text = `Certainly, ${guestName}. I have arranged **Porter Luggage Assistance** for **Suite #${roomNumber} (In Room)**.\n\nLead Porter Ibrahim has been notified and will be with you shortly.`;
+        response.voiceText = voiceMsg;
+        response.actionType = AMARA_ACTIONS.OPEN_PORTER_OPTIONS;
+        response.actionPayload = { location: 'In Room', roomNumber };
+        return response;
+      } else if (q.includes('lobby') || q.includes('reception') || q.includes('entrance')) {
+        const voiceMsg = `Certainly, ${guestName}. I've arranged porter assistance for you at the Main Lobby. A member of our team will meet you there.`;
+        response.text = `Certainly, ${guestName}. I have arranged **Porter Luggage Assistance** at the **Main Lobby Reception**.\n\nLead Porter Ibrahim has been notified and will meet you at the lobby.`;
+        response.voiceText = voiceMsg;
+        response.actionType = AMARA_ACTIONS.OPEN_PORTER_OPTIONS;
+        response.actionPayload = { location: 'Main Lobby', roomNumber };
+        return response;
+      }
 
       const voiceMsg = `Certainly, ${guestName}. I'd be delighted to arrange porter assistance for you. Would you like our porter team to assist you in your room or at the main lobby?`;
       response.text = `Certainly, ${guestName}. I'd be delighted to arrange porter assistance for you.\n\nWould you like our porter team to assist you **in your room (Suite #${roomNumber})** or **at the Main Lobby**? Please tap your preferred location below:`;

@@ -1170,7 +1170,7 @@ function renderConciergeSection(guest) {
           </button>
         </div>
 
-        <!-- PORTER LUGGAGE ASSISTANCE OPTIONS WIDGET (Sections 18 & 19) -->
+        <!-- PORTER LUGGAGE ASSISTANCE OPTIONS WIDGET (Sections 18 & 19: In Room & Main Lobby Only) -->
         <div class="glass-panel-gold p-5 rounded-xl mb-6">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
@@ -1183,32 +1183,31 @@ function renderConciergeSection(guest) {
             <span class="badge-gold text-xs">Porter Service</span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 my-3">
             <button 
-              class="p-3 rounded-xl bg-navy-950 border border-gold/40 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
-              onclick="window.submitPorterRequest('Suite #' + '${guest.roomNumber}')"
+              class="p-4 rounded-xl bg-navy-950 border border-gold/40 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
+              onclick="window.submitPorterRequest('In Room (Suite #' + '${guest.roomNumber}' + ')')"
             >
-              <div class="font-bold text-xs text-white">🛎️ In Room</div>
-              <div class="text-[11px] text-slate-300 mt-1">Suite #${guest.roomNumber} (Pick up bags from room)</div>
-              <div class="text-gold font-semibold text-[10px] mt-2">Tap to Dispatch →</div>
+              <div class="font-bold text-sm text-white flex items-center gap-2">
+                <span>🛎️</span> <span>In Room</span>
+              </div>
+              <div class="text-xs text-slate-300 mt-1.5">Pick up luggage directly inside Suite #${guest.roomNumber}</div>
+              <div class="text-gold font-semibold text-xs mt-3 flex items-center gap-1">
+                <span>Request In Room</span> <span>→</span>
+              </div>
             </button>
 
             <button 
-              class="p-3 rounded-xl bg-navy-950 border border-white/10 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
+              class="p-4 rounded-xl bg-navy-950 border border-white/10 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
               onclick="window.submitPorterRequest('Main Lobby Reception')"
             >
-              <div class="font-bold text-xs text-white">🏛️ Main Lobby</div>
-              <div class="text-[11px] text-slate-300 mt-1">Ground floor reception & entrance</div>
-              <div class="text-gold font-semibold text-[10px] mt-2">Tap to Dispatch →</div>
-            </button>
-
-            <button 
-              class="p-3 rounded-xl bg-navy-950 border border-white/10 hover:border-gold text-left transition-all cursor-pointer flex flex-col justify-between"
-              onclick="window.submitPorterRequest('Baggage Storage Vault')"
-            >
-              <div class="font-bold text-xs text-white">🔒 Storage Vault</div>
-              <div class="text-[11px] text-slate-300 mt-1">Secure holding until departure</div>
-              <div class="text-gold font-semibold text-[10px] mt-2">Tap to Dispatch →</div>
+              <div class="font-bold text-sm text-white flex items-center gap-2">
+                <span>🏛️</span> <span>Main Lobby</span>
+              </div>
+              <div class="text-xs text-slate-300 mt-1.5">Ground floor main lobby & reception entrance</div>
+              <div class="text-gold font-semibold text-xs mt-3 flex items-center gap-1">
+                <span>Request at Lobby</span> <span>→</span>
+              </div>
             </button>
           </div>
         </div>
