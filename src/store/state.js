@@ -3,7 +3,7 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V11';
+export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V12';
 
 // Real Role-Based Access Control Definitions
 export const ADMIN_ROLES = {
@@ -994,7 +994,7 @@ const defaultState = {
       rules: 'Athletic footwear required. Wipe down equipment after use. Personal training upon booking.',
       guestInstructions: 'Complimentary chilled water and fresh sweat towels available in gym foyer.',
       contact: 'Ext 204 / Fitness Desk',
-      image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
+      image: './src/assets/amenity-fitness-gym.jpg',
       status: 'PUBLISHED',
       available: true,
       featured: true,
@@ -1011,7 +1011,7 @@ const defaultState = {
       rules: 'Network Name: HotelCapitol_VIP_Guest. Password provided on keycard wallet.',
       guestInstructions: 'Connect to SSID and enter password "CapitolStay2026". 24/7 IT assistance available.',
       contact: 'Ext 0 / Front Desk',
-      image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80',
+      image: './src/assets/amenity-wifi-services.jpg',
       status: 'PUBLISHED',
       available: true,
       featured: false,
@@ -1028,7 +1028,7 @@ const defaultState = {
       rules: 'Express 3-hour turnaround available upon request. Regular service delivered by 6:00 PM.',
       guestInstructions: 'Place laundry bag in wardrobe and request collection via Tolani or Room Attendant.',
       contact: 'Ext 102 / Valet Laundry',
-      image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=800&q=80',
+      image: './src/assets/amenity-laundry-service.jpg',
       status: 'PUBLISHED',
       available: true,
       featured: false,
@@ -1167,7 +1167,7 @@ const defaultState = {
       fileType: 'image/jpeg',
       fileSize: '380 KB',
       dimensions: '1200x800',
-      url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
+      url: './src/assets/amenity-fitness-gym.jpg',
       category: 'Amenities',
       uploadedAt: '2026-08-15 10:45 AM',
       uploadedBy: 'Chidinma Eze (Content Manager)',
@@ -1671,6 +1671,7 @@ class StateStore {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V5');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V9');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V10');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V11');
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           return JSON.parse(saved);

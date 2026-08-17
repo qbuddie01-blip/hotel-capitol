@@ -599,6 +599,11 @@ assert(guestAmenitiesHtml.includes('Executive Fitness Centre & Gym'), 'Amenities
 assert(guestAmenitiesHtml.includes('High-Speed Fiber VIP Wi-Fi'), 'Amenities list preserves High-Speed Fiber VIP Wi-Fi');
 assert(guestAmenitiesHtml.includes('Executive Express Laundry & Dry Cleaning'), 'Amenities list preserves Executive Express Laundry & Dry Cleaning');
 
+// --- 14. AMENITY IMAGE REPLACEMENT VERIFICATION ---
+assert(guestAmenitiesHtml.includes('amenity-fitness-gym.jpg'), 'Executive Fitness Centre card uses new gym spin bikes image');
+assert(guestAmenitiesHtml.includes('amenity-wifi-services.jpg'), 'High-Speed Wi-Fi card uses new Hotel Capitol Free WiFi Services image');
+assert(guestAmenitiesHtml.includes('amenity-laundry-service.jpg'), 'Executive Laundry card uses new Hotel Capitol Laundry Service image');
+
 console.log('\n================================================================');
 console.log(`VERIFICATION SUMMARY: ${passCount} PASSED / ${failCount} FAILED`);
 console.log('================================================================');
