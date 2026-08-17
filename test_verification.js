@@ -408,13 +408,13 @@ console.log('\n--- 7. ADMIN CONSOLE: AMENITIES, BREAKFAST & SERVICE OPTIONS ---'
 
 // Test 7A: Add Amenity & Update
 const newAmenity = store.addAmenity({
-  name: 'Capitol Rooftop Infinity Pool',
+  name: 'Executive Squash & Racquet Court',
   category: 'Recreation & Leisure',
   openingHours: '06:00 AM - 10:00 PM Daily',
-  location: '6th Floor Rooftop Deck',
-  description: 'Panoramic heated pool overlooking Ikeja GRA skyline.',
-  rules: 'Resident keycard required. No glassware poolside.',
-  contact: 'Ext 40 (Pool Bar)',
+  location: '6th Floor Sports Deck',
+  description: 'Championship-grade indoor squash courts with air conditioning.',
+  rules: 'Resident keycard required. Non-marking court shoes mandatory.',
+  contact: 'Ext 40 (Sports Desk)',
   image: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=600&q=80',
   status: 'PUBLISHED',
   available: true
@@ -516,8 +516,8 @@ assert(priceQueryResponse.text.includes('14,500') || priceQueryResponse.voiceTex
 assert(priceQueryResponse.text.includes('22 minutes') || priceQueryResponse.voiceText.includes('22 minutes'), 'Tolani dynamically spoke current published prep time (22 mins)');
 
 // Ask Tolani for Amenity hours
-const amenityQueryResponse = aiEngine.processGuestQuery('What time does the pool close?');
-assert(amenityQueryResponse.text.includes('Pool') || amenityQueryResponse.voiceText.includes('Pool'), 'Tolani dynamically answered pool hours query from authoritative amenity catalog');
+const amenityQueryResponse = aiEngine.processGuestQuery('What time does the gym close?');
+assert(amenityQueryResponse.text.includes('Fitness') || amenityQueryResponse.text.includes('Gym') || amenityQueryResponse.voiceText.includes('Gym') || amenityQueryResponse.voiceText.includes('Fitness'), 'Tolani dynamically answered gym hours query from authoritative amenity catalog');
 
 // Ask Tolani for Transport Fare
 const transportQueryResponse = aiEngine.processGuestQuery('How much is a ride to Lekki Phase 1?');
@@ -582,6 +582,22 @@ assert(conciergeGreeting.includes('concierge'), 'Concierge greeting delivers lux
 
 // Verify Tolani AI learning engine identity preserved
 assert(typeof learningEngine.createCorrectionSuggestion === 'function', 'Tolani AI Learning Engine remains intact');
+
+// --- 13. AMENITIES REMOVAL VERIFICATION ---
+window.navigateGuestTab('info');
+const guestAmenitiesHtml = renderGuestPortal();
+
+// Verify the 5 specified services are NOT displayed in Amenities
+assert(!guestAmenitiesHtml.includes('Luxury Spa'), 'Amenities list does NOT contain Luxury Spa');
+assert(!guestAmenitiesHtml.includes('Valet Parking'), 'Amenities list does NOT contain Valet Parking');
+assert(!guestAmenitiesHtml.includes('Cigar & Whiskey Lounge') && !guestAmenitiesHtml.includes('Cigar and Whiskey Lounge'), 'Amenities list does NOT contain Cigar and Whiskey Lounge');
+assert(!guestAmenitiesHtml.includes('Diplomatic Business Centre') && !guestAmenitiesHtml.includes('Diplomatic Business Center'), 'Amenities list does NOT contain Diplomatic Business Center');
+assert(!guestAmenitiesHtml.includes('Rooftop Infinity Pool'), 'Amenities list does NOT contain Rooftop Infinity Pool');
+
+// Verify existing approved amenities remain intact
+assert(guestAmenitiesHtml.includes('Executive Fitness Centre & Gym'), 'Amenities list preserves Executive Fitness Centre & Gym');
+assert(guestAmenitiesHtml.includes('High-Speed Fiber VIP Wi-Fi'), 'Amenities list preserves High-Speed Fiber VIP Wi-Fi');
+assert(guestAmenitiesHtml.includes('Executive Express Laundry & Dry Cleaning'), 'Amenities list preserves Executive Express Laundry & Dry Cleaning');
 
 console.log('\n================================================================');
 console.log(`VERIFICATION SUMMARY: ${passCount} PASSED / ${failCount} FAILED`);

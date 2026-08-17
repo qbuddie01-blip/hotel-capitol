@@ -3,7 +3,7 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V10';
+export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V11';
 
 // Real Role-Based Access Control Definitions
 export const ADMIN_ROLES = {
@@ -985,23 +985,6 @@ const defaultState = {
 
   amenities: [
     {
-      id: 'AMN-01',
-      name: 'Capitol Rooftop Infinity Pool',
-      category: 'Recreation & Leisure',
-      description: 'Heated open-air rooftop infinity pool overlooking Ikeja skyline with luxury daybeds and cocktail bar service.',
-      openingHours: '06:00 AM - 10:00 PM Daily',
-      location: '5th Floor Rooftop Pavilion',
-      rules: 'Resident suites & members only. Proper swimwear required. Poolside attendant on duty.',
-      guestInstructions: 'Pool towels are provided on-site. Room charging available for poolside cocktails.',
-      contact: 'Ext 502 / Concierge',
-      image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80',
-      status: 'PUBLISHED',
-      available: true,
-      featured: true,
-      version: 1,
-      versionHistory: []
-    },
-    {
       id: 'AMN-02',
       name: 'Executive Fitness Centre & Gym',
       category: 'Health & Fitness',
@@ -1029,74 +1012,6 @@ const defaultState = {
       guestInstructions: 'Connect to SSID and enter password "CapitolStay2026". 24/7 IT assistance available.',
       contact: 'Ext 0 / Front Desk',
       image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80',
-      status: 'PUBLISHED',
-      available: true,
-      featured: false,
-      version: 1,
-      versionHistory: []
-    },
-    {
-      id: 'AMN-04',
-      name: 'Diplomatic Business Centre & Boardrooms',
-      category: 'Business & Events',
-      description: 'Private 12-seat executive boardroom with 4K interactive teleconference screens, high-speed color printing, and secretarial support.',
-      openingHours: '07:00 AM - 11:00 PM Daily',
-      location: '1st Floor Executive Concourse',
-      rules: 'Advance booking recommended for boardrooms. Walk-in workstations open for residents.',
-      guestInstructions: 'Reserve boardroom through Concierge or Admin console. Audio/Visual setup included.',
-      contact: 'Ext 108 / Business Desk',
-      image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
-      status: 'PUBLISHED',
-      available: true,
-      featured: true,
-      version: 1,
-      versionHistory: []
-    },
-    {
-      id: 'AMN-05',
-      name: 'The Capitol Penthouse Cigar & Whiskey Lounge',
-      category: 'Nightlife & Lounges',
-      description: 'Exclusive hotel-resident rooftop lounge offering rare single malt scotch, aged rum, authentic Cuban cigars, and live jazz.',
-      openingHours: '05:00 PM - 02:00 AM Daily',
-      location: '5th Floor Penthouse Deck',
-      rules: 'Adults 21+ only. Smart casual dress code required. Resident signature charging permitted.',
-      guestInstructions: 'Table reservations recommended on Friday and Saturday evenings.',
-      contact: 'Ext 501 / Penthouse Bar',
-      image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
-      status: 'PUBLISHED',
-      available: true,
-      featured: true,
-      version: 1,
-      versionHistory: []
-    },
-    {
-      id: 'AMN-06',
-      name: 'Luxury Spa & Holistic Wellness Haven',
-      category: 'Wellness & Spa',
-      description: 'Therapeutic deep-tissue Swedish massage, Moroccan hammam rituals, hot stone treatments, and botanical skin therapies.',
-      openingHours: '09:00 AM - 09:00 PM Daily',
-      location: 'Ground Floor Garden Wing',
-      rules: 'Appointments required. In-suite massage service available for Presidential Suite.',
-      guestInstructions: 'Book through Tolani AI concierge or call Spa Reception at Ext 105.',
-      contact: 'Ext 105 / Spa Desk',
-      image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
-      status: 'PUBLISHED',
-      available: true,
-      featured: true,
-      version: 1,
-      versionHistory: []
-    },
-    {
-      id: 'AMN-07',
-      name: 'Valet Parking & Secure Chauffeur Bay',
-      category: 'Transportation & Access',
-      description: '24-hour secured underground parking with CCTV surveillance, electric vehicle charging, and professional valet service.',
-      openingHours: '24/7 Always Active',
-      location: 'Basement & Main Porte-Cochère',
-      rules: 'Complimentary for registered hotel guests. Hand keys to uniformed valet attendant.',
-      guestInstructions: 'Call Front Desk 10 minutes prior to departure to have vehicle brought to front entrance.',
-      contact: 'Ext 101 / Valet Bay',
-      image: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80',
       status: 'PUBLISHED',
       available: true,
       featured: false,
@@ -1755,6 +1670,7 @@ class StateStore {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V4');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V5');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V9');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V10');
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           return JSON.parse(saved);
