@@ -69,9 +69,9 @@ console.log('--- 1 & 2: PUBLIC WEBSITE & GUEST PORTAL NAVIGATION ---');
 const publicHtml = renderPublicHome();
 recordTest(
   'Render Public Website Home',
-  'Contains Hotel Capitol luxury branding, CTAs, and contact links',
-  publicHtml.includes('Hotel Capitol') && publicHtml.includes('6 Animashaun Close') && publicHtml.includes('Executive') ? 'Valid Public UI HTML rendered' : 'Failed to render public home',
-  publicHtml.includes('Hotel Capitol') && publicHtml.includes('6 Animashaun Close')
+  'Contains Hotel Capitol luxury branding, enhanced hero background image, CTAs, and contact links',
+  publicHtml.includes('Hotel Capitol') && publicHtml.includes('hotel-capitol-hero.jpg') && publicHtml.includes('6 Animashaun Close') ? 'Valid Public UI HTML rendered with enhanced hero image' : 'Failed to render public home',
+  publicHtml.includes('Hotel Capitol') && publicHtml.includes('hotel-capitol-hero.jpg') && publicHtml.includes('6 Animashaun Close')
 );
 
 recordTest(

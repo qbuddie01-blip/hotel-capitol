@@ -17,7 +17,7 @@ export function renderPublicHome() {
       <section class="relative min-h-[85vh] flex items-center justify-center text-center px-4 py-16 overflow-hidden">
         
         <!-- Background Ambience & Grid Pattern -->
-        <div class="absolute inset-0 bg-cover bg-center opacity-25" style="background-image: url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1920&q=80'); filter: saturate(1.2);"></div>
+        <div class="absolute inset-0 bg-cover bg-center opacity-30" style="background-image: url('./src/assets/hotel-capitol-hero.jpg'); filter: saturate(1.15);"></div>
         <div class="absolute inset-0 bg-gradient-to-b from-navy-950/80 via-navy-950/95 to-navy-950"></div>
 
         <div class="relative z-10 container-custom max-w-4xl flex flex-col items-center">

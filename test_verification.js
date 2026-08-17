@@ -18,6 +18,7 @@ import { store } from './src/store/state.js';
 import { aiEngine, TOLANI_VOICE_CONFIG, SERVICES } from './src/services/aiEngine.js';
 import { learningEngine } from './src/services/learningEngine.js';
 import { formatStayDate, renderGuestPortal, initGuestPortal } from './src/views/guestPortal.js';
+import { renderPublicHome } from './src/views/publicHome.js';
 
 // Setup mock window/document for portal rendering
 if (!globalThis.window) globalThis.window = globalThis;
@@ -603,6 +604,10 @@ assert(guestAmenitiesHtml.includes('Executive Express Laundry & Dry Cleaning'), 
 assert(guestAmenitiesHtml.includes('amenity-fitness-gym.jpg'), 'Executive Fitness Centre card uses new gym spin bikes image');
 assert(guestAmenitiesHtml.includes('amenity-wifi-services.jpg'), 'High-Speed Wi-Fi card uses new Hotel Capitol Free WiFi Services image');
 assert(guestAmenitiesHtml.includes('amenity-laundry-service.jpg'), 'Executive Laundry card uses new Hotel Capitol Laundry Service image');
+
+// --- 15. PUBLIC WEBSITE HERO IMAGE REPLACEMENT VERIFICATION ---
+const pubHtml = renderPublicHome();
+assert(pubHtml.includes('hotel-capitol-hero.jpg'), 'Public Website Hero Section uses luxury enhanced Hotel Capitol exterior image');
 
 console.log('\n================================================================');
 console.log(`VERIFICATION SUMMARY: ${passCount} PASSED / ${failCount} FAILED`);
