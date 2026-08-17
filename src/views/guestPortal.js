@@ -30,6 +30,29 @@ let showTransportReviewModal = false;
 let showTransportRescheduleModal = null; // tbkId
 let showFeedbackModal = null; // { serviceType: 'RESTAURANT' }
 
+// Alphabetic month date formatter (e.g. "15 August 2026")
+export function formatStayDate(dateStr) {
+  if (!dateStr) return '';
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (monthIdx >= 0 && monthIdx < 12 && !isNaN(day)) {
+      return `${day} ${months[monthIdx]} ${year}`;
+    }
+  }
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  return dateStr;
+}
+
 export function initGuestPortal() {
   window.getActiveGuestTab = () => activeGuestTab;
 
@@ -158,13 +181,13 @@ export function initGuestPortal() {
       restaurantFlowStep = 'MENU';
     }
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   window.setRestaurantFlowStep = (step) => {
     restaurantFlowStep = step;
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // 2. INTERCOM ACTION: Explicitly activates Tolani with isolated card context
@@ -173,6 +196,30 @@ export function initGuestPortal() {
     window.toggleAIAssistant(true, true, serviceKey);
   };
   window.activateAmaraIntercom = window.activateTolaniIntercom;
+
+  // 2b. DEDICATED SUITE DIRECT INTERCOM SERVICE ROUTING (Breakfast, VIP Transport, Concierge Mary)
+  window.activateGuestServiceIntercom = (serviceType) => {
+    const guest = store.getActiveGuest();
+    const suiteNum = guest ? guest.roomNumber : '402';
+    automationEngine.playChime('bell');
+    
+    if (serviceType === 'BREAKFAST') {
+      automationEngine.showToast('☕ Breakfast Service Intercom', `Connecting Suite #${suiteNum} to Breakfast & Kitchen queue...`, 'info');
+      activeGuestTab = 'breakfast';
+      if (window.renderApp) window.renderApp();
+      if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (serviceType === 'TRANSPORT') {
+      automationEngine.showToast('🚕 VIP Transportation Intercom', `Connecting Suite #${suiteNum} to VIP Chauffeur & Transit desk...`, 'info');
+      activeGuestTab = 'transport';
+      if (window.renderApp) window.renderApp();
+      if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (serviceType === 'CONCIERGE') {
+      automationEngine.showToast('🧳 Mary Concierge Intercom', `Connecting Suite #${suiteNum} to Mary (Concierge & Porter)...`, 'info');
+      activeGuestTab = 'concierge';
+      if (window.renderApp) window.renderApp();
+      if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // 3. TOLANI UI ACTION EXECUTOR: Translates AI intent into real visible UI state changes
   window.amaraActionExecutor = (actionType, payload = {}) => {
@@ -652,11 +699,11 @@ export function initGuestPortal() {
     automationEngine.playChime('bell');
     automationEngine.showToast('🧳 Porter Dispatched', `Luggage assistance requested for ${location}. Ticket ${req.id} sent to Porter Department.`, 'success');
     
-    // Section 19: Porter department audible alert
+    // Porter department audible alert and guest confirmation
     aiEngine.speak(`New porter assistance request from Room ${guest.roomNumber}.`);
     
     setTimeout(() => {
-      aiEngine.speak(`Your porter assistance request has been confirmed. A member of our team will be with you shortly.`);
+      aiEngine.speak(`Your porter assistance request has been confirmed. Mary and our concierge team will be with you shortly.`);
     }, 2400);
 
     showPorterLocationModal = false;
@@ -794,52 +841,17 @@ export function renderGuestPortal() {
             Welcome, ${guest.name}
           </h1>
           <p class="text-xs sm:text-sm text-slate-300 mt-1">
-            <strong class="text-white">Suite #${guest.roomNumber}</strong> · ${guest.roomType} · Stay: <strong>${guest.checkIn} to ${guest.checkOut}</strong>
+            <strong class="text-white">Suite #${guest.roomNumber}</strong> · ${guest.roomType} · Stay: <strong>${formatStayDate(guest.checkIn)} to ${formatStayDate(guest.checkOut)}</strong>
           </p>
         </div>
 
-        <!-- Stack 'Ask Hotel Capitol AI' and 'Intercom' tabs vertically in Guest profile card -->
-        <div class="flex flex-col items-stretch sm:items-end gap-2.5 w-full md:w-auto mt-3 md:mt-0">
-          <button 
-            class="floating-ai-btn-banner py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 w-full sm:w-auto" 
-            onclick="window.activateAmaraIntercom('GENERAL', 'General Concierge')"
-            title="Ask Hotel Capitol AI"
-          >
-            <span class="floating-ai-pulse" aria-label="AI Online"></span>
-            <div class="floating-ai-icon-wrapper">
-              <svg width="18" height="18" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" class="modern-ai-icon">
-                <defs>
-                  <linearGradient id="aiBannerGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#ffffff"/>
-                    <stop offset="25%" stop-color="#fff1b8"/>
-                    <stop offset="60%" stop-color="#ffd700"/>
-                    <stop offset="100%" stop-color="#c5a059"/>
-                  </linearGradient>
-                </defs>
-                <path d="M14 2.5 L16.8 10.2 L24.5 13 L16.8 15.8 L14 23.5 L11.2 15.8 L3.5 13 L11.2 10.2 Z" fill="url(#aiBannerGoldGrad)" stroke="#ffffff" stroke-width="0.8"/>
-                <circle cx="14" cy="13" r="2.2" fill="#ffffff"/>
-                <path d="M21.5 4.5 L22.6 7.4 L25.5 8.5 L22.6 9.6 L21.5 12.5 L20.4 9.6 L17.5 8.5 L20.4 7.4 Z" fill="#ffd700"/>
-                <path d="M6.5 16.5 L7.4 18.9 L9.8 19.8 L7.4 20.7 L6.5 23.1 L5.6 20.7 L3.2 19.8 L5.6 18.9 Z" fill="#ffd700"/>
-              </svg>
-            </div>
-            <span class="floating-ai-text" style="font-size: 0.82rem;">Ask Hotel Capitol AI</span>
-          </button>
-          
-          <button 
-            class="menu-btn-gold py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 w-full sm:w-auto"
-            onclick="window.activateAmaraIntercom('FRONT_DESK', 'Front Desk Reception');"
-            title="Open direct two-way intercom call to Hotel Capitol staff"
-          >
-            ${renderIntercomRoundBadge(20)}
-            <span>Intercom Front Desk</span>
-          </button>
-
-          ${activeGuestTab !== 'home' ? `
+        ${activeGuestTab !== 'home' ? `
+          <div class="flex items-center gap-2.5 w-full sm:w-auto mt-3 sm:mt-0">
             <button class="btn-secondary py-2 px-4 text-xs font-semibold w-full sm:w-auto text-center" onclick="window.navigateGuestTab('home')">
               ← Main Menu
             </button>
-          ` : ''}
-        </div>
+          </div>
+        ` : ''}
       </div>
 
       <!-- ACTIVE ORDERS ALERT BAR (Visible on any tab except isolated order-tracker) -->
@@ -865,24 +877,23 @@ export function renderGuestPortal() {
   `;
 }
 
-// 1. GUEST PORTAL HOME - 10 LARGE SERVICE CARDS + DIRECT SUITE INTERCOM BAR
+// 1. GUEST PORTAL HOME - SERVICE CARDS + SUITE DIRECT INTERCOM BAR
 function renderGuestHomeCards(guest, activeOrders) {
   const cards = [
     { id: 'restaurant', icon: '🍽', title: 'Restaurant & Dining', badge: 'Popular', serviceKey: 'RESTAURANT' },
     { id: 'breakfast', icon: '☕', title: 'Breakfast Service', badge: guest.breakfastEntitlement === 'Complimentary' ? 'Complimentary' : 'Available', serviceKey: 'BREAKFAST' },
-    { id: 'room-service', icon: '🛎', title: 'Room Service & Cleaning', badge: 'Voice<br/>Enabled', serviceKey: 'HOUSEKEEPING' },
-    { id: 'transport', icon: '🚕', title: 'VIP Transportation', badge: 'Instant<br/>Quote', serviceKey: 'VIP_TRANSPORTATION' },
-    { id: 'concierge', icon: '🧳', title: 'Concierge & Porter', badge: '24/7<br/>Support', serviceKey: 'CONCIERGE_PORTER' },
+    { id: 'room-service', icon: '🛎', title: 'Room Service & Cleaning', badge: 'On Demand', serviceKey: 'HOUSEKEEPING' },
+    { id: 'transport', icon: '🚕', title: 'VIP Transportation', badge: 'Instant Quote', serviceKey: 'VIP_TRANSPORTATION' },
+    { id: 'concierge', icon: '🧳', title: 'Mary · Concierge & Porter', badge: '24/7 Support', serviceKey: 'CONCIERGE_PORTER' },
     { id: 'folio', icon: '🧾', title: 'My Bill & Folio', badge: `₦${guest.folio.reduce((a, b) => a + b.amount, 0).toLocaleString()}`, serviceKey: 'FOLIO' },
-    { id: 'ai', icon: '🤖', title: 'Ask Hotel Capitol AI', badge: 'Instant<br/>AI', serviceKey: 'GENERAL' },
-    { id: 'nearby', icon: '📍', title: 'Near Hotel Capitol', badge: 'Ikeja<br/>Guide', serviceKey: 'NEAR_HOTEL' },
-    { id: 'info', icon: '🏨', title: 'Hotel Amenities & WiFi', badge: 'Hotel<br/>Info', serviceKey: 'AMENITIES' },
-    { id: 'contact', icon: '📞', title: 'Contact Front Desk', badge: 'Live<br/>Desk', serviceKey: 'FRONT_DESK' }
+    { id: 'nearby', icon: '📍', title: 'Near Hotel Capitol', badge: 'Ikeja Guide', serviceKey: 'NEAR_HOTEL' },
+    { id: 'info', icon: '🏨', title: 'Hotel Amenities & WiFi', badge: 'Hotel Info', serviceKey: 'AMENITIES' },
+    { id: 'contact', icon: '📞', title: 'Contact Front Desk', badge: 'Live Desk', serviceKey: 'FRONT_DESK' }
   ];
 
   return `
-    <!-- DIRECT SUITE INTERCOM CARD (Vertically Stretched Length, Glowy Gold Background, Solid Black Contents, Stacked Tabs Vertically to Left Side) -->
-    <div class="intercom-banner-gold p-6 sm:p-8 rounded-2xl mb-8 flex flex-col items-start justify-between min-h-[290px] gap-6">
+    <!-- SUITE DIRECT INTERCOM CARD (3 Dedicated Service Entry Points) -->
+    <div class="intercom-banner-gold p-6 sm:p-8 rounded-2xl mb-8 flex flex-col items-start justify-between min-h-[260px] gap-6">
       
       <!-- Top Row: Icon + Title + Line Live Label -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full border-b border-black/20 pb-5">
@@ -895,50 +906,62 @@ function renderGuestHomeCards(guest, activeOrders) {
               SUITE #${guest.roomNumber} DIRECT INTERCOM
             </h3>
             <p class="text-xs sm:text-sm font-bold mt-1" style="color: #000000 !important;">
-              Instant two-way voice dispatch to Hotel Capitol staff departments.
+              Instant dedicated service communication dispatch to Hotel Capitol staff departments.
             </p>
           </div>
         </div>
 
-        <!-- Instruction 2: Line Live Label (Bold Black Font, Chocolate Brown Rounded Borders) -->
+        <!-- Line Live Label -->
         <div class="line-live-badge self-start sm:self-auto">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-700 animate-pulse"></span>
           <span>Line Live</span>
         </div>
       </div>
 
-      <!-- Instruction 1: Vertically Stacked Tabs to Left Side of Card -->
-      <div class="flex flex-col items-start gap-3.5 w-full sm:w-auto pt-2 pb-1">
-        <button class="intercom-gold-tab-btn" onclick="window.activateAmaraIntercom('FRONT_DESK', 'Front Desk Reception');" title="Direct 2-way voice to Front Desk">
-          ${renderIntercomBlackBadge(20)} <span>Intercom Front Desk</span>
+      <!-- Exactly Three Service Intercom CTAs (Touch friendly, >=44px, wrap naturally) -->
+      <div class="flex flex-col sm:flex-row items-stretch gap-3.5 w-full pt-2 pb-1 flex-wrap">
+        <button 
+          class="intercom-gold-tab-btn flex-1 min-h-[44px] justify-center sm:justify-start" 
+          onclick="window.activateGuestServiceIntercom('BREAKFAST');" 
+          title="Intercom Breakfast Service"
+        >
+          ${renderIntercomBlackBadge(20)} <span>INTERCOM BREAKFAST SERVICE</span>
         </button>
-        <button class="intercom-gold-tab-btn" onclick="window.activateAmaraIntercom('RESTAURANT', 'Kitchen & Dining');" title="Direct 2-way voice to Kitchen">
-          ${renderIntercomBlackBadge(20)} <span>Intercom Kitchen</span>
+        <button 
+          class="intercom-gold-tab-btn flex-1 min-h-[44px] justify-center sm:justify-start" 
+          onclick="window.activateGuestServiceIntercom('TRANSPORT');" 
+          title="Intercom VIP Transportation"
+        >
+          ${renderIntercomBlackBadge(20)} <span>INTERCOM VIP TRANSPORTATION</span>
         </button>
-        <button class="intercom-gold-tab-btn" onclick="window.activateAmaraIntercom('HOUSEKEEPING', 'Housekeeping Service');" title="Direct 2-way voice to Housekeeping">
-          ${renderIntercomBlackBadge(20)} <span>Intercom Housekeeping</span>
+        <button 
+          class="intercom-gold-tab-btn flex-1 min-h-[44px] justify-center sm:justify-start" 
+          onclick="window.activateGuestServiceIntercom('CONCIERGE');" 
+          title="Intercom Mary Concierge"
+        >
+          ${renderIntercomBlackBadge(20)} <span>INTERCOM CONCIERGE</span>
         </button>
       </div>
 
     </div>
 
-    <!-- Cards Container (Ends scroll cleanly in 1 light swipe while maintaining clear space from bottom menu) -->
+    <!-- Cards Container -->
     <div class="grid-responsive-cards mb-6">
       ${cards.map(c => `
         <div 
           class="service-card flex flex-col justify-between cursor-pointer transform hover:-translate-y-1 transition-all"
-          onclick="${c.id === 'ai' ? `window.activateAmaraIntercom('GENERAL', 'Ask Hotel Capitol AI')` : `window.navigateGuestTab('${c.id}')`}"
+          onclick="window.navigateGuestTab('${c.id}')"
           style="box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 0 10px rgba(220, 173, 84, 0.05);"
         >
           <div>
             ${c.id === 'breakfast' ? `
-              <!-- Instruction 1: BREAKFAST SERVICE - Place Coffee cup icon above 'Complimentary' Label -->
+              <!-- BREAKFAST SERVICE - Coffee cup icon above label -->
               <div class="flex flex-col items-start gap-2 mb-3">
                 <div class="service-card-icon">${c.icon}</div>
                 ${c.badge ? `<span class="badge-gold" style="align-self: flex-start; margin-top: 2px;">${c.badge}</span>` : ''}
               </div>
             ` : `
-              <!-- Centered Side-by-Side Icon & Badge Row with Balanced Spacing -->
+              <!-- Centered Side-by-Side Icon & Badge Row -->
               <div class="service-card-top-row">
                 <div class="service-card-icon">${c.icon}</div>
                 ${c.badge ? `
@@ -954,22 +977,12 @@ function renderGuestHomeCards(guest, activeOrders) {
             <h3 class="font-serif text-base text-white font-bold tracking-wide">${c.title}</h3>
           </div>
 
-          <!-- Explore CTA and Intercom Trigger -->
+          <!-- Explore CTA (No Intercom Icon) -->
           <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
             <span class="text-gold font-bold text-xs flex items-center gap-1.5 hover:text-white transition-colors">
-              <span>${c.id === 'contact' ? 'Contact Desk' : c.id === 'info' ? 'Explore Amenities' : 'Explore'}</span> 
+              <span>EXPLORE</span> 
               <span class="text-sm font-bold">→</span>
             </span>
-            
-            ${c.id !== 'folio' && c.id !== 'nearby' && c.id !== 'info' && c.id !== 'ai' ? `
-              <button 
-                class="intercom-icon-btn"
-                onclick="event.stopPropagation(); window.activateAmaraIntercom('${c.serviceKey}', '${c.title}');"
-                title="Direct Intercom Call for ${c.title}"
-              >
-                ${renderIntercomRoundBadge(20)}
-              </button>
-            ` : ''}
           </div>
         </div>
       `).join('')}
@@ -2534,17 +2547,17 @@ function renderConciergeSection(guest) {
       <div class="glass-panel p-6 sm:p-8 rounded-2xl">
         <div class="flex items-center justify-between pb-4 border-b border-gold/20 mb-6 gap-4 flex-wrap">
           <div>
-            <span class="text-xs font-bold uppercase tracking-luxury text-gold">24/7 Concierge & Porter Services</span>
-            <h2 class="text-2xl font-serif text-white mt-1">Concierge & Porter Assistance</h2>
-            <p class="text-xs text-slate-300">Dedicated luggage handling, city cultural tours, pressing, and front desk coordination.</p>
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">24/7 Mary · Concierge & Porter Services</span>
+            <h2 class="text-2xl font-serif text-white mt-1">Mary · Concierge & Porter Assistance</h2>
+            <p class="text-xs text-slate-300">Dedicated luggage handling, city cultural tours, pressing, and front desk coordination with Mary.</p>
           </div>
           <button 
             class="intercom-pill-btn"
-            onclick="window.activateTolaniIntercom('CONCIERGE_PORTER', 'Concierge & Porter')"
-            title="Direct Intercom for Porter & Concierge"
+            onclick="window.activateGuestServiceIntercom('CONCIERGE')"
+            title="Direct Intercom for Mary Concierge"
           >
             ${renderIntercomRoundBadge(18)}
-            <span>Intercom Porter</span>
+            <span>INTERCOM CONCIERGE</span>
           </button>
         </div>
 
@@ -2680,7 +2693,7 @@ function renderFolioSection(guest, totalFolio) {
         <div>
           <span class="text-xs font-bold uppercase tracking-luxury text-gold">Consolidated Guest Folio</span>
           <h2 class="text-2xl font-serif text-white mt-1">Suite #${guest.roomNumber} Invoicing</h2>
-          <div class="text-xs text-slate-300 mt-1">Guest: <strong class="text-white">${guest.name}</strong> · Stay: ${guest.checkIn} to ${guest.checkOut}</div>
+          <div class="text-xs text-slate-300 mt-1">Guest: <strong class="text-white">${guest.name}</strong> · Stay: ${formatStayDate(guest.checkIn)} to ${formatStayDate(guest.checkOut)}</div>
         </div>
         <div class="text-right">
           <span class="text-xs text-slate-400">Total Outstanding</span>
@@ -2839,7 +2852,7 @@ function renderCheckoutSection(guest) {
       <span class="text-xs font-bold uppercase tracking-luxury text-gold">45-Minute Pre-Departure Outreach</span>
       <h2 class="text-2xl font-serif text-white mt-1 mb-2">Departure Assistance</h2>
       <p class="text-xs text-slate-300 max-w-md mx-auto mb-6">
-        Scheduled Checkout for Suite #${guest.roomNumber} is at <strong class="text-white">${guest.checkoutHour}</strong> on <strong class="text-white">${guest.checkOut}</strong>.
+        Scheduled Checkout for Suite #${guest.roomNumber} is at <strong class="text-white">${guest.checkoutHour}</strong> on <strong class="text-white">${formatStayDate(guest.checkOut)}</strong>.
       </p>
 
       <div class="flex flex-col gap-3 max-w-md mx-auto">

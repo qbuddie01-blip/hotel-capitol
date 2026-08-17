@@ -228,15 +228,15 @@ export function renderAIAssistant() {
         
         <div class="w-full sm:max-w-lg bg-navy-900 border border-gold rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden" style="height: 90vh; max-height: 680px; box-shadow: 0 10px 40px rgba(0,0,0,0.9), 0 0 35px rgba(197, 160, 89, 0.35);">
           
-          <!-- Header (Tolani Branding & Live Status) -->
+          <!-- Header (Mary Concierge Branding & Live Status) -->
           <div class="p-4 bg-navy-950 border-b border-gold flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-400 flex items-center justify-center text-navy-950 font-black text-base shadow-md border border-white/30">
-                T
+                M
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 class="font-serif text-sm font-bold text-white tracking-luxury">TOLANI · CONCIERGE</h3>
+                  <h3 class="font-serif text-sm font-bold text-white tracking-luxury">MARY · CONCIERGE</h3>
                   <span class="badge-gold text-xs py-0.5 px-1.5 font-mono">Suite #${guest.roomNumber}</span>
                 </div>
                 <div class="text-xs text-gold-light opacity-90 flex items-center gap-1.5 mt-0.5">

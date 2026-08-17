@@ -45,9 +45,9 @@ export function initIntercom() {
     const guestName = guest ? guest.name : 'Valued Guest';
     const roomNumber = guest ? guest.roomNumber : '402';
 
-    let staffName = attendantName || 'Tolani (Concierge)';
+    let staffName = attendantName || 'Mary (Concierge)';
     let staffRole = 'Hotel Capitol Concierge';
-    let greeting = `Good day, ${guestName}. I am Tolani, your Hotel Capitol concierge. I will connect you with our Front Desk team. How may we assist you today?`;
+    let greeting = `Good day, ${guestName}. I am Mary, your Hotel Capitol concierge. I will connect you with our Front Desk team. How may we assist you today?`;
 
     if (channelId === 'kitchen-fb') {
       staffName = 'Chef Babatunde Adele';

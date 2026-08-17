@@ -128,7 +128,12 @@ export class HotelCapitolAI {
     try {
       const loadVoices = () => {
         try {
-          this.currentVoice = this.getNigerianFemaleVoice();
+          const v = this.speechSynth.getVoices();
+          if (v && v.length > 0) {
+            this.cachedVoices = v;
+            this.currentVoice = this.getNigerianFemaleVoice();
+            this.isVoicePrewarmed = true;
+          }
         } catch (err) {
           console.warn('Voice lookup error:', err);
         }
@@ -146,7 +151,7 @@ export class HotelCapitolAI {
 
   getNigerianFemaleVoice() {
     if (!this.speechSynth) return null;
-    const voices = this.speechSynth.getVoices();
+    const voices = (this.cachedVoices && this.cachedVoices.length > 0) ? this.cachedVoices : this.speechSynth.getVoices();
     if (!voices || voices.length === 0) return null;
 
     // 1. Official en-NG female voice
@@ -187,7 +192,7 @@ export class HotelCapitolAI {
     }
 
     try {
-      if (options.cancelPrevious !== false) {
+      if (options.cancelPrevious !== false && this.isSpeaking) {
         this.speechSynth.cancel();
       }
 
@@ -201,7 +206,9 @@ export class HotelCapitolAI {
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
       const voice = this.currentVoice || this.getNigerianFemaleVoice();
-      if (voice) utterance.voice = voice;
+      if (voice) {
+        utterance.voice = voice;
+      }
       
       utterance.lang = TOLANI_VOICE_CONFIG.locale;
       utterance.rate = TOLANI_VOICE_CONFIG.rate;
@@ -221,7 +228,7 @@ export class HotelCapitolAI {
 
       this.speechSynth.speak(utterance);
     } catch (e) {
-      console.warn('Tolani Speech Synthesis exception:', e);
+      console.warn('Speech Synthesis exception:', e);
       this.isSpeaking = false;
       onEnd && onEnd();
     }
@@ -329,16 +336,16 @@ export class HotelCapitolAI {
     const s = serviceKey || this.context.currentService;
 
     if (s === SERVICES.RESTAURANT) {
-      return `Hello, ${guestName}. I'm Tolani, your Hotel Capitol concierge. It would be my pleasure to assist you with your dining selection. How may I help you today?`;
+      return `Hello, ${guestName}. I'm Mary, your Hotel Capitol concierge. It would be my pleasure to assist you with your dining selection. How may I help you today?`;
     }
     if (s === SERVICES.BREAKFAST) {
-      return `Good morning, ${guestName}. I'm Tolani, your Hotel Capitol concierge. I see you're arranging breakfast. How may I assist you?`;
+      return `Good morning, ${guestName}. I'm Mary, your Hotel Capitol concierge. I see you're arranging breakfast. How may I assist you?`;
     }
     if (s === SERVICES.HOUSEKEEPING) {
       return `I'm here to assist with your room, ${guestName}. Would you like to request housekeeping, fresh towels, or another room amenity?`;
     }
     if (s === SERVICES.CONCIERGE_PORTER) {
-      return `Hello, ${guestName}. I'm Tolani, your Hotel Capitol concierge. Certainly, I'll be happy to arrange porter assistance for you.`;
+      return `Hello, ${guestName}. I'm Mary, your Hotel Capitol concierge. Certainly, I'll be happy to arrange porter assistance for you.`;
     }
     if (s === SERVICES.VIP_TRANSPORTATION) {
       return `Good day, ${guestName}. I'd be delighted to arrange your transportation. Where would you like to go?`;
@@ -353,15 +360,15 @@ export class HotelCapitolAI {
       return `Certainly, ${guestName}. I can help you discover verified restaurants, nightlife, and cultural spots around Ikeja.`;
     }
     if (s === SERVICES.FRONT_DESK) {
-      return `Good day, ${guestName}. I am Tolani, your Hotel Capitol concierge. Certainly, please tell me how I may assist you.`;
+      return `Good day, ${guestName}. I am Mary, your Hotel Capitol concierge. Certainly, please tell me how I may assist you.`;
     }
 
     if (hour < 12) {
-      return `Good morning, ${guestName}. Welcome to Hotel Capitol. I'm Tolani, your personal concierge. It is my pleasure to assist you this morning. How may I help you?`;
+      return `Good morning, ${guestName}. Welcome to Hotel Capitol. I'm Mary, your personal concierge. It is my pleasure to assist you this morning. How may I help you?`;
     } else if (hour < 17) {
-      return `Good afternoon, ${guestName}. Welcome back. I'm Tolani, your Hotel Capitol concierge. How may I assist you this afternoon?`;
+      return `Good afternoon, ${guestName}. Welcome back. I'm Mary, your Hotel Capitol concierge. How may I assist you this afternoon?`;
     } else {
-      return `Good evening, ${guestName}. I'm Tolani, your Hotel Capitol concierge. It is my pleasure to assist you this evening. What may I arrange for you?`;
+      return `Good evening, ${guestName}. I'm Mary, your Hotel Capitol concierge. It is my pleasure to assist you this evening. What may I arrange for you?`;
     }
   }
 

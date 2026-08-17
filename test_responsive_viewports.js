@@ -105,7 +105,7 @@ for (const vp of REQUIRED_VIEWPORTS) {
   // 3. Render and test Guest Portal (Home, Restaurant, Breakfast, Transport)
   window.navigateGuestTab('home');
   const guestHome = renderGuestPortal();
-  if (!guestHome.includes('402') || !guestHome.includes('Ask Hotel Capitol AI')) {
+  if (!guestHome.includes('402') || !guestHome.includes('SUITE #402 DIRECT INTERCOM')) {
     isVpPass = false;
     failureReasons.push('Guest home tab failed');
   }

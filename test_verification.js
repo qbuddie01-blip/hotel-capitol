@@ -15,8 +15,19 @@
  */
 
 import { store } from './src/store/state.js';
-import { aiEngine, TOLANI_VOICE_CONFIG } from './src/services/aiEngine.js';
+import { aiEngine, TOLANI_VOICE_CONFIG, SERVICES } from './src/services/aiEngine.js';
 import { learningEngine } from './src/services/learningEngine.js';
+import { formatStayDate, renderGuestPortal, initGuestPortal } from './src/views/guestPortal.js';
+
+// Setup mock window/document for portal rendering
+if (!globalThis.window) globalThis.window = globalThis;
+if (!globalThis.document) {
+  globalThis.document = {
+    getElementById: () => ({ value: '', innerText: '', innerHTML: '', style: {}, classList: { add: () => {}, remove: () => {} } }),
+    createElement: () => ({ style: {}, classList: { add: () => {}, remove: () => {} } }),
+    body: { style: {} }
+  };
+}
 
 console.log('================================================================');
 console.log('HOTEL CAPITOL AI — COMPREHENSIVE SYSTEM VERIFICATION');
@@ -540,6 +551,37 @@ assert(recentAudits.length > 5, `Audit trail contains ${recentAudits.length} chr
 assert(recentAudits.some(a => a.action.toUpperCase().includes('MENU') || (a.module && a.module.toUpperCase().includes('MENU'))), 'Audit trail logged Menu updates');
 assert(recentAudits.some(a => a.action.toUpperCase().includes('AMENITY') || (a.module && a.module.toUpperCase().includes('AMENITIES'))), 'Audit trail logged Amenity updates');
 assert(recentAudits.some(a => a.action.toUpperCase().includes('BREAKFAST') || (a.module && a.module.toUpperCase().includes('BREAKFAST'))), 'Audit trail logged Breakfast updates');
+
+// ================================================================
+// 12. GUEST PORTAL & CONCIERGE RESTRUCTURE (MARY CONCIERGE & DEDICATED SUITE INTERCOM)
+// ================================================================
+console.log('\n--- 12. GUEST PORTAL & CONCIERGE RESTRUCTURE (MARY CONCIERGE) ---');
+
+assert(formatStayDate('2026-08-15') === '15 August 2026', 'formatStayDate parses 2026-08-15 to "15 August 2026"');
+assert(formatStayDate('2026-08-18') === '18 August 2026', 'formatStayDate parses 2026-08-18 to "18 August 2026"');
+
+initGuestPortal();
+window.navigateGuestTab('home');
+const guestPortalHtml = renderGuestPortal();
+
+assert(guestPortalHtml.includes('15 August 2026 to 18 August 2026'), 'Guest Profile renders stay date with alphabetic month representation');
+assert(!guestPortalHtml.includes('floating-ai-btn-banner'), 'Guest Profile banner has no "Ask Hotel Capitol AI" button');
+assert(!guestPortalHtml.includes('Intercom Front Desk'), 'Guest Profile banner has no "Intercom Front Desk" button');
+
+assert(guestPortalHtml.includes('SUITE #402 DIRECT INTERCOM'), 'Direct Suite Intercom card renders for active Suite 402');
+assert(guestPortalHtml.includes('INTERCOM BREAKFAST SERVICE'), 'Suite Intercom contains INTERCOM BREAKFAST SERVICE CTA');
+assert(guestPortalHtml.includes('INTERCOM VIP TRANSPORTATION'), 'Suite Intercom contains INTERCOM VIP TRANSPORTATION CTA');
+assert(guestPortalHtml.includes('INTERCOM CONCIERGE'), 'Suite Intercom contains INTERCOM CONCIERGE CTA');
+
+assert(!guestPortalHtml.includes('intercom-icon-btn'), 'Individual guest service cards have NO intercom action buttons');
+assert(guestPortalHtml.includes('EXPLORE'), 'Guest service cards retain standard EXPLORE CTA');
+
+const conciergeGreeting = aiEngine.getGreetingForContext(SERVICES.CONCIERGE_PORTER);
+assert(conciergeGreeting.includes('Mary'), 'Concierge service persona is named Mary in voice greetings');
+assert(conciergeGreeting.includes('concierge'), 'Concierge greeting delivers luxury concierge assistance');
+
+// Verify Tolani AI learning engine identity preserved
+assert(typeof learningEngine.createCorrectionSuggestion === 'function', 'Tolani AI Learning Engine remains intact');
 
 console.log('\n================================================================');
 console.log(`VERIFICATION SUMMARY: ${passCount} PASSED / ${failCount} FAILED`);

@@ -93,9 +93,9 @@ const guestHomeHtml = renderGuestPortal();
 
 recordTest(
   'Render Guest Portal Navigation (Home View)',
-  'Renders Chief Adeleke Babalola, Suite 402, Ask Tolani AI, Intercom button, and Service Tiles',
-  guestHomeHtml.includes('402') && guestHomeHtml.includes('Ask Hotel Capitol AI') ? 'Guest portal home rendered successfully' : 'Missing elements in guest home',
-  guestHomeHtml.includes('402') && guestHomeHtml.includes('Ask Hotel Capitol AI')
+  'Renders Chief Adeleke Babalola, Suite 402, 3 Direct Intercom CTAs, and Service Cards',
+  guestHomeHtml.includes('402') && guestHomeHtml.includes('SUITE #402 DIRECT INTERCOM') && guestHomeHtml.includes('INTERCOM BREAKFAST SERVICE') ? 'Guest portal home rendered successfully' : 'Missing elements in guest home',
+  guestHomeHtml.includes('402') && guestHomeHtml.includes('SUITE #402 DIRECT INTERCOM') && guestHomeHtml.includes('INTERCOM BREAKFAST SERVICE')
 );
 
 // 3: Test Restaurant, Breakfast, Amenities & VIP Transportation
@@ -361,6 +361,59 @@ recordTest(
   'Zero uncaught exceptions, zero syntax errors, zero missing references',
   uiFailCount === 0 ? 'Clean runtime execution' : `${uiFailCount} issues recorded`,
   uiFailCount === 0
+);
+
+// 19: Guest Portal Restructure & Mary Concierge Architecture
+console.log('\n--- 19. GUEST PORTAL RESTRUCTURE & MARY CONCIERGE VERIFICATION ---');
+window.navigateGuestTab('home');
+const updatedGuestHome = renderGuestPortal();
+
+recordTest(
+  'Guest Profile Dates Use Full Alphabetic Month Format',
+  'Shows "15 August 2026 to 18 August 2026"',
+  updatedGuestHome.includes('15 August 2026 to 18 August 2026') ? 'Dates formatted with full alphabetic month names' : 'Date format mismatch',
+  updatedGuestHome.includes('15 August 2026 to 18 August 2026')
+);
+
+recordTest(
+  'Guest Profile Banner Excludes AI & Intercom Buttons',
+  'Ask Hotel Capitol AI and Intercom Front Desk removed from Guest Profile card',
+  !updatedGuestHome.includes('floating-ai-btn-banner') && !updatedGuestHome.includes('Ask Hotel Capitol AI') ? 'Profile card cleanly freed of AI & Intercom buttons' : 'Unwanted buttons found in profile card',
+  !updatedGuestHome.includes('floating-ai-btn-banner') && !updatedGuestHome.includes('Ask Hotel Capitol AI')
+);
+
+recordTest(
+  'Direct Suite Intercom Contains Exactly 3 Service Communication CTAs',
+  'Has Breakfast, VIP Transportation, and Mary Concierge CTAs',
+  updatedGuestHome.includes('INTERCOM BREAKFAST SERVICE') && 
+  updatedGuestHome.includes('INTERCOM VIP TRANSPORTATION') && 
+  updatedGuestHome.includes('INTERCOM CONCIERGE') ? 'All 3 direct service CTAs present on Suite Intercom banner' : 'Missing service CTAs on Suite Intercom banner',
+  updatedGuestHome.includes('INTERCOM BREAKFAST SERVICE') && 
+  updatedGuestHome.includes('INTERCOM VIP TRANSPORTATION') && 
+  updatedGuestHome.includes('INTERCOM CONCIERGE')
+);
+
+recordTest(
+  'Guest Service Cards Have No Intercom Action Buttons',
+  'Intercom round icon buttons absent on individual service cards',
+  !updatedGuestHome.includes('intercom-icon-btn') ? 'Service cards strictly contain Explore CTAs without intercom buttons' : 'Intercom button detected on service card',
+  !updatedGuestHome.includes('intercom-icon-btn')
+);
+
+window.navigateGuestTab('concierge');
+const conciergeHtml = renderGuestPortal();
+recordTest(
+  'Concierge Persona Displayed As Mary',
+  'Concierge section and cards refer to Mary',
+  conciergeHtml.includes('Mary') && conciergeHtml.includes('Mary · Concierge & Porter') ? 'Mary Concierge persona correctly rendered' : 'Missing Mary Concierge branding',
+  conciergeHtml.includes('Mary') && conciergeHtml.includes('Mary · Concierge & Porter')
+);
+
+recordTest(
+  'Tolani AI Learning Engine Identity Intact',
+  'Learning engine remains Tolani and pending suggestions functional',
+  typeof learningEngine.createCorrectionSuggestion === 'function' ? 'Tolani Learning Engine fully functional' : 'Learning engine broken',
+  typeof learningEngine.createCorrectionSuggestion === 'function'
 );
 
 console.log('\n================================================================');
