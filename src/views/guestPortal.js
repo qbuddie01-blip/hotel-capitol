@@ -265,7 +265,7 @@ export function initGuestPortal() {
     }
 
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Auto-minimize AI Assistant Modal after 1.8s so guest immediately sees and interacts with the opened menu
     setTimeout(() => {
@@ -334,7 +334,7 @@ export function initGuestPortal() {
     restaurantFlowStep = 'UPSELL_PROMPT';
 
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Guest clicks YES to add drinks/snacks/desserts
@@ -343,7 +343,7 @@ export function initGuestPortal() {
     aiEngine.speak(`Certainly, ${guest.name}. I'll show you the available options.`);
     restaurantFlowStep = 'UPSELL_OPTIONS';
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Guest clicks NO to continue to review
@@ -352,7 +352,7 @@ export function initGuestPortal() {
     aiEngine.speak(`Certainly, ${guest.name}. Let me show you your order for confirmation.`);
     restaurantFlowStep = 'REVIEW';
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // When adding upsell item
@@ -362,7 +362,7 @@ export function initGuestPortal() {
     aiEngine.speak(`Thank you, ${guest.name}. I've added your selections. Let me show you your updated order.`);
     restaurantFlowStep = 'REVIEW';
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Section 3: Open Order Review
@@ -374,7 +374,7 @@ export function initGuestPortal() {
     aiEngine.speak(`Please review your order, ${guest.name}. Once you're happy with your selection, I'll send it to our kitchen.`);
 
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Edit current order
@@ -382,7 +382,7 @@ export function initGuestPortal() {
     restaurantFlowStep = 'MENU';
     activeGuestTab = 'restaurant';
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Section 4: Final Order Confirmation & Kitchen Routing
@@ -414,7 +414,9 @@ export function initGuestPortal() {
     automationEngine.playChime('order');
     automationEngine.showToast('👨‍🍳 Kitchen Alert', `Attention: New restaurant order from Room ${guest.roomNumber}.`, 'info');
 
-    const formattedDeliveryTime = new Date(newOrder.estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const formattedDeliveryTime = (newOrder.estimatedDeliveryAt && !isNaN(new Date(newOrder.estimatedDeliveryAt).getTime()))
+      ? new Date(newOrder.estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      : `~${newOrder.estimatedMinutes || 25} mins`;
 
     // Tolani speaks configured preparation and delivery timing sequentially
     aiEngine.speakSequence([
@@ -425,7 +427,7 @@ export function initGuestPortal() {
     // Automatically navigate to dedicated isolated Order Tracker page
     activeGuestTab = 'order-tracker';
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Dedicated Isolated Tracker Navigation
@@ -435,7 +437,7 @@ export function initGuestPortal() {
       activeTrackedOrderId = orderId;
     }
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Additional Order: Allows placing an additional order without destroying current active orders
@@ -444,7 +446,7 @@ export function initGuestPortal() {
     restaurantFlowStep = 'MENU';
     activeGuestTab = 'restaurant';
     if (window.renderApp) window.renderApp();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // --- VIP TRANSPORTATION STATE HANDLERS ---
@@ -795,9 +797,9 @@ export function initGuestPortal() {
 
 export function renderGuestPortal() {
   const state = store.getState();
-  const guest = store.getActiveGuest();
-  const totalFolio = guest.folio.reduce((sum, item) => sum + item.amount, 0);
-  const activeOrders = state.orders.filter(o => o.guestId === guest.id && o.status !== 'DELIVERED');
+  const guest = store.getActiveGuest() || store.getState().guests[0];
+  const totalFolio = (guest?.folio || []).reduce((sum, item) => sum + item.amount, 0);
+  const activeOrders = state.orders.filter(o => o.guestId === (guest ? guest.id : '') && o.status !== 'DELIVERED');
 
   let tabContent = '';
 
@@ -825,6 +827,19 @@ export function renderGuestPortal() {
     tabContent = renderCheckoutSection(guest);
   } else if (activeGuestTab === 'contact') {
     tabContent = renderContactSection();
+  }
+
+  // Safe arrival time computation for active order alert banner (WebKit compliant)
+  let activeOrderArrivalStr = '';
+  if (activeOrders.length > 0) {
+    const firstOrd = activeOrders[0];
+    const targetTime = firstOrd.revisedDeliveryAt || firstOrd.estimatedDeliveryAt;
+    if (targetTime) {
+      const d = new Date(targetTime);
+      activeOrderArrivalStr = !isNaN(d.getTime()) ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : `~${firstOrd.estimatedMinutes || 25} mins`;
+    } else {
+      activeOrderArrivalStr = `~${firstOrd.estimatedMinutes || 25} mins`;
+    }
   }
 
   return `
@@ -861,7 +876,7 @@ export function renderGuestPortal() {
             <div class="w-3 h-3 rounded-full bg-gold animate-ping"></div>
             <div>
               <div class="text-xs font-bold text-white">Active Restaurant Order: ${activeOrders[0].id} (${activeOrders[0].items.map(i => `${i.quantity}x ${i.name}`).join(', ')})</div>
-              <div class="text-xs text-gold mt-0.5">Status: <strong class="uppercase">${activeOrders[0].status.replace(/_/g, ' ')}</strong> · Est. Room Arrival: <strong>${new Date(activeOrders[0].revisedDeliveryAt || activeOrders[0].estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong></div>
+              <div class="text-xs text-gold mt-0.5">Status: <strong class="uppercase">${(activeOrders[0].status || 'PREPARING').replace(/_/g, ' ')}</strong> · Est. Room Arrival: <strong>${activeOrderArrivalStr}</strong></div>
             </div>
           </div>
           <button class="btn-primary text-xs py-1.5 px-4 font-bold whitespace-nowrap shadow-md" onclick="window.navigateToOrderTracker('${activeOrders[0].id}')">
@@ -1509,7 +1524,9 @@ function renderRestaurantConfirmationStep(guest, order) {
     `;
   }
 
-  const formattedDeliveryTime = new Date(order.estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const formattedDeliveryTime = (order.estimatedDeliveryAt && !isNaN(new Date(order.estimatedDeliveryAt).getTime()))
+    ? new Date(order.estimatedDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : `~${order.estimatedMinutes || 25} mins`;
 
   return `
     <div class="max-w-2xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl border-2 border-gold/60 shadow-2xl text-center animate-fade-in my-4">
@@ -1605,12 +1622,16 @@ function renderIsolatedOrderTrackerPage(guest, orderId) {
   const prepStartedAt = order.preparationStartedAt || (order.createdTimestamp || now);
   const prepTotalMs = (order.preparationMinutes || 20) * 60 * 1000;
   const estimatedReadyAt = order.estimatedReadyAt || (prepStartedAt + prepTotalMs);
-  const readyFormatted = new Date(estimatedReadyAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const readyFormatted = (estimatedReadyAt && !isNaN(new Date(estimatedReadyAt).getTime()))
+    ? new Date(estimatedReadyAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : `~${order.preparationMinutes || 20} mins`;
 
   const deliveryStartedAt = order.deliveryStartedAt || estimatedReadyAt;
   const deliveryTotalMs = (order.deliveryMinutes || 15) * 60 * 1000;
   const targetDeliveryAt = order.revisedDeliveryAt || order.estimatedDeliveryAt || (estimatedReadyAt + deliveryTotalMs);
-  const deliveryFormatted = new Date(targetDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const deliveryFormatted = (targetDeliveryAt && !isNaN(new Date(targetDeliveryAt).getTime()))
+    ? new Date(targetDeliveryAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : `~${order.totalMinutes || 35} mins`;
 
   const isDelayed = now > targetDeliveryAt && !isDelivered;
 

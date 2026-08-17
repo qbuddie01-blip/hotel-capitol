@@ -55,15 +55,19 @@ window.switchGuestProfile = (guestId) => {
 };
 
 function renderApp() {
-  try {
-    const state = store.getState();
-    const navbarRoot = document.getElementById('navbar-root');
-    const appRoot = document.getElementById('app-root');
+  const state = store.getState();
+  const navbarRoot = document.getElementById('navbar-root');
+  const appRoot = document.getElementById('app-root');
 
+  try {
     if (navbarRoot) {
       navbarRoot.innerHTML = renderNavbar();
     }
+  } catch (err) {
+    console.warn('Navbar render warning:', err);
+  }
 
+  try {
     if (appRoot) {
       if (state.activeRole === 'public') {
         appRoot.innerHTML = renderPublicHome();
@@ -83,6 +87,19 @@ function renderApp() {
     }
   } catch (err) {
     console.error('Error rendering core application portal:', err);
+    if (appRoot && !appRoot.innerHTML) {
+      appRoot.innerHTML = `
+        <div class="container-custom py-12 text-center">
+          <div class="glass-panel p-8 rounded-2xl max-w-lg mx-auto border border-gold/40">
+            <h2 class="text-xl font-serif text-white font-bold mb-2">Hotel Capitol</h2>
+            <p class="text-sm text-slate-300 mb-4">Initializing resident services...</p>
+            <button class="btn-primary py-2 px-6 text-xs font-bold" onclick="window.location.reload()">
+              Reload Portal
+            </button>
+          </div>
+        </div>
+      `;
+    }
   }
 
   // Render auxiliary overlays independently

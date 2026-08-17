@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
   
   <!-- CSS Design System with Cache-Buster -->
-  <link rel="stylesheet" href="./src/styles/index.css?v=6.0">
+  <link rel="stylesheet" href="./src/styles/index.css?v=7.0">
 </head>
 <body class="bg-navy-950 text-slate-100 antialiased selection:bg-gold-500 selection:text-navy-950">
   <!-- Top Navigation & Role Switcher Bar -->
@@ -35,9 +35,17 @@
   <div id="demo-controls-root"></div>
 
   <!-- Mobile Bottom Navigation (Visible on Guest Portal on Mobile) -->
-  <div id="mobile-nav-root"></div>
+  <!-- Pre-Bootstrap WebKit / Safari Compatibility & Error Safeguards -->
+  <script>
+    (function() {
+      if (typeof window !== 'undefined') {
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+        window.AudioContext = window.AudioContext || window.webkitAudioContext || null;
+      }
+    })();
+  </script>
 
   <!-- Main Application Entry with Cache-Buster -->
-  <script type="module" src="./src/main.js?v=6.0"></script>
+  <script type="module" src="./src/main.js?v=7.0"></script>
 </body>
 </html>

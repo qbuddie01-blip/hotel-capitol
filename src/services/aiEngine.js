@@ -192,6 +192,11 @@ export class HotelCapitolAI {
     }
 
     try {
+      if (typeof SpeechSynthesisUtterance === 'undefined') {
+        onEnd && onEnd();
+        return;
+      }
+
       if (options.cancelPrevious !== false && this.isSpeaking) {
         this.speechSynth.cancel();
       }
@@ -711,7 +716,9 @@ export class HotelCapitolAI {
       const now = Date.now();
       const status = active.status;
       const targetDelivery = active.revisedDeliveryAt || active.estimatedDeliveryAt || (now + 15 * 60000);
-      const deliveryFormatted = new Date(targetDelivery).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const deliveryFormatted = (targetDelivery && !isNaN(new Date(targetDelivery).getTime()))
+        ? new Date(targetDelivery).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+        : '~25 mins';
 
       let voiceMsg = '';
       if (status === 'SUBMITTED' || status === 'ACCEPTED') {

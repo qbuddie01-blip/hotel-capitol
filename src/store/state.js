@@ -3,7 +3,7 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V9';
+export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V10';
 
 // Real Role-Based Access Control Definitions
 export const ADMIN_ROLES = {
@@ -442,6 +442,9 @@ const defaultState = {
       totalAmount: 18000,
       status: 'PREPARING', // 'PENDING' | 'PREPARING' | 'READY' | 'OUT FOR DELIVERY' | 'DELIVERED'
       createdAt: '2026-08-15 12:45:00',
+      preparationStartedAt: Date.now() - 18 * 60 * 1000,
+      estimatedReadyAt: Date.now() + 2 * 60 * 1000,
+      estimatedDeliveryAt: Date.now() + 7 * 60 * 1000,
       estimatedMinutes: 25,
       elapsedMinutes: 18,
       fiveMinWarningTriggered: false,
@@ -1751,6 +1754,7 @@ class StateStore {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V3');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V4');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V5');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V9');
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           return JSON.parse(saved);
