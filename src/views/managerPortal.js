@@ -601,6 +601,211 @@ export function initManagerPortal() {
     if (window.renderApp) window.renderApp();
   };
 
+  
+  window.submitRbacAccountForm = (e) => {
+    e.preventDefault();
+    try {
+      const name = document.getElementById('rbac-acc-name').value.trim();
+      const username = document.getElementById('rbac-acc-username').value.trim();
+      const roleKey = document.getElementById('rbac-acc-role').value;
+      const department = document.getElementById('rbac-acc-dept').value;
+      const email = document.getElementById('rbac-acc-email').value.trim();
+      const phone = document.getElementById('rbac-acc-phone').value.trim();
+
+      const newAcc = store.createStaffAccount({ name, username, roleKey, roleName: roleKey.replace(/_/g, ' '), department, email, phone });
+      automationEngine.showToast('Staff Account Created', `Created ${newAcc.username} with role ${newAcc.roleKey}.`, 'success');
+      window.closeRbacModals();
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.toggleStaffAccountStatus = (accId, currentActive) => {
+    try {
+      store.updateStaffAccountStatus(accId, !currentActive);
+      automationEngine.showToast('Account Status Updated', `Account is now ${!currentActive ? 'ACTIVE' : 'DEACTIVATED'}.`, 'info');
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.resetStaffAccountPassword = (accId) => {
+    try {
+      const res = store.resetStaffCredentials(accId, 'CapitolTempPass2026');
+      alert(`Temporary login credentials for ${res.username}:\nPassword: ${res.temporaryPassword}\n\nThe user will be prompted to set a permanent password upon first login.`);
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.reviewVendorSubmission = (submissionId, decision) => {
+    try {
+      const reviewer = store.getActiveStaff().name + ' (Procurement)';
+      const res = store.reviewVendorOnboarding(submissionId, decision, reviewer);
+      if (decision === 'APPROVE') {
+        alert(`Vendor ${res.submission.vendorName} APPROVED!\nAssigned Unique Supplier Code: ${res.supplier.supplierCode}\nInitial login password: ${res.supplier.temporaryPassword}`);
+      } else {
+        alert(`Vendor application for ${res.submission.vendorName} declined.`);
+      }
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.submitProcurementOrderForm = (e) => {
+    e.preventDefault();
+    try {
+      const supplierCode = document.getElementById('po-supplier-code').value;
+      const productId = document.getElementById('po-product-id').value;
+      const productName = document.getElementById('po-product-name').value;
+      const quantity = Number(document.getElementById('po-quantity').value);
+      const unit = document.getElementById('po-unit').value;
+      const requiredDeliveryDate = document.getElementById('po-delivery-date').value;
+      const notes = document.getElementById('po-notes').value;
+
+      const order = store.requestProcurementOrder({ supplierCode, productId, productName, quantity, unit, requiredDeliveryDate, notes });
+      automationEngine.showToast('Purchase Order Created', `PO ${order.id} requested for ${order.supplierCode}.`, 'success');
+      window.closeProcurementModals();
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.approveInvoiceAction = (invoiceId) => {
+    try {
+      const reviewer = store.getActiveStaff().name + ' (Procurement Manager)';
+      const res = store.approveProcurementInvoice(invoiceId, reviewer);
+      alert(`Invoice ${res.invoice.invoiceNumber} approved!\nPayment ref ${res.payment.paymentRef} routed to Accounts department for disbursement.`);
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.closeRbacModals = () => {
+    const el = document.getElementById('rbac-create-modal');
+    if (el) el.remove();
+  };
+
+  window.openRbacCreateModal = () => {
+    const root = document.getElementById('app');
+    const modal = document.createElement('div');
+    modal.id = 'rbac-create-modal';
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in" style="background: rgba(8, 17, 28, 0.98);">
+          <div class="flex items-center justify-between pb-3 border-b border-gold/20 mb-4">
+            <h3 class="font-serif text-lg text-white font-bold">Create Staff Account</h3>
+            <button class="text-slate-400 hover:text-white bg-transparent border-none text-lg cursor-pointer" onclick="window.closeRbacModals()">✕</button>
+          </div>
+          <form onsubmit="window.submitRbacAccountForm(event)" class="flex flex-col gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Staff Full Name:</label>
+              <input type="text" id="rbac-acc-name" class="input-custom text-xs" placeholder="e.g. Samuel Okon" required />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Username:</label>
+                <input type="text" id="rbac-acc-username" class="input-custom text-xs" placeholder="samuel.okon" required />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Department:</label>
+                <input type="text" id="rbac-acc-dept" class="input-custom text-xs" placeholder="Kitchen" required />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">RBAC System Role:</label>
+              <select id="rbac-acc-role" class="input-custom text-xs">
+                ${Object.values(ADMIN_ROLES).map(r => `<option value="${r}">${r.replace(/_/g, ' ')}</option>`).join('')}
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Email:</label>
+                <input type="email" id="rbac-acc-email" class="input-custom text-xs" placeholder="samuel@hotelcapitol.ng" required />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Phone:</label>
+                <input type="tel" id="rbac-acc-phone" class="input-custom text-xs" placeholder="+234 803 000 1122" required />
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-white/10 mt-2">
+              <button type="button" class="btn-secondary text-xs py-2 px-4 cursor-pointer" onclick="window.closeRbacModals()">Cancel</button>
+              <button type="submit" class="btn-primary text-xs py-2 px-5 font-bold cursor-pointer">Create Account →</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    root.appendChild(modal);
+  };
+
+  window.closeProcurementModals = () => {
+    const el = document.getElementById('procurement-po-modal');
+    if (el) el.remove();
+  };
+
+  window.openRequestOrderModal = () => {
+    const state = store.getState();
+    const suppliers = state.suppliers || [];
+    const root = document.getElementById('app');
+    const modal = document.createElement('div');
+    modal.id = 'procurement-po-modal';
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in" style="background: rgba(8, 17, 28, 0.98);">
+          <div class="flex items-center justify-between pb-3 border-b border-gold/20 mb-4">
+            <div>
+              <span class="text-[10px] text-gold font-bold uppercase tracking-luxury">Procurement Order Form</span>
+              <h3 class="font-serif text-lg text-white font-bold">Request Supplier Purchase Order</h3>
+            </div>
+            <button class="text-slate-400 hover:text-white bg-transparent border-none text-lg cursor-pointer" onclick="window.closeProcurementModals()">✕</button>
+          </div>
+          <form onsubmit="window.submitProcurementOrderForm(event)" class="flex flex-col gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Select Approved Supplier:</label>
+              <select id="po-supplier-code" class="input-custom text-xs" onchange="window.updatePoProducts(this.value)">
+                ${suppliers.map(s => `<option value="${s.supplierCode}">${s.name} (${s.supplierCode})</option>`).join('')}
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Product / Item:</label>
+                <select id="po-product-id" class="input-custom text-xs" onchange="window.updatePoProductPrice(this.value)">
+                  ${(suppliers[0]?.approvedPrices || []).map(p => `<option value="${p.productId}" data-name="${p.name}" data-unit="${p.unit}" data-price="${p.approvedBulkPrice}">${p.name} (₦${p.approvedBulkPrice.toLocaleString()}/${p.unit})</option>`).join('')}
+                </select>
+                <input type="hidden" id="po-product-name" value="${suppliers[0]?.approvedPrices[0]?.name || ''}" />
+                <input type="hidden" id="po-unit" value="${suppliers[0]?.approvedPrices[0]?.unit || 'units'}" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Quantity:</label>
+                <input type="number" id="po-quantity" min="1" value="5" class="input-custom text-xs" required />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Required Delivery Date:</label>
+              <input type="date" id="po-delivery-date" value="${new Date().toISOString().slice(0, 10)}" class="input-custom text-xs" required />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Delivery Bay / Notes:</label>
+              <textarea id="po-notes" class="input-custom text-xs p-2 h-16" placeholder="Loading bay instructions..."></textarea>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-white/10 mt-2">
+              <button type="button" class="btn-secondary text-xs py-2 px-4 cursor-pointer" onclick="window.closeProcurementModals()">Cancel</button>
+              <button type="submit" class="btn-primary text-xs py-2 px-5 font-bold cursor-pointer">Submit Purchase Order →</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    root.appendChild(modal);
+  };
+
   window.updateAuditModule = (val) => {
     auditModuleFilter = val;
     if (window.renderApp) window.renderApp();
@@ -651,6 +856,12 @@ export function renderManagerPortal() {
     tabContent = renderStaffDirectoryTab(state, currentRole);
   } else if (managerActiveTab === 'audit') {
     tabContent = renderAuditLogsTab(state);
+  } else if (managerActiveTab === 'rbac-management') {
+    tabContent = renderRbacManagementTab(state, currentRole);
+  } else if (managerActiveTab === 'procurement') {
+    tabContent = renderProcurementManagerTab(state, currentRole);
+  } else if (managerActiveTab === 'performance-reports') {
+    tabContent = renderStaffPerformanceReportsTab(state);
   } else if (managerActiveTab === 'settings') {
     tabContent = renderSystemSettingsTab(state, currentRole);
   }
@@ -699,7 +910,10 @@ export function renderManagerPortal() {
           { id: 'orders', label: '📦 Orders & Requests' },
           { id: 'transportation', label: '🚗 VIP Transportation' },
           { id: 'learning', label: '🧠 Tolani Learning' },
-          { id: 'staff', label: '👥 Staff & RBAC' },
+          { id: 'staff', label: '👥 Staff Directory' },
+          { id: 'rbac-management', label: '🔐 RBAC Governance' },
+          { id: 'procurement', label: '📦 Procurement & Supply' },
+          { id: 'performance-reports', label: '📈 KPI Reports' },
           { id: 'audit', label: '📜 Audit Logs' },
           { id: 'settings', label: '⚙️ Settings' }
         ].map(t => `

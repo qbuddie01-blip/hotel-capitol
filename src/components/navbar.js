@@ -18,6 +18,7 @@ export function renderNavbar() {
     supervisor: 'Supervisor',
     manager: 'Admin Console',
     vendor: 'Vendor Portal',
+    account: 'Accounts',
     public: 'Public Website'
   };
 
@@ -32,7 +33,7 @@ export function renderNavbar() {
 
         <!-- Center: Quick Portal Switcher Tabs (Desktop & Tablet) -->
         <nav class="hide-mobile flex items-center gap-1 p-1 rounded-full glass-panel-subtle flex-wrap justify-center" style="border: 1.5px solid rgba(220, 173, 84, 0.4); box-shadow: 0 0 15px rgba(220, 173, 84, 0.2); max-width: 100%;">
-          ${['guest', 'staff', 'supervisor', 'manager', 'vendor', 'public'].map(role => `
+          ${['guest', 'staff', 'supervisor', 'manager', 'vendor', 'account', 'public'].map(role => `
             <button 
               class="menu-btn-gold ${state.activeRole === role ? 'active' : ''}"
               style="padding: clamp(3px, 0.6vw, 6px) clamp(8px, 1.1vw, 14px); font-size: clamp(0.72rem, 0.9vw, 0.8rem); min-height: 36px;"

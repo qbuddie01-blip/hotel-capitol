@@ -8,10 +8,43 @@ import { getIcon, renderIntercomRoundBadge } from '../assets/icons.js';
 import { store } from '../store/state.js';
 import { automationEngine } from '../services/automationRules.js';
 
-let activeStaffTab = 'profile'; // 'profile' | 'tasks' | 'rooms' | 'requests' | 'schedule' | 'performance'
+
+let isSimulationLoggedIn = true;
+let simulationLoginError = '';
+let activeDepartmentFilter = 'ALL';
+
+let activeStaffTab = 'tasks'; // 'profile' | 'tasks' | 'rooms' | 'requests' | 'schedule' | 'performance'
 let staffIntercomState = 'ready'; // 'ready' | 'active' | 'delivered'
 
 export function initStaffPortal() {
+  
+  window.submitSimulationLogin = (e) => {
+    e.preventDefault();
+    const user = document.getElementById('sim-username')?.value.trim();
+    const pass = document.getElementById('sim-password')?.value.trim();
+
+    if ((user.toLowerCase() === 'porter' && pass === 'Capitol 123') || (user && pass)) {
+      isSimulationLoggedIn = true;
+      simulationLoginError = '';
+      automationEngine.playChime('success');
+      automationEngine.showToast('Demo Login Verified', `Logged in as ${user} (Simulation Mode)`, 'success');
+      if (window.renderApp) window.renderApp();
+    } else {
+      simulationLoginError = 'Invalid credentials. Use Username: Porter / Password: Capitol 123';
+      if (window.renderApp) window.renderApp();
+    }
+  };
+
+  window.simulationLogout = () => {
+    isSimulationLoggedIn = false;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.setStaffDepartmentFilter = (dept) => {
+    activeDepartmentFilter = dept;
+    if (window.renderApp) window.renderApp();
+  };
+
   window.navigateStaffTab = (tab) => {
     activeStaffTab = tab;
     if (window.renderApp) window.renderApp();
@@ -127,118 +160,201 @@ export function initStaffPortal() {
 export function renderStaffPortal() {
   const state = store.getState();
   const staff = store.getActiveStaff();
-  const myTasks = state.staffTasks.filter(t => t.staffId === staff.id || t.staffName === staff.name);
+
+  // If Simulation Login is logged out, render the Demo Authentication screen (Section 17)
+  if (!isSimulationLoggedIn) {
+    return `
+      <div class="container-custom py-12 max-w-md mx-auto animate-fade-in">
+        <div class="glass-panel-gold p-8 rounded-3xl border-2 border-gold shadow-2xl text-center">
+          <div class="w-16 h-16 rounded-2xl bg-gold/20 border border-gold flex items-center justify-center text-3xl mx-auto mb-4">
+            🏨
+          </div>
+          <h2 class="text-2xl font-serif text-white font-bold mb-1">Hotel Capitol Staff Portal</h2>
+          <div class="p-2.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs font-bold mb-6 tracking-wide">
+            DEMO / SIMULATION LOGIN — NOT PRODUCTION AUTHENTICATION
+          </div>
+
+          <form onsubmit="window.submitSimulationLogin(event)" class="flex flex-col gap-4 text-left">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Username:</label>
+              <input type="text" id="sim-username" class="input-custom text-sm" value="Porter" required />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Password:</label>
+              <input type="password" id="sim-password" class="input-custom text-sm" value="Capitol 123" required />
+            </div>
+
+            ${simulationLoginError ? `
+              <div class="text-xs text-red-400 font-semibold">${simulationLoginError}</div>
+            ` : ''}
+
+            <button type="submit" class="btn-primary py-3 px-6 text-sm font-bold shadow-xl mt-2 cursor-pointer">
+              LOGIN TO SIMULATION →
+            </button>
+          </form>
+
+          <div class="mt-6 pt-4 border-t border-white/10 text-xs text-slate-400">
+            Demo Credentials: <strong class="text-gold">Porter</strong> / <strong class="text-gold">Capitol 123</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Filter Tasks & Requests for active department
+  const myTasks = state.staffTasks.filter(t => t.staffId === staff.id || staff.role.includes('Head') || staff.role.includes('Supervisor') || staff.role.includes('Lead'));
   const myPendingCount = myTasks.filter(t => t.status !== 'COMPLETED').length;
+  const myRooms = state.rooms.filter(r => r.assignedTo === staff.name || staff.role.includes('Head') || staff.role.includes('Supervisor') || staff.role.includes('Lead'));
+  const activeAlerts = (state.intercomAlerts || []).filter(a => a.status === 'WAITING');
 
   let tabContent = '';
   if (activeStaffTab === 'profile') {
-    tabContent = renderStaffPersonalProfileTab(staff);
+    tabContent = renderStaffPersonalProfileTab(staff, state);
   } else if (activeStaffTab === 'tasks') {
     tabContent = renderStaffTasksTab(myTasks, staff);
   } else if (activeStaffTab === 'rooms') {
-    tabContent = renderStaffRoomsTab(state.rooms);
+    tabContent = renderStaffRoomsTab(myRooms, staff);
   } else if (activeStaffTab === 'requests') {
-    tabContent = renderStaffRequestsTab(state.serviceRequests);
+    tabContent = renderStaffLiveRequestsTab(state, activeAlerts);
   } else if (activeStaffTab === 'schedule') {
-    tabContent = renderStaffScheduleTab(state.schedule, state.shiftSwapRequests, staff);
+    tabContent = renderStaffScheduleTab(staff);
+  } else if (activeStaffTab === 'swaps') {
+    tabContent = renderStaffShiftSwapTab(staff);
   } else if (activeStaffTab === 'performance') {
     tabContent = renderStaffPerformanceTab(staff);
   }
 
   return `
-    <div class="container-custom py-4 sm:py-6">
+    <div class="container-custom py-6">
       
-      <!-- REAL-TIME VOICE REQUEST CONFIRMATION PROMPT BANNER -->
-      ${state.serviceRequests.filter(r => r.status === 'AWAITING_STAFF_CONFIRMATION').map(pendingReq => `
-        <div class="glass-panel-gold p-4 sm:p-5 rounded-2xl mb-6 border-2 border-gold flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in" style="background: linear-gradient(135deg, rgba(32, 18, 4, 0.95) 0%, rgba(10, 22, 38, 0.95) 100%); box-shadow: 0 0 25px rgba(220, 173, 84, 0.35);">
-          <div class="flex items-start gap-3.5">
-            <div class="p-2.5 rounded-2xl bg-amber-500/20 text-gold border border-gold/60 text-2xl">
-              🛎️
-            </div>
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-xs font-bold uppercase tracking-luxury text-amber-400 flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> 
-                  ${pendingReq.assignedStaffName === staff.name ? '🎯 Designated Room Attendant Alert (You)' : `🎙️ Dispatched to ${pendingReq.assignedStaffName}`}
-                </span>
-                <span class="badge-gold text-[10px] py-0.5">Suite #${pendingReq.roomNumber}</span>
-              </div>
-              <h3 class="text-sm sm:text-base font-bold text-white font-serif">"${pendingReq.title}"</h3>
-              <p class="text-xs text-slate-300 mt-0.5">${pendingReq.details} · Designated Attendant: <strong class="text-gold">${pendingReq.assignedStaffName}</strong> (${pendingReq.department})</p>
-              <div class="text-[11px] text-amber-200 mt-1">AI Voice Prompt: <em>"Attention ${pendingReq.assignedStaffName}, you have a guest request for Suite #${pendingReq.roomNumber}. Please confirm request."</em></div>
-            </div>
+      <!-- Top Staff Header -->
+      <div class="glass-panel p-5 rounded-2xl mb-6 border border-gold/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">Department Operations Simulation</span>
+            <span class="badge-gold text-xs font-bold">${staff.role}</span>
           </div>
-
-          <div class="flex items-center gap-2 w-full md:w-auto">
-            <button 
-              class="btn-primary py-2.5 px-5 text-xs font-bold flex items-center gap-2 shadow-lg cursor-pointer"
-              onclick="window.hotelCapitolAutomation.confirmStaffVoiceRequest('${pendingReq.id}', '${staff.name}')"
-              title="Confirm receipt of guest request"
-            >
-              <span>🎙️</span>
-              <span>Say "Request Confirmed"</span>
-            </button>
-          </div>
+          <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">${staff.name} · Staff Dashboard</h1>
+          <p class="text-xs text-slate-300 mt-0.5">Assigned Shift: <strong>${staff.shift}</strong> · Department: <strong class="capitalize text-gold">${staff.department}</strong></p>
         </div>
-      `).join('')}
 
-      <!-- NAVIGATION TABS with Golden Outlay & Glowing Borders -->
-      <div class="category-tabs-scroll mb-6">
-        <button 
-          class="menu-btn-gold ${activeStaffTab === 'profile' ? 'active' : ''}"
-          onclick="window.navigateStaffTab('profile')"
-        >
-          <span>👤</span>
-          <span>My Profile</span>
-        </button>
-
-        <button 
-          class="menu-btn-gold ${activeStaffTab === 'tasks' ? 'active' : ''}"
-          onclick="window.navigateStaffTab('tasks')"
-        >
-          <span>📋</span>
-          <span>My Tasks (${myPendingCount} Pending)</span>
-        </button>
-
-        <button 
-          class="menu-btn-gold ${activeStaffTab === 'rooms' ? 'active' : ''}"
-          onclick="window.navigateStaffTab('rooms')"
-        >
-          <span>🛏</span>
-          <span>My Rooms & Turnover</span>
-        </button>
-
-        <button 
-          class="menu-btn-gold ${activeStaffTab === 'requests' ? 'active' : ''}"
-          onclick="window.navigateStaffTab('requests')"
-        >
-          <span>🛎</span>
-          <span>Live Service Requests</span>
-        </button>
-
-        <button 
-          class="menu-btn-gold ${activeStaffTab === 'schedule' ? 'active' : ''}"
-          onclick="window.navigateStaffTab('schedule')"
-        >
-          <span>📅</span>
-          <span>Roster & Shift Swap</span>
-        </button>
-
-        <button 
-          class="menu-btn-gold ${activeStaffTab === 'performance' ? 'active' : ''}"
-          onclick="window.navigateStaffTab('performance')"
-        >
-          <span>📊</span>
-          <span>AI Performance (${staff.performanceScore}%)</span>
-        </button>
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-bold">Switch Role:</span>
+            <select 
+              class="input-custom text-xs py-1.5 px-3 bg-navy-950 text-gold border-gold/40 rounded-lg cursor-pointer"
+              onchange="store.setActiveStaff(this.value); if(window.renderApp) window.renderApp();"
+            >
+              ${state.staffMembers.map(s => `
+                <option value="${s.id}" ${s.id === staff.id ? 'selected' : ''}>
+                  ${s.name} (${s.role})
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          <button class="btn-secondary text-xs py-1.5 px-3 text-red-400 cursor-pointer" onclick="window.simulationLogout()">
+            Logout Demo
+          </button>
+        </div>
       </div>
 
-      <!-- ACTIVE TAB CONTENT -->
-      ${tabContent}
+      <!-- ACTIVE INCOMING INTERCOM ALERT BANNER (Section 16: Immediate Staff Acceptance) -->
+      ${activeAlerts.length > 0 ? `
+        <div class="glass-panel p-4 rounded-2xl mb-6 border-2 border-amber-400 bg-amber-950/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-pulse shadow-2xl">
+          <div class="flex items-center gap-3">
+            <div class="w-4 h-4 rounded-full bg-amber-400 animate-ping"></div>
+            <div>
+              <div class="text-xs font-bold text-amber-200 uppercase tracking-luxury">
+                🚨 LIVE GUEST REQUEST: SUITE #${activeAlerts[0].roomNumber} (${activeAlerts[0].serviceType})
+              </div>
+              <div class="text-xs text-slate-200 mt-0.5">
+                Guest: <strong>${activeAlerts[0].guestName}</strong> · Requested at ${activeAlerts[0].requestedAt}
+              </div>
+            </div>
+          </div>
+          <button 
+            class="btn-primary py-2 px-6 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black cursor-pointer shadow-lg whitespace-nowrap"
+            onclick="window.acceptIntercomRequest('${activeAlerts[0].id}')"
+          >
+            ✓ ACCEPT & CONNECT CALL
+          </button>
+        </div>
+      ` : ''}
+
+      <!-- MAIN WORKSPACE GRID: Vertically Stacked Navigation (Left) + Content (Right) -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Left Sidebar: Vertically Stacked 7-Tier Menu (Section 16) -->
+        <div class="lg:col-span-1 flex flex-col gap-2">
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-luxury px-3 mb-1">Navigation Menu</div>
+          
+          <button 
+            class="menu-btn-gold ${activeStaffTab === 'profile' ? 'active' : ''} text-left py-3 px-4 rounded-xl flex items-center gap-3 cursor-pointer min-h-[44px]"
+            onclick="window.navigateStaffTab('profile')"
+          >
+            <span>👤</span> <span>DAILY LOGIN</span>
+          </button>
+
+          <button 
+            class="menu-btn-gold ${activeStaffTab === 'tasks' ? 'active' : ''} text-left py-3 px-4 rounded-xl flex items-center justify-between gap-2 cursor-pointer min-h-[44px]"
+            onclick="window.navigateStaffTab('tasks')"
+          >
+            <div class="flex items-center gap-3">
+              <span>📋</span> <span>MY TASKS</span>
+            </div>
+            ${myPendingCount > 0 ? `<span class="badge-gold text-[10px]">${myPendingCount}</span>` : ''}
+          </button>
+
+          <button 
+            class="menu-btn-gold ${activeStaffTab === 'rooms' ? 'active' : ''} text-left py-3 px-4 rounded-xl flex items-center gap-3 cursor-pointer min-h-[44px]"
+            onclick="window.navigateStaffTab('rooms')"
+          >
+            <span>🛏️</span> <span>MY ROOM TURNOVER</span>
+          </button>
+
+          <button 
+            class="menu-btn-gold ${activeStaffTab === 'requests' ? 'active' : ''} text-left py-3 px-4 rounded-xl flex items-center justify-between gap-2 cursor-pointer min-h-[44px]"
+            onclick="window.navigateStaffTab('requests')"
+          >
+            <div class="flex items-center gap-3">
+              <span>🛎️</span> <span>LIVE SERVICE REQUESTS</span>
+            </div>
+            ${activeAlerts.length > 0 ? `<span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>` : ''}
+          </button>
+
+          <button 
+            class="menu-btn-gold ${activeStaffTab === 'schedule' ? 'active' : ''} text-left py-3 px-4 rounded-xl flex items-center gap-3 cursor-pointer min-h-[44px]"
+            onclick="window.navigateStaffTab('schedule')"
+          >
+            <span>📅</span> <span>WORK SCHEDULE</span>
+          </button>
+
+          <button 
+            class="menu-btn-gold ${activeStaffTab === 'swaps' ? 'active' : ''} text-left py-3 px-4 rounded-xl flex items-center gap-3 cursor-pointer min-h-[44px]"
+            onclick="window.navigateStaffTab('swaps')"
+          >
+            <span>🔄</span> <span>SHIFT SWAPS</span>
+          </button>
+
+          <button 
+            class="menu-btn-gold ${activeStaffTab === 'performance' ? 'active' : ''} text-left py-3 px-4 rounded-xl flex items-center gap-3 cursor-pointer min-h-[44px]"
+            onclick="window.navigateStaffTab('performance')"
+          >
+            <span>📊</span> <span>AI PERFORMANCE</span>
+          </button>
+        </div>
+
+        <!-- Right Main Workspace -->
+        <div class="lg:col-span-3">
+          ${tabContent}
+        </div>
+
+      </div>
 
     </div>
   `;
 }
+
 
 // 1. MY TASKS TAB (Spec #24)
 function renderStaffTasksTab(myTasks, staff) {
@@ -817,6 +933,87 @@ function renderStaffPersonalProfileTab(staff) {
 
       </div>
 
+    </div>
+  `;
+}
+
+
+// 2b. LIVE SERVICE REQUESTS TAB (With Intercom Integration)
+function renderStaffLiveRequestsTab(state, activeAlerts) {
+  const requests = state.serviceRequests || [];
+
+  return `
+    <div class="glass-panel p-6 rounded-2xl border border-white/10 flex flex-col gap-6">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <div>
+          <h2 class="text-lg font-serif text-white font-bold">Live Guest Service Requests & Intercom Queue</h2>
+          <p class="text-xs text-slate-300">Active incoming guest service requests requiring staff dispatch.</p>
+        </div>
+        <button class="btn-primary text-xs py-1.5 px-4 font-bold" onclick="window.toggleIntercomModal(true)">
+          📻 Open Staff Radio
+        </button>
+      </div>
+
+      ${(activeAlerts || []).length > 0 ? `
+        <div class="p-4 rounded-xl bg-amber-950/80 border-2 border-amber-400 flex flex-col gap-3">
+          <div class="text-xs font-bold text-amber-200 uppercase">Incoming Direct Intercom Calls Awaiting Response:</div>
+          ${activeAlerts.map(a => `
+            <div class="p-3 bg-navy-950 rounded-lg flex items-center justify-between gap-4">
+              <div>
+                <strong class="text-white text-sm">Suite #${a.roomNumber} · ${a.serviceType}</strong>
+                <div class="text-xs text-slate-300">Guest: ${a.guestName} · Dept: ${a.deptName} · Requested: ${a.requestedAt}</div>
+              </div>
+              <button class="btn-primary text-xs py-1.5 px-4 font-bold bg-amber-500 hover:bg-amber-400 text-black cursor-pointer shadow-md" onclick="window.acceptIntercomRequest('${a.id}')">
+                ✓ Accept Request
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <div class="flex flex-col gap-3">
+        ${requests.map(r => `
+          <div class="p-4 rounded-xl bg-navy-950 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-${r.priority === 'HIGH' ? 'critical' : 'gold'} text-[10px]">${r.priority}</span>
+                <strong class="text-white text-sm">${r.title}</strong>
+              </div>
+              <div class="text-slate-300">${r.description || r.details}</div>
+              <div class="text-[11px] text-slate-400 mt-1">Assigned: ${r.assignedTo || 'Department Team'} · Status: <strong class="text-gold">${r.status}</strong></div>
+            </div>
+            <span class="badge-normal text-[10px]">${r.type}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// 2c. SHIFT SWAP TAB
+function renderStaffShiftSwapTab(staff) {
+  return `
+    <div class="glass-panel p-6 rounded-2xl border border-white/10 flex flex-col gap-6">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <div>
+          <h2 class="text-lg font-serif text-white font-bold">Shift Swaps & Coverage Requests</h2>
+          <p class="text-xs text-slate-300">Request coverage or accept peer shift exchanges with Supervisor authorization.</p>
+        </div>
+      </div>
+      <div class="p-4 rounded-xl bg-navy-950 border border-gold/30 text-xs text-slate-300">
+        You are currently scheduled for: <strong class="text-white">${staff.shift}</strong> (${staff.department}).
+      </div>
+      <div class="flex flex-col gap-3">
+        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 flex items-center justify-between">
+          <div>
+            <strong class="text-white text-sm">Sunday Evening Coverage (16:00 - 00:00)</strong>
+            <div class="text-xs text-slate-400">Offered by: Amara Nwosu · Status: <span class="text-amber-400 font-bold">Awaiting Peer Acceptance</span></div>
+          </div>
+          <button class="btn-primary text-xs py-1.5 px-4 font-bold" onclick="alert('Coverage request accepted and routed to Shift Supervisor for sign-off.')">
+            Accept Shift
+          </button>
+        </div>
+      </div>
     </div>
   `;
 }

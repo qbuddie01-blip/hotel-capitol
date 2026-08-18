@@ -3,16 +3,26 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V12';
+export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V13';
 
 // Real Role-Based Access Control Definitions
 export const ADMIN_ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   HOTEL_ADMIN: 'HOTEL_ADMIN',
+  MANAGER: 'MANAGER',
   CONTENT_MANAGER: 'CONTENT_MANAGER',
   TRANSPORT_MANAGER: 'TRANSPORT_MANAGER',
   RESTAURANT_MANAGER: 'RESTAURANT_MANAGER',
-  FRONT_DESK: 'FRONT_DESK'
+  SUPERVISOR: 'SUPERVISOR',
+  FRONT_DESK: 'FRONT_DESK',
+  KITCHEN: 'KITCHEN',
+  HOUSEKEEPING: 'HOUSEKEEPING',
+  CONCIERGE: 'CONCIERGE',
+  PORTER: 'PORTER',
+  VIP_TRANSPORTATION: 'VIP_TRANSPORTATION',
+  PROCUREMENT: 'PROCUREMENT',
+  ACCOUNTS: 'ACCOUNTS',
+  VENDOR: 'VENDOR'
 };
 
 export const ROLE_PERMISSIONS = {
@@ -20,7 +30,13 @@ export const ROLE_PERMISSIONS = {
   HOTEL_ADMIN: [
     'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
     'MANAGE_MEDIA', 'MANAGE_SERVICES', 'MANAGE_TRANSPORT_PRICING', 'DISPATCH_TRANSPORT',
-    'APPROVE_TOLANI_LEARNING', 'ROLLBACK_TOLANI_LEARNING', 'MANAGE_STAFF', 'VIEW_AUDIT_LOGS', 'MANAGE_SETTINGS'
+    'APPROVE_TOLANI_LEARNING', 'ROLLBACK_TOLANI_LEARNING', 'MANAGE_STAFF', 'VIEW_AUDIT_LOGS',
+    'MANAGE_SETTINGS', 'MANAGE_PROCUREMENT', 'MANAGE_ACCOUNTS', 'MANAGE_RBAC'
+  ],
+  MANAGER: [
+    'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
+    'MANAGE_MEDIA', 'MANAGE_SERVICES', 'MANAGE_TRANSPORT_PRICING', 'DISPATCH_TRANSPORT',
+    'MANAGE_STAFF', 'VIEW_AUDIT_LOGS', 'MANAGE_PROCUREMENT', 'APPROVE_INVOICES'
   ],
   CONTENT_MANAGER: [
     'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
@@ -32,8 +48,35 @@ export const ROLE_PERMISSIONS = {
   RESTAURANT_MANAGER: [
     'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_ORDERS', 'VIEW_AUDIT_LOGS'
   ],
+  SUPERVISOR: [
+    'VIEW_DASHBOARD', 'MANAGE_STAFF', 'APPROVE_SWAPS', 'VIEW_KPIS', 'VIEW_REPORTS', 'VIEW_AUDIT_LOGS', 'MANAGE_INTERCOM'
+  ],
   FRONT_DESK: [
-    'VIEW_DASHBOARD', 'MANAGE_ORDERS', 'DISPATCH_TRANSPORT'
+    'VIEW_DASHBOARD', 'MANAGE_ORDERS', 'DISPATCH_TRANSPORT', 'MANAGE_INTERCOM', 'VIEW_GUESTS'
+  ],
+  KITCHEN: [
+    'VIEW_DASHBOARD', 'MANAGE_ORDERS', 'MANAGE_BREAKFAST', 'MANAGE_INTERCOM'
+  ],
+  HOUSEKEEPING: [
+    'VIEW_DASHBOARD', 'MANAGE_ROOMS', 'MANAGE_TASKS', 'MANAGE_INTERCOM'
+  ],
+  CONCIERGE: [
+    'VIEW_DASHBOARD', 'MANAGE_SERVICES', 'MANAGE_INTERCOM', 'VIEW_NEARBY'
+  ],
+  PORTER: [
+    'VIEW_DASHBOARD', 'MANAGE_TASKS', 'MANAGE_INTERCOM'
+  ],
+  VIP_TRANSPORTATION: [
+    'VIEW_DASHBOARD', 'DISPATCH_TRANSPORT', 'MANAGE_INTERCOM'
+  ],
+  PROCUREMENT: [
+    'VIEW_DASHBOARD', 'MANAGE_PROCUREMENT', 'ONBOARD_VENDORS', 'APPROVE_VENDORS', 'MANAGE_SUPPLIERS', 'REQUEST_ORDERS', 'APPROVE_INVOICES', 'VIEW_AUDIT_LOGS'
+  ],
+  ACCOUNTS: [
+    'VIEW_DASHBOARD', 'MANAGE_ACCOUNTS', 'APPROVE_PAYMENTS', 'CONFIRM_PAYMENTS', 'VIEW_PAYMENT_HISTORY', 'VIEW_AUDIT_LOGS'
+  ],
+  VENDOR: [
+    'VIEW_VENDOR_PORTAL', 'GENERATE_INVOICE', 'CONFIRM_PAYMENT_RECEIVED', 'GENERATE_RECEIPT', 'UPDATE_PRICE'
   ]
 };
 
@@ -1610,6 +1653,304 @@ const defaultState = {
     { id: 'AUD-04', timestamp: '2026-08-15 12:45:00', actor: 'Chief Adeleke (Guest 402)', action: 'Restaurant Order Placed', entity: 'ORD-101 (₦18,000)', details: 'Ordered Jollof Fiesta with extras and Chapman.' }
   ],
 
+  
+  intercomAlerts: [
+    {
+      id: 'ALT-101',
+      serviceType: 'BREAKFAST',
+      deptName: 'Kitchen',
+      deptKey: 'kitchen-fb',
+      roomNumber: '402',
+      guestName: 'Chief Adeleke Babalola',
+      status: 'CONNECTED',
+      requestedAt: '08:00 AM',
+      notifiedAt: '08:00:05 AM',
+      acceptedAt: '08:00:25 AM',
+      responseTimeMs: 20000,
+      startedAt: '08:00:30 AM',
+      completedAt: '08:04:00 AM',
+      durationMs: 240000,
+      staffId: 'STF-02',
+      staffName: 'Chef Babatunde Adele',
+      conversationSummary: 'Room 402 requested The English Royal Breakfast for 8:15 AM. Kitchen has acknowledged the request.',
+      isEscalated: false
+    }
+  ],
+
+  staffPerformanceRecords: [
+    {
+      id: 'PRF-01',
+      requestId: 'ALT-101',
+      serviceType: 'BREAKFAST',
+      department: 'Kitchen',
+      staffId: 'STF-02',
+      staffName: 'Chef Babatunde Adele',
+      requestTime: '2026-08-18 08:00:00',
+      notifiedTime: '2026-08-18 08:00:05',
+      acceptedTime: '2026-08-18 08:00:25',
+      responseTimeMs: 20000,
+      startTime: '2026-08-18 08:00:30',
+      completedTime: '2026-08-18 08:04:00',
+      durationMs: 240000,
+      status: 'COMPLETED',
+      escalated: false,
+      summary: 'Delivered breakfast on time'
+    },
+    {
+      id: 'PRF-02',
+      requestId: 'ALT-100',
+      serviceType: 'VIP_TRANSPORTATION',
+      department: 'VIP Transportation',
+      staffId: 'STF-03',
+      staffName: 'Ibrahim Bello',
+      requestTime: '2026-08-18 07:15:00',
+      notifiedTime: '2026-08-18 07:15:04',
+      acceptedTime: '2026-08-18 07:15:19',
+      responseTimeMs: 15000,
+      startTime: '2026-08-18 07:15:30',
+      completedTime: '2026-08-18 07:22:00',
+      durationMs: 410000,
+      status: 'COMPLETED',
+      escalated: false,
+      summary: 'Confirmed SUV transfer to MMA2'
+    },
+    {
+      id: 'PRF-03',
+      requestId: 'ALT-099',
+      serviceType: 'CONCIERGE',
+      department: 'Concierge',
+      staffId: 'STF-03',
+      staffName: 'Ibrahim Bello',
+      requestTime: '2026-08-18 06:45:00',
+      notifiedTime: '2026-08-18 06:45:03',
+      acceptedTime: '2026-08-18 06:45:15',
+      responseTimeMs: 12000,
+      startTime: '2026-08-18 06:45:20',
+      completedTime: '2026-08-18 06:48:00',
+      durationMs: 160000,
+      status: 'COMPLETED',
+      escalated: false,
+      summary: 'Provided flight re-confirmation guidance'
+    }
+  ],
+
+  rbacRoles: [
+    { id: 'ROL-01', name: 'Super Admin', key: 'SUPER_ADMIN', department: 'Executive', permissions: ['ALL'], active: true, userCount: 1 },
+    { id: 'ROL-02', name: 'Hotel Admin', key: 'HOTEL_ADMIN', department: 'Management', permissions: ['VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES', 'MANAGE_MEDIA', 'MANAGE_SERVICES', 'MANAGE_TRANSPORT_PRICING', 'DISPATCH_TRANSPORT', 'APPROVE_TOLANI_LEARNING', 'ROLLBACK_TOLANI_LEARNING', 'MANAGE_STAFF', 'VIEW_AUDIT_LOGS', 'MANAGE_SETTINGS', 'MANAGE_PROCUREMENT', 'MANAGE_ACCOUNTS', 'MANAGE_RBAC'], active: true, userCount: 1 },
+    { id: 'ROL-03', name: 'Procurement Manager', key: 'PROCUREMENT', department: 'Procurement', permissions: ['VIEW_DASHBOARD', 'MANAGE_PROCUREMENT', 'ONBOARD_VENDORS', 'APPROVE_VENDORS', 'MANAGE_SUPPLIERS', 'REQUEST_ORDERS', 'APPROVE_INVOICES', 'VIEW_AUDIT_LOGS'], active: true, userCount: 1 },
+    { id: 'ROL-04', name: 'Accounts Officer', key: 'ACCOUNTS', department: 'Accounts', permissions: ['VIEW_DASHBOARD', 'MANAGE_ACCOUNTS', 'APPROVE_PAYMENTS', 'CONFIRM_PAYMENTS', 'VIEW_PAYMENT_HISTORY', 'VIEW_AUDIT_LOGS'], active: true, userCount: 1 },
+    { id: 'ROL-05', name: 'Operations Supervisor', key: 'SUPERVISOR', department: 'Operations', permissions: ['VIEW_DASHBOARD', 'MANAGE_STAFF', 'APPROVE_SWAPS', 'VIEW_KPIS', 'VIEW_REPORTS', 'VIEW_AUDIT_LOGS', 'MANAGE_INTERCOM'], active: true, userCount: 1 },
+    { id: 'ROL-06', name: 'Lead Concierge', key: 'CONCIERGE', department: 'Concierge', permissions: ['VIEW_DASHBOARD', 'MANAGE_SERVICES', 'MANAGE_INTERCOM', 'VIEW_NEARBY'], active: true, userCount: 1 },
+    { id: 'ROL-07', name: 'Executive Chef', key: 'KITCHEN', department: 'Kitchen', permissions: ['VIEW_DASHBOARD', 'MANAGE_ORDERS', 'MANAGE_BREAKFAST', 'MANAGE_INTERCOM'], active: true, userCount: 1 },
+    { id: 'ROL-08', name: 'Housekeeping Lead', key: 'HOUSEKEEPING', department: 'Housekeeping', permissions: ['VIEW_DASHBOARD', 'MANAGE_ROOMS', 'MANAGE_TASKS', 'MANAGE_INTERCOM'], active: true, userCount: 1 },
+    { id: 'ROL-09', name: 'Lead Porter', key: 'PORTER', department: 'Porter', permissions: ['VIEW_DASHBOARD', 'MANAGE_TASKS', 'MANAGE_INTERCOM'], active: true, userCount: 1 },
+    { id: 'ROL-10', name: 'VIP Chauffeur', key: 'VIP_TRANSPORTATION', department: 'VIP Transportation', permissions: ['VIEW_DASHBOARD', 'DISPATCH_TRANSPORT', 'MANAGE_INTERCOM'], active: true, userCount: 1 },
+    { id: 'ROL-11', name: 'Front Desk Lead', key: 'FRONT_DESK', department: 'Front Desk', permissions: ['VIEW_DASHBOARD', 'MANAGE_ORDERS', 'DISPATCH_TRANSPORT', 'MANAGE_INTERCOM', 'VIEW_GUESTS'], active: true, userCount: 1 },
+    { id: 'ROL-12', name: 'Supplier Partner', key: 'VENDOR', department: 'Supply Chain', permissions: ['VIEW_VENDOR_PORTAL', 'GENERATE_INVOICE', 'CONFIRM_PAYMENT_RECEIVED', 'GENERATE_RECEIPT', 'UPDATE_PRICE'], active: true, userCount: 3 }
+  ],
+
+  staffAccounts: [
+    { id: 'ACC-01', name: 'Seyi Adeyemi', username: 'seyi.admin', roleKey: 'SUPER_ADMIN', roleName: 'Super Admin', department: 'Executive', email: 'seyi.adeyemi@hotelcapitol.ng', phone: '+234 803 111 2233', active: true, createdAt: '2026-08-01', lastLogin: '2026-08-18 08:30 AM' },
+    { id: 'ACC-02', name: 'Tariq Alabi', username: 'tariq.supervisor', roleKey: 'SUPERVISOR', roleName: 'Operations Supervisor', department: 'Operations', email: 'tariq.alabi@hotelcapitol.ng', phone: '+234 803 222 3344', active: true, createdAt: '2026-08-01', lastLogin: '2026-08-18 07:45 AM' },
+    { id: 'ACC-03', name: 'Kunle Adeleke', username: 'kunle.procurement', roleKey: 'PROCUREMENT', roleName: 'Procurement Manager', department: 'Procurement', email: 'procurement@hotelcapitol.ng', phone: '+234 803 333 4455', active: true, createdAt: '2026-08-05', lastLogin: '2026-08-18 08:15 AM' },
+    { id: 'ACC-04', name: 'Ngozi Okonjo', username: 'ngozi.accounts', roleKey: 'ACCOUNTS', roleName: 'Accounts Officer', department: 'Accounts', email: 'accounts@hotelcapitol.ng', phone: '+234 803 444 5566', active: true, createdAt: '2026-08-05', lastLogin: '2026-08-18 08:45 AM' },
+    { id: 'ACC-05', name: 'Lead Porter Ibrahim', username: 'Porter', roleKey: 'PORTER', roleName: 'Lead Porter', department: 'Porter', email: 'porter@hotelcapitol.ng', phone: '+234 803 555 6677', active: true, createdAt: '2026-08-10', lastLogin: '2026-08-18 08:00 AM' }
+  ],
+
+  vendorOnboardingSubmissions: [
+    {
+      id: 'VON-101',
+      vendorName: 'Golden Star Beverages Nigeria Ltd',
+      productCategory: 'Beverages & Soft Drinks',
+      phone: '+234 802 998 7766',
+      email: 'sales@goldenstarbev.ng',
+      whatsapp: '+234 802 998 7766',
+      address: '44 Commercial Avenue, Yaba, Lagos',
+      contactPerson: 'Mrs. Funke Balogun',
+      productsSupplied: 'Assorted Sodas, Chapman Syrups, Sparkling Waters, Juices',
+      supplyCapability: '500+ Crates per week with same-day emergency dispatch',
+      businessDescription: 'Registered major distributor for premium FMCG beverage lines in Greater Lagos.',
+      submittedAt: '2026-08-18 09:30 AM',
+      status: 'SUBMITTED', // 'SUBMITTED' | 'APPROVED' | 'REJECTED'
+      reviewedAt: null,
+      reviewedBy: null,
+      notes: 'Initial registration application awaiting Procurement review'
+    }
+  ],
+
+  suppliers: [
+    {
+      id: 'SUP-01',
+      supplierCode: 'ABC-001',
+      name: 'ABC Foods Limited',
+      category: 'Kitchen Gourmet & Staples',
+      contactPerson: 'Mr. Anthony Bassey',
+      phone: '+234 802 334 5566',
+      email: 'orders@abcfoods.ng',
+      whatsapp: '+234 802 334 5566',
+      address: '10 Industrial Avenue, Ikeja, Lagos',
+      status: 'ACTIVE',
+      temporaryPassword: null,
+      passwordChanged: true,
+      lastPriceUpdate: '2026-08-10',
+      approvedPrices: [
+        { productId: 'PRD-01', name: 'Premium Long Grain Parboiled Rice (50kg Bag)', unit: 'bags', approvedBulkPrice: 78000, lastApprovedDate: '2026-08-10', approvedBy: 'Kunle Adeleke (Procurement)' },
+        { productId: 'PRD-02', name: 'Pure Refined Vegetable Oil (25L Jerrycan)', unit: 'canisters', approvedBulkPrice: 45000, lastApprovedDate: '2026-08-10', approvedBy: 'Kunle Adeleke (Procurement)' },
+        { productId: 'PRD-03', name: 'All-Purpose Seasoning & Spice Blend (10kg Carton)', unit: 'cartons', approvedBulkPrice: 28000, lastApprovedDate: '2026-08-10', approvedBy: 'Kunle Adeleke (Procurement)' }
+      ]
+    },
+    {
+      id: 'SUP-02',
+      supplierCode: 'LFF-002',
+      name: 'Lagos Farm Fresh Produce',
+      category: 'Kitchen Produce & Oils',
+      contactPerson: 'Mr. Kunle Sanwo',
+      phone: '+234 802 443 1190',
+      email: 'orders@lagosfreshfarm.ng',
+      whatsapp: '+234 802 443 1190',
+      address: '22 Alausa Market Road, Ikeja, Lagos',
+      status: 'ACTIVE',
+      temporaryPassword: null,
+      passwordChanged: true,
+      lastPriceUpdate: '2026-08-12',
+      approvedPrices: [
+        { productId: 'PRD-04', name: 'Fresh Farm Tomatoes & Peppers (Basket)', unit: 'baskets', approvedBulkPrice: 22000, lastApprovedDate: '2026-08-12', approvedBy: 'Kunle Adeleke (Procurement)' },
+        { productId: 'PRD-05', name: 'Fresh Farm Eggs (Crate of 30)', unit: 'crates', approvedBulkPrice: 4200, lastApprovedDate: '2026-08-12', approvedBy: 'Kunle Adeleke (Procurement)' }
+      ]
+    },
+    {
+      id: 'SUP-03',
+      supplierCode: 'CLA-003',
+      name: 'Capitol Linen & Amenities Supplies',
+      category: 'Housekeeping & Toiletries',
+      contactPerson: 'Mrs. Chidinma Eze',
+      phone: '+234 803 776 2201',
+      email: 'supply@capitollinen.ng',
+      whatsapp: '+234 803 776 2201',
+      address: '14 Oregun Industrial Estate, Ikeja, Lagos',
+      status: 'ACTIVE',
+      temporaryPassword: null,
+      passwordChanged: true,
+      lastPriceUpdate: '2026-08-08',
+      approvedPrices: [
+        { productId: 'PRD-06', name: 'Egyptian Cotton Luxury Bath Towels (Pair)', unit: 'pairs', approvedBulkPrice: 12000, lastApprovedDate: '2026-08-08', approvedBy: 'Kunle Adeleke (Procurement)' },
+        { productId: 'PRD-07', name: 'Luxury Botanical Toiletry Kit (50 Sets)', unit: 'cartons', approvedBulkPrice: 85000, lastApprovedDate: '2026-08-08', approvedBy: 'Kunle Adeleke (Procurement)' },
+        { productId: 'PRD-08', name: 'Room Air Sanitizer & Insecticide Spray (12 Cans)', unit: 'packs', approvedBulkPrice: 48000, lastApprovedDate: '2026-08-08', approvedBy: 'Kunle Adeleke (Procurement)' }
+      ]
+    }
+  ],
+
+  procurementOrders: [
+    {
+      id: 'PO-8801',
+      supplierCode: 'ABC-001',
+      supplierName: 'ABC Foods Limited',
+      productId: 'PRD-01',
+      productName: 'Premium Long Grain Parboiled Rice (50kg Bag)',
+      quantity: 10,
+      unit: 'bags',
+      unitPrice: 78000,
+      totalAmount: 780000,
+      deliveryLocation: 'Hotel Capitol Main Kitchen Loading Bay',
+      requiredDeliveryDate: '2026-08-20',
+      notes: 'Urgent restocking for weekend diplomatic banquets',
+      status: 'REQUESTED', // 'REQUESTED' | 'INVOICE_GENERATED' | 'APPROVED_BY_PROCUREMENT' | 'PAYMENT_CONFIRMED' | 'DELIVERED'
+      createdAt: '2026-08-18 10:00 AM',
+      createdBy: 'Kunle Adeleke (Procurement Manager)'
+    }
+  ],
+
+  vendorInvoices: [
+    {
+      id: 'INV-8801',
+      invoiceNumber: 'INV-ABC-2026-044',
+      orderId: 'PO-8801',
+      supplierCode: 'ABC-001',
+      supplierName: 'ABC Foods Limited',
+      items: [
+        { productId: 'PRD-01', name: 'Premium Long Grain Parboiled Rice (50kg Bag)', quantity: 10, unit: 'bags', unitPrice: 78000, total: 780000 }
+      ],
+      totalAmount: 780000,
+      issueDate: '2026-08-18',
+      status: 'PENDING_APPROVAL', // 'PENDING_APPROVAL' | 'APPROVED' | 'ROUTED_TO_ACCOUNTS' | 'PAID'
+      goodsReceivedConfirmed: false,
+      procurementApprovedBy: null,
+      procurementApprovedAt: null,
+      paymentRef: null
+    }
+  ],
+
+  accountPayments: [
+    {
+      id: 'PAY-7701',
+      paymentRef: 'PAY-REF-2026-0899',
+      supplierCode: 'CLA-003',
+      supplierName: 'Capitol Linen & Amenities Supplies',
+      invoiceRef: 'INV-CLA-2026-012',
+      receiptRef: 'RCP-CLA-9901',
+      amount: 480000,
+      status: 'CONFIRMED_PAID', // 'AWAITING_PAYMENT' | 'CONFIRMED_PAID'
+      paidAt: '2026-08-17 03:30 PM',
+      paymentMethod: 'Direct Executive Bank Transfer (Zenith Bank)',
+      officerName: 'Ngozi Okonjo (Accounts Officer)',
+      notes: 'Payment for 40x Towels & Toiletry Kits replenishment'
+    }
+  ],
+
+  vendorReceipts: [
+    {
+      id: 'RCP-CLA-9901',
+      receiptNumber: 'RCPT-CLA-2026-088',
+      supplierCode: 'CLA-003',
+      supplierName: 'Capitol Linen & Amenities Supplies',
+      invoiceNumber: 'INV-CLA-2026-012',
+      paymentRef: 'PAY-REF-2026-0899',
+      amount: 480000,
+      submittedAt: '2026-08-17 04:00 PM',
+      verifiedBy: 'Ngozi Okonjo (Accounts Officer)'
+    }
+  ],
+
+  vendorPriceUpdateRequests: [
+    {
+      id: 'PUR-301',
+      supplierCode: 'LFF-002',
+      supplierName: 'Lagos Farm Fresh Produce',
+      productId: 'PRD-04',
+      productName: 'Fresh Farm Tomatoes & Peppers (Basket)',
+      currentPrice: 22000,
+      proposedPrice: 24500,
+      reason: 'Interstate transport fuel tariffs & seasonal rainfall yield reduction',
+      submittedAt: '2026-08-18 10:15 AM',
+      status: 'PENDING_PROCUREMENT_APPROVAL', // 'PENDING_PROCUREMENT_APPROVAL' | 'APPROVED' | 'REJECTED'
+      reviewedAt: null,
+      reviewedBy: null
+    }
+  ],
+
+  deliveryTrackings: [
+    {
+      id: 'TRK-901',
+      orderId: 'PO-8801',
+      supplierCode: 'ABC-001',
+      supplierName: 'ABC Foods Limited',
+      route: 'Ikeja Industrial Estate → 6 Animashaun Close',
+      currentPosition: 'Allen Avenue Intersection (~1.2 km away)',
+      destination: 'Hotel Capitol Loading Bay 1',
+      etaMinutes: 12,
+      expectedArrivalDate: '2026-08-18',
+      expectedArrivalTime: '11:30 AM',
+      actualArrivalTime: null,
+      status: 'IN_TRANSIT', // 'ORDER_CONFIRMED' | 'PREPARING' | 'DISPATCHED' | 'IN_TRANSIT' | 'NEAR_HOTEL' | 'ARRIVED' | 'RECEIVED'
+      statusHistory: [
+        { status: 'ORDER_CONFIRMED', time: '10:05 AM', note: 'Purchase Order confirmed by supplier' },
+        { status: 'PREPARING', time: '10:20 AM', note: 'Goods palletized at warehouse' },
+        { status: 'DISPATCHED', time: '10:50 AM', note: 'Truck departed supplier depot' },
+        { status: 'IN_TRANSIT', time: '11:18 AM', note: 'Approaching Ikeja GRA corridor' }
+      ]
+    }
+  ],
+
   automationSettings: {
     breakfastNotificationTime: '06:00 AM',
     breakfastDeliveryWindow: '06:00 AM - 10:00 AM',
@@ -1672,6 +2013,7 @@ class StateStore {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V9');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V10');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V11');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V12');
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           return JSON.parse(saved);
@@ -2834,6 +3176,627 @@ class StateStore {
     const prevRole = existing.adminRole;
     this.updateStaffMember(staffId, { adminRole: newAdminRole }, staff);
     this.addAudit('STAFF_ROLE_CHANGED', `${existing.name} (${staffId})`, `Assigned RBAC role: ${prevRole} → ${newAdminRole}`, actor.name, 'Staff Directory', { role: prevRole }, { role: newAdminRole }, 'Role reassignment');
+  }
+
+  
+  // --- DIRECT INTERCOM SERVICE ALERTS & STAFF PERFORMANCE ---
+  createIntercomAlert(serviceType, deptName, deptKey, roomNumber, guestName) {
+    const alertId = 'ALT-' + Date.now().toString().slice(-4);
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    
+    const newAlert = {
+      id: alertId,
+      serviceType,
+      deptName,
+      deptKey: deptKey || (serviceType === 'BREAKFAST' ? 'kitchen-fb' : serviceType === 'VIP_TRANSPORTATION' ? 'concierge-frontdesk' : 'concierge-frontdesk'),
+      roomNumber: String(roomNumber || '402'),
+      guestName: guestName || 'Chief Adeleke Babalola',
+      status: 'WAITING', // 'WAITING' | 'ACCEPTED' | 'CONNECTED' | 'COMPLETED'
+      requestedAt: timeStr,
+      notifiedAt: timeStr,
+      acceptedAt: null,
+      responseTimeMs: null,
+      startedAt: null,
+      completedAt: null,
+      durationMs: null,
+      staffId: null,
+      staffName: null,
+      conversationSummary: null,
+      isEscalated: false,
+      timestampCreated: now.toISOString()
+    };
+
+    this.setState(s => ({
+      ...s,
+      intercomAlerts: [newAlert, ...(s.intercomAlerts || [])]
+    }));
+
+    this.addAudit('INTERCOM_ALERT_CREATED', `Room ${newAlert.roomNumber} (${deptName})`, `Direct ${serviceType} alert issued by guest`, newAlert.guestName, 'Intercom System', null, newAlert, 'Guest pressed direct intercom CTA');
+    return newAlert;
+  }
+
+  acceptIntercomAlert(alertId, staffId, staffName) {
+    const existing = (this.state.intercomAlerts || []).find(a => a.id === alertId);
+    if (!existing) return null;
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    const createdTime = new Date(existing.timestampCreated || Date.now());
+    const responseTimeMs = Math.max(1000, now.getTime() - createdTime.getTime());
+
+    const updated = {
+      ...existing,
+      status: 'CONNECTED',
+      acceptedAt: timeStr,
+      responseTimeMs,
+      startedAt: timeStr,
+      staffId: staffId || 'STF-01',
+      staffName: staffName || 'Hotel Staff Attendant'
+    };
+
+    this.setState(s => ({
+      ...s,
+      intercomAlerts: (s.intercomAlerts || []).map(a => a.id === alertId ? updated : a)
+    }));
+
+    this.addAudit('INTERCOM_ALERT_ACCEPTED', `Room ${updated.roomNumber} (${updated.deptName})`, `Accepted by ${updated.staffName} in ${Math.round(responseTimeMs/1000)}s`, updated.staffName, 'Intercom System', existing, updated, 'Staff pickup');
+    return updated;
+  }
+
+  completeIntercomAlert(alertId, summaryText = '') {
+    const existing = (this.state.intercomAlerts || []).find(a => a.id === alertId);
+    if (!existing) return null;
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    const createdTime = new Date(existing.timestampCreated || Date.now());
+    const durationMs = Math.max(1000, now.getTime() - createdTime.getTime());
+
+    const updated = {
+      ...existing,
+      status: 'COMPLETED',
+      completedAt: timeStr,
+      durationMs,
+      conversationSummary: summaryText || `Room ${existing.roomNumber} requested ${existing.serviceType.toLowerCase()} assistance. ${existing.deptName} has acknowledged the request.`
+    };
+
+    const newPerfRecord = {
+      id: 'PRF-' + Date.now().toString().slice(-4),
+      requestId: existing.id,
+      serviceType: existing.serviceType,
+      department: existing.deptName,
+      staffId: existing.staffId || 'STF-01',
+      staffName: existing.staffName || 'Hotel Staff',
+      requestTime: existing.timestampCreated || new Date().toISOString(),
+      notifiedTime: existing.notifiedAt || timeStr,
+      acceptedTime: existing.acceptedAt || timeStr,
+      responseTimeMs: existing.responseTimeMs || 15000,
+      startTime: existing.startedAt || timeStr,
+      completedTime: timeStr,
+      durationMs,
+      status: 'COMPLETED',
+      escalated: existing.isEscalated || false,
+      summary: updated.conversationSummary
+    };
+
+    this.setState(s => ({
+      ...s,
+      intercomAlerts: (s.intercomAlerts || []).map(a => a.id === alertId ? updated : a),
+      staffPerformanceRecords: [newPerfRecord, ...(s.staffPerformanceRecords || [])]
+    }));
+
+    this.addAudit('INTERCOM_ALERT_COMPLETED', `Room ${updated.roomNumber} (${updated.deptName})`, `Completed in ${Math.round(durationMs/1000)}s: ${updated.conversationSummary}`, updated.staffName, 'Intercom System', existing, updated, 'Service completed');
+    return updated;
+  }
+
+  calculateStaffPerformanceMetrics(timeframe = 'weekly') {
+    const records = this.state.staffPerformanceRecords || [];
+    const total = records.length;
+    if (total === 0) {
+      return {
+        totalRequests: 0,
+        avgResponseTimeSec: 0,
+        avgCompletionTimeMin: 0,
+        completedCount: 0,
+        delayedCount: 0,
+        escalatedCount: 0,
+        onTimeRate: '100%'
+      };
+    }
+
+    const completed = records.filter(r => r.status === 'COMPLETED').length;
+    const escalated = records.filter(r => r.escalated).length;
+    const delayed = records.filter(r => (r.responseTimeMs || 0) > 60000).length;
+
+    const totalResponseMs = records.reduce((acc, r) => acc + (r.responseTimeMs || 0), 0);
+    const totalDurationMs = records.reduce((acc, r) => acc + (r.durationMs || 0), 0);
+
+    const avgResponseSec = Math.round(totalResponseMs / total / 1000);
+    const avgCompletionMin = Math.round((totalDurationMs / total / 60000) * 10) / 10;
+    const onTimePercent = Math.round(((total - delayed) / total) * 100);
+
+    return {
+      totalRequests: total,
+      avgResponseTimeSec: avgResponseSec,
+      avgCompletionTimeMin: avgCompletionMin,
+      completedCount: completed,
+      delayedCount: delayed,
+      escalatedCount: escalated,
+      onTimeRate: `${onTimePercent}%`
+    };
+  }
+
+  // --- RBAC MANAGEMENT ---
+  createRbacRole(roleData, actor = null) {
+    this.checkPermissionOrThrow('MANAGE_RBAC', actor);
+    const staff = actor || this.getActiveStaff();
+    const newId = 'ROL-' + String((this.state.rbacRoles || []).length + 1).padStart(2, '0');
+    const newRole = {
+      id: newId,
+      name: roleData.name,
+      key: roleData.key || roleData.name.toUpperCase().replace(/\s+/g, '_'),
+      department: roleData.department || 'General Operations',
+      permissions: roleData.permissions || ['VIEW_DASHBOARD'],
+      active: roleData.active ?? true,
+      userCount: 0
+    };
+
+    this.setState(s => ({
+      ...s,
+      rbacRoles: [...(s.rbacRoles || []), newRole]
+    }));
+
+    this.addAudit('RBAC_ROLE_CREATED', `${newRole.name} (${newRole.key})`, `Created RBAC role with ${newRole.permissions.length} permissions`, staff.name, 'RBAC Management', null, newRole, 'Admin role creation');
+    return newRole;
+  }
+
+  updateRbacRole(roleId, updates, actor = null) {
+    this.checkPermissionOrThrow('MANAGE_RBAC', actor);
+    const staff = actor || this.getActiveStaff();
+    const existing = (this.state.rbacRoles || []).find(r => r.id === roleId || r.key === roleId);
+    if (!existing) throw new Error(`Role ${roleId} not found`);
+
+    const updated = { ...existing, ...updates };
+
+    this.setState(s => ({
+      ...s,
+      rbacRoles: (s.rbacRoles || []).map(r => (r.id === roleId || r.key === roleId) ? updated : r)
+    }));
+
+    this.addAudit('RBAC_ROLE_UPDATED', `${updated.name} (${updated.key})`, `Updated role permissions and active status`, staff.name, 'RBAC Management', existing, updated, 'Admin role update');
+    return updated;
+  }
+
+  createStaffAccount(accountData, actor = null) {
+    this.checkPermissionOrThrow('MANAGE_RBAC', actor);
+    const staff = actor || this.getActiveStaff();
+    const newId = 'ACC-' + String((this.state.staffAccounts || []).length + 1).padStart(2, '0');
+    const newAccount = {
+      id: newId,
+      name: accountData.name,
+      username: accountData.username,
+      roleKey: accountData.roleKey || 'FRONT_DESK',
+      roleName: accountData.roleName || accountData.roleKey,
+      department: accountData.department || 'Front Desk',
+      email: accountData.email,
+      phone: accountData.phone,
+      active: accountData.active ?? true,
+      createdAt: new Date().toISOString().slice(0, 10),
+      lastLogin: null
+    };
+
+    this.setState(s => ({
+      ...s,
+      staffAccounts: [...(s.staffAccounts || []), newAccount]
+    }));
+
+    this.addAudit('STAFF_ACCOUNT_CREATED', `${newAccount.username} (${newAccount.name})`, `Created staff login with role ${newAccount.roleKey}`, staff.name, 'RBAC Management', null, newAccount, 'Admin user account creation');
+    return newAccount;
+  }
+
+  updateStaffAccountStatus(accountId, isActive, actor = null) {
+    this.checkPermissionOrThrow('MANAGE_RBAC', actor);
+    const staff = actor || this.getActiveStaff();
+    const existing = (this.state.staffAccounts || []).find(a => a.id === accountId || a.username === accountId);
+    if (!existing) return null;
+
+    const updated = { ...existing, active: isActive };
+
+    this.setState(s => ({
+      ...s,
+      staffAccounts: (s.staffAccounts || []).map(a => (a.id === accountId || a.username === accountId) ? updated : a)
+    }));
+
+    this.addAudit('STAFF_ACCOUNT_STATUS_CHANGED', `${existing.username}`, `Account status set to ${isActive ? 'ACTIVE' : 'DEACTIVATED'}`, staff.name, 'RBAC Management', existing, updated, 'Admin account status toggle');
+    return updated;
+  }
+
+  resetStaffCredentials(accountId, newPassword = 'TemporaryPass123', actor = null) {
+    this.checkPermissionOrThrow('MANAGE_RBAC', actor);
+    const staff = actor || this.getActiveStaff();
+    const existing = (this.state.staffAccounts || []).find(a => a.id === accountId || a.username === accountId);
+    if (!existing) return null;
+
+    this.addAudit('STAFF_CREDENTIALS_RESET', `${existing.username}`, `Reset password credentials for staff member`, staff.name, 'RBAC Management', null, null, 'Credential reset');
+    return { success: true, username: existing.username, temporaryPassword: newPassword };
+  }
+
+  // --- VENDOR ONBOARDING & SUPPLIER CODES ---
+  generateUniqueSupplierCode(companyName) {
+    const initials = companyName
+      .replace(/[^a-zA-Z0-9 ]/g, '')
+      .split(' ')
+      .filter(w => w.length > 0)
+      .map(w => w[0].toUpperCase())
+      .slice(0, 3)
+      .join('');
+    const baseCode = (initials.length >= 2 ? initials : companyName.slice(0, 3).toUpperCase());
+    const existingCount = (this.state.suppliers || []).filter(s => s.supplierCode && s.supplierCode.startsWith(baseCode)).length + 1;
+    return `${baseCode}-${String(existingCount).padStart(3, '0')}`;
+  }
+
+  submitVendorOnboarding(formData) {
+    const newId = 'VON-' + (100 + (this.state.vendorOnboardingSubmissions || []).length + 1);
+    const submission = {
+      id: newId,
+      vendorName: formData.vendorName,
+      productCategory: formData.productCategory,
+      phone: formData.phone,
+      email: formData.email,
+      whatsapp: formData.whatsapp || formData.phone,
+      address: formData.address,
+      contactPerson: formData.contactPerson,
+      productsSupplied: formData.productsSupplied,
+      supplyCapability: formData.supplyCapability,
+      businessDescription: formData.businessDescription,
+      submittedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      status: 'SUBMITTED',
+      reviewedAt: null,
+      reviewedBy: null,
+      notes: 'Submitted via public vendor onboarding form'
+    };
+
+    this.setState(s => ({
+      ...s,
+      vendorOnboardingSubmissions: [submission, ...(s.vendorOnboardingSubmissions || [])]
+    }));
+
+    this.addAudit('VENDOR_ONBOARDING_SUBMITTED', `${submission.vendorName} (${submission.id})`, 'Submitted vendor registration application', submission.contactPerson, 'Vendor Procurement', null, submission, 'Public registration');
+    return submission;
+  }
+
+  reviewVendorOnboarding(submissionId, decision, reviewerName = 'Kunle Adeleke (Procurement)') {
+    const existing = (this.state.vendorOnboardingSubmissions || []).find(s => s.id === submissionId);
+    if (!existing) throw new Error(`Submission ${submissionId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const isApproved = decision === 'APPROVE';
+
+    const updatedSubmission = {
+      ...existing,
+      status: isApproved ? 'APPROVED' : 'REJECTED',
+      reviewedAt: nowStr,
+      reviewedBy: reviewerName,
+      notes: isApproved ? 'Approved for official Hotel Capitol supplier network' : 'Application declined by procurement review'
+    };
+
+    let newSupplier = null;
+    if (isApproved) {
+      const supplierCode = this.generateUniqueSupplierCode(existing.vendorName);
+      newSupplier = {
+        id: 'SUP-' + String((this.state.suppliers || []).length + 1).padStart(2, '0'),
+        supplierCode,
+        name: existing.vendorName,
+        category: existing.productCategory,
+        contactPerson: existing.contactPerson,
+        phone: existing.phone,
+        email: existing.email,
+        whatsapp: existing.whatsapp,
+        address: existing.address,
+        status: 'ACTIVE',
+        temporaryPassword: 'CapitolTempPass2026',
+        passwordChanged: false,
+        lastPriceUpdate: new Date().toISOString().slice(0, 10),
+        approvedPrices: [
+          {
+            productId: 'PRD-' + (this.state.suppliers || []).length + '01',
+            name: existing.productsSupplied || 'Assorted Quality Supply Item',
+            unit: 'units',
+            approvedBulkPrice: 15000,
+            lastApprovedDate: new Date().toISOString().slice(0, 10),
+            approvedBy: reviewerName
+          }
+        ]
+      };
+    }
+
+    this.setState(s => ({
+      ...s,
+      vendorOnboardingSubmissions: (s.vendorOnboardingSubmissions || []).map(sub => sub.id === submissionId ? updatedSubmission : sub),
+      suppliers: newSupplier ? [...(s.suppliers || []), newSupplier] : (s.suppliers || [])
+    }));
+
+    this.addAudit('VENDOR_APPLICATION_REVIEWED', `${existing.vendorName} (${submissionId})`, `Decision: ${updatedSubmission.status} by ${reviewerName}`, reviewerName, 'Vendor Procurement', existing, updatedSubmission, 'Procurement onboarding review');
+    return { submission: updatedSubmission, supplier: newSupplier };
+  }
+
+  // --- PRICE SOURCE OF TRUTH (AI NEVER GUESSES) ---
+  getApprovedSupplierPrice(supplierCode, productId) {
+    const supplier = (this.state.suppliers || []).find(s => s.supplierCode === supplierCode);
+    if (!supplier || supplier.status !== 'ACTIVE') return null;
+    const priceItem = (supplier.approvedPrices || []).find(p => p.productId === productId || p.name.toLowerCase() === productId.toLowerCase());
+    return priceItem ? priceItem.approvedBulkPrice : null;
+  }
+
+  // --- PROCUREMENT ORDERS & INVOICES ---
+  requestProcurementOrder(orderData, actorName = 'Kunle Adeleke (Procurement Manager)') {
+    const supplier = (this.state.suppliers || []).find(s => s.supplierCode === orderData.supplierCode || s.name === orderData.supplierName);
+    if (!supplier) throw new Error(`Supplier ${orderData.supplierCode || orderData.supplierName} not found`);
+
+    const approvedPrice = this.getApprovedSupplierPrice(supplier.supplierCode, orderData.productId);
+    if (approvedPrice === null) {
+      throw new Error('No approved supplier price is available for this item. Procurement approval is required.');
+    }
+
+    const newId = 'PO-' + (8800 + (this.state.procurementOrders || []).length + 1);
+    const qty = Number(orderData.quantity) || 1;
+    const total = approvedPrice * qty;
+
+    const newOrder = {
+      id: newId,
+      supplierCode: supplier.supplierCode,
+      supplierName: supplier.name,
+      productId: orderData.productId,
+      productName: orderData.productName,
+      quantity: qty,
+      unit: orderData.unit || 'units',
+      unitPrice: approvedPrice,
+      totalAmount: total,
+      deliveryLocation: orderData.deliveryLocation || 'Hotel Capitol Loading Bay 1',
+      requiredDeliveryDate: orderData.requiredDeliveryDate || new Date().toISOString().slice(0, 10),
+      notes: orderData.notes || 'Routine procurement stock request',
+      status: 'REQUESTED',
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      createdBy: actorName
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementOrders: [newOrder, ...(s.procurementOrders || [])]
+    }));
+
+    this.addAudit('PROCUREMENT_ORDER_REQUESTED', `${newOrder.id} (${supplier.supplierCode})`, `Requested ${newOrder.quantity} ${newOrder.unit} of ${newOrder.productName} (₦${total.toLocaleString()})`, actorName, 'Vendor Procurement', null, newOrder, 'Purchase order generation');
+    return newOrder;
+  }
+
+  generateVendorInvoice(orderId) {
+    const order = (this.state.procurementOrders || []).find(o => o.id === orderId);
+    if (!order) throw new Error(`Order ${orderId} not found`);
+
+    const newInvId = 'INV-' + (8800 + (this.state.vendorInvoices || []).length + 1);
+    const invoiceNumber = `INV-${order.supplierCode}-${new Date().getFullYear()}-${String((this.state.vendorInvoices || []).length + 1).padStart(3, '0')}`;
+
+    const newInvoice = {
+      id: newInvId,
+      invoiceNumber,
+      orderId: order.id,
+      supplierCode: order.supplierCode,
+      supplierName: order.supplierName,
+      items: [
+        { productId: order.productId, name: order.productName, quantity: order.quantity, unit: order.unit, unitPrice: order.unitPrice, total: order.totalAmount }
+      ],
+      totalAmount: order.totalAmount,
+      issueDate: new Date().toISOString().slice(0, 10),
+      status: 'PENDING_APPROVAL',
+      goodsReceivedConfirmed: false,
+      procurementApprovedBy: null,
+      procurementApprovedAt: null,
+      paymentRef: null
+    };
+
+    this.setState(s => ({
+      ...s,
+      vendorInvoices: [newInvoice, ...(s.vendorInvoices || [])],
+      procurementOrders: (s.procurementOrders || []).map(o => o.id === orderId ? { ...o, status: 'INVOICE_GENERATED' } : o)
+    }));
+
+    this.addAudit('VENDOR_INVOICE_GENERATED', `${invoiceNumber} (${order.supplierCode})`, `Invoice generated for PO ${order.id} (₦${newInvoice.totalAmount.toLocaleString()})`, order.supplierName, 'Vendor Invoicing', null, newInvoice, 'Supplier invoice generation');
+    return newInvoice;
+  }
+
+  approveProcurementInvoice(invoiceId, reviewerName = 'Kunle Adeleke (Procurement Manager)') {
+    const existing = (this.state.vendorInvoices || []).find(i => i.id === invoiceId || i.invoiceNumber === invoiceId);
+    if (!existing) throw new Error(`Invoice ${invoiceId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const updatedInvoice = {
+      ...existing,
+      status: 'ROUTED_TO_ACCOUNTS',
+      goodsReceivedConfirmed: true,
+      procurementApprovedBy: reviewerName,
+      procurementApprovedAt: nowStr
+    };
+
+    const newPayment = {
+      id: 'PAY-' + (7700 + (this.state.accountPayments || []).length + 1),
+      paymentRef: `PAY-REF-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`,
+      supplierCode: existing.supplierCode,
+      supplierName: existing.supplierName,
+      invoiceRef: existing.invoiceNumber,
+      receiptRef: null,
+      amount: existing.totalAmount,
+      status: 'AWAITING_PAYMENT',
+      paidAt: null,
+      paymentMethod: 'Direct Executive Bank Transfer',
+      officerName: null,
+      notes: `Procurement approved by ${reviewerName}. Ready for account disbursement.`
+    };
+
+    this.setState(s => ({
+      ...s,
+      vendorInvoices: (s.vendorInvoices || []).map(inv => (inv.id === invoiceId || inv.invoiceNumber === invoiceId) ? updatedInvoice : inv),
+      accountPayments: [newPayment, ...(s.accountPayments || [])]
+    }));
+
+    this.addAudit('INVOICE_APPROVED_ROUTED_TO_ACCOUNTS', `${existing.invoiceNumber}`, `Approved and routed ₦${existing.totalAmount.toLocaleString()} to Account department`, reviewerName, 'Vendor Procurement', existing, updatedInvoice, 'Procurement invoice authorization');
+    return { invoice: updatedInvoice, payment: newPayment };
+  }
+
+  // --- ACCOUNT PORTAL PAYMENT CONFIRMATION ---
+  confirmAccountPayment(paymentId, refNumber = null, officerName = 'Ngozi Okonjo (Accounts Officer)') {
+    const existing = (this.state.accountPayments || []).find(p => p.id === paymentId || p.paymentRef === paymentId);
+    if (!existing) throw new Error(`Payment record ${paymentId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const finalRef = refNumber || existing.paymentRef || `PAY-REF-${Date.now().toString().slice(-4)}`;
+
+    const updatedPayment = {
+      ...existing,
+      paymentRef: finalRef,
+      status: 'CONFIRMED_PAID',
+      paidAt: nowStr,
+      officerName
+    };
+
+    this.setState(s => ({
+      ...s,
+      accountPayments: (s.accountPayments || []).map(p => (p.id === paymentId || p.paymentRef === paymentId) ? updatedPayment : p),
+      vendorInvoices: (s.vendorInvoices || []).map(inv => inv.invoiceNumber === existing.invoiceRef ? { ...inv, status: 'PAID', paymentRef: finalRef } : inv)
+    }));
+
+    this.addAudit('ACCOUNT_PAYMENT_CONFIRMED', `${finalRef} (${existing.supplierCode})`, `Confirmed disbursement of ₦${existing.amount.toLocaleString()} for Invoice ${existing.invoiceRef}`, officerName, 'Account Department', existing, updatedPayment, 'Vendor payment settlement');
+    return updatedPayment;
+  }
+
+  // --- VENDOR RECEIPT GENERATION & SUBMISSION ---
+  generateVendorReceipt(paymentId, actorName = 'Supplier Partner') {
+    const payment = (this.state.accountPayments || []).find(p => p.id === paymentId || p.paymentRef === paymentId);
+    if (!payment) throw new Error(`Payment ${paymentId} not found`);
+    if (payment.status !== 'CONFIRMED_PAID') throw new Error('Payment has not yet been confirmed by Hotel Accounts.');
+
+    const rcpNum = `RCPT-${payment.supplierCode}-${new Date().getFullYear()}-${String((this.state.vendorReceipts || []).length + 1).padStart(3, '0')}`;
+    const newReceipt = {
+      id: 'RCP-' + Date.now().toString().slice(-4),
+      receiptNumber: rcpNum,
+      supplierCode: payment.supplierCode,
+      supplierName: payment.supplierName,
+      invoiceNumber: payment.invoiceRef,
+      paymentRef: payment.paymentRef,
+      amount: payment.amount,
+      submittedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      verifiedBy: payment.officerName || 'Hotel Capitol Accounts'
+    };
+
+    this.setState(s => ({
+      ...s,
+      vendorReceipts: [newReceipt, ...(s.vendorReceipts || [])],
+      accountPayments: (s.accountPayments || []).map(p => p.id === payment.id ? { ...p, receiptRef: rcpNum } : p)
+    }));
+
+    this.addAudit('VENDOR_RECEIPT_SUBMITTED', `${rcpNum} (${payment.supplierCode})`, `Issued receipt for payment ${payment.paymentRef} (₦${payment.amount.toLocaleString()})`, actorName, 'Vendor Portal', null, newReceipt, 'Supplier receipt issuance');
+    return newReceipt;
+  }
+
+  // --- VENDOR PRICE UPDATE WORKFLOW ---
+  submitPriceUpdateRequest(updateData) {
+    const newId = 'PUR-' + (300 + (this.state.vendorPriceUpdateRequests || []).length + 1);
+    const newReq = {
+      id: newId,
+      supplierCode: updateData.supplierCode,
+      supplierName: updateData.supplierName,
+      productId: updateData.productId,
+      productName: updateData.productName,
+      currentPrice: Number(updateData.currentPrice),
+      proposedPrice: Number(updateData.proposedPrice),
+      reason: updateData.reason || 'Cost adjustment',
+      submittedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      status: 'PENDING_PROCUREMENT_APPROVAL',
+      reviewedAt: null,
+      reviewedBy: null
+    };
+
+    this.setState(s => ({
+      ...s,
+      vendorPriceUpdateRequests: [newReq, ...(s.vendorPriceUpdateRequests || [])]
+    }));
+
+    this.addAudit('PRICE_UPDATE_SUBMITTED', `${newReq.productName} (${newReq.supplierCode})`, `Proposed price: ₦${newReq.currentPrice.toLocaleString()} → ₦${newReq.proposedPrice.toLocaleString()}. Status: PENDING_PROCUREMENT_APPROVAL`, newReq.supplierName, 'Vendor Portal', null, newReq, updateData.reason);
+    return newReq;
+  }
+
+  reviewPriceUpdateRequest(requestId, decision, reviewerName = 'Kunle Adeleke (Procurement Manager)') {
+    const existing = (this.state.vendorPriceUpdateRequests || []).find(r => r.id === requestId);
+    if (!existing) throw new Error(`Price update request ${requestId} not found`);
+
+    const isApproved = decision === 'APPROVE';
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const updatedReq = {
+      ...existing,
+      status: isApproved ? 'APPROVED' : 'REJECTED',
+      reviewedAt: nowStr,
+      reviewedBy: reviewerName
+    };
+
+    let updatedSuppliers = this.state.suppliers || [];
+    if (isApproved) {
+      updatedSuppliers = updatedSuppliers.map(s => {
+        if (s.supplierCode === existing.supplierCode) {
+          return {
+            ...s,
+            lastPriceUpdate: new Date().toISOString().slice(0, 10),
+            approvedPrices: (s.approvedPrices || []).map(p => {
+              if (p.productId === existing.productId || p.name === existing.productName) {
+                return {
+                  ...p,
+                  approvedBulkPrice: existing.proposedPrice,
+                  lastApprovedDate: new Date().toISOString().slice(0, 10),
+                  approvedBy: reviewerName
+                };
+              }
+              return p;
+            })
+          };
+        }
+        return s;
+      });
+    }
+
+    this.setState(s => ({
+      ...s,
+      vendorPriceUpdateRequests: (s.vendorPriceUpdateRequests || []).map(r => r.id === requestId ? updatedReq : r),
+      suppliers: updatedSuppliers
+    }));
+
+    this.addAudit('PRICE_UPDATE_REVIEWED', `${existing.productName} (${existing.supplierCode})`, `Decision: ${updatedReq.status} by ${reviewerName}`, reviewerName, 'Vendor Procurement', existing, updatedReq, 'Procurement pricing decision');
+    return updatedReq;
+  }
+
+  // --- DELIVERY TRACKING SIMULATION ---
+  updateDeliveryTrackingStatus(trackingId, nextStatus, note = '') {
+    const existing = (this.state.deliveryTrackings || []).find(t => t.id === trackingId || t.orderId === trackingId);
+    if (!existing) return null;
+
+    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const isArrived = nextStatus === 'ARRIVED' || nextStatus === 'RECEIVED';
+    const updated = {
+      ...existing,
+      status: nextStatus,
+      actualArrivalTime: isArrived ? (existing.actualArrivalTime || timeStr) : null,
+      statusHistory: [
+        ...(existing.statusHistory || []),
+        { status: nextStatus, time: timeStr, note: note || `Status transitioned to ${nextStatus}` }
+      ]
+    };
+
+    this.setState(s => ({
+      ...s,
+      deliveryTrackings: (s.deliveryTrackings || []).map(t => (t.id === trackingId || t.orderId === trackingId) ? updated : t)
+    }));
+
+    this.addAudit('DELIVERY_TRACKING_UPDATED', `Order ${existing.orderId} (${existing.supplierCode})`, `Delivery status transitioned: ${nextStatus}`, 'Automated Dispatch AI', 'Delivery Tracking', existing, updated, note);
+    return updated;
   }
 
   updatePricingConfig(newConfig) {

@@ -18,6 +18,8 @@ import { initStaffPortal, renderStaffPortal } from './views/staffPortal.js';
 import { initSupervisorPortal, renderSupervisorPortal } from './views/supervisorPortal.js';
 import { initManagerPortal, renderManagerPortal } from './views/managerPortal.js';
 import { initVendorPortal, renderVendorPortal } from './views/vendorPortal.js';
+import { initAccountPortal, renderAccountPortal } from './views/accountPortal.js';
+import { initDeliveryTracker, renderDeliveryTracker } from './components/deliveryTrackerModal.js';
 
 // Global Navigation Router
 window.isGuestDropdownOpen = false;
@@ -81,6 +83,8 @@ function renderApp() {
         appRoot.innerHTML = renderManagerPortal();
       } else if (state.activeRole === 'vendor') {
         appRoot.innerHTML = renderVendorPortal();
+      } else if (state.activeRole === 'account' || state.activeRole === 'accounts') {
+        appRoot.innerHTML = renderAccountPortal();
       } else {
         appRoot.innerHTML = renderGuestPortal();
       }
@@ -107,6 +111,7 @@ function renderApp() {
   try { renderIntercomModal(); } catch (e) { console.warn('renderIntercomModal error:', e); }
   try { renderDemoControls(); } catch (e) { console.warn('renderDemoControls error:', e); }
   try { renderMobileNav(); } catch (e) { console.warn('renderMobileNav error:', e); }
+  try { renderDeliveryTracker(); } catch (e) { console.warn('renderDeliveryTracker error:', e); }
 }
 
 window.renderApp = renderApp;
@@ -121,7 +126,7 @@ function init() {
   try {
     // 1. Sync initial hash route if present
     const hash = (window.location.hash || '').replace('#', '');
-    if (['public', 'guest', 'staff', 'supervisor', 'manager', 'vendor'].includes(hash)) {
+    if (['public', 'guest', 'staff', 'supervisor', 'manager', 'vendor', 'account'].includes(hash)) {
       store.setActiveRole(hash);
     }
   } catch (e) {
@@ -137,6 +142,8 @@ function init() {
   try { initSupervisorPortal(); } catch (e) { console.warn('initSupervisorPortal error:', e); }
   try { initManagerPortal(); } catch (e) { console.warn('initManagerPortal error:', e); }
   try { initVendorPortal(); } catch (e) { console.warn('initVendorPortal error:', e); }
+  try { initAccountPortal(); } catch (e) { console.warn('initAccountPortal error:', e); }
+  try { initDeliveryTracker(); } catch (e) { console.warn('initDeliveryTracker error:', e); }
   try { initAIAssistant(); } catch (e) { console.warn('initAIAssistant error:', e); }
   try { initIntercom(); } catch (e) { console.warn('initIntercom error:', e); }
   try { initDemoControls(); } catch (e) { console.warn('initDemoControls error:', e); }

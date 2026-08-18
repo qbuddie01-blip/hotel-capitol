@@ -88,7 +88,7 @@ export function initGuestPortal() {
         const elapsed = Math.max(0, now - prepStarted);
         const prepPct = Math.min(99, Math.max(5, Math.round((elapsed / prepTotalMs) * 100)));
         const pBar = document.getElementById('prep-progress-bar');
-        if (pBar) pBar.style.width = prepPct + '%';
+        if (pBar && pBar.style) pBar.style.width = prepPct + '%';
       }
 
       // 2. Update DELIVERY countdown & progress bar
@@ -108,7 +108,7 @@ export function initGuestPortal() {
           const elapsed = Math.max(0, now - delStarted);
           const delPct = Math.min(99, Math.max(10, Math.round((elapsed / delTotalMs) * 100)));
           const dBar = document.getElementById('delivery-progress-bar');
-          if (dBar) dBar.style.width = delPct + '%';
+          if (dBar && dBar.style) dBar.style.width = delPct + '%';
         }
 
         // Check 5-minute notification (Triggers ONCE only)
@@ -197,27 +197,27 @@ export function initGuestPortal() {
   };
   window.activateAmaraIntercom = window.activateTolaniIntercom;
 
-  // 2b. DEDICATED SUITE DIRECT INTERCOM SERVICE ROUTING (Breakfast, VIP Transport, Concierge Mary)
+    // 2b. DEDICATED SUITE DIRECT INTERCOM SERVICE ROUTING (Immediate Alert, Chime & Waiting State)
   window.activateGuestServiceIntercom = (serviceType) => {
-    const guest = store.getActiveGuest();
-    const suiteNum = guest ? guest.roomNumber : '402';
-    automationEngine.playChime('bell');
-    
-    if (serviceType === 'BREAKFAST') {
-      automationEngine.showToast('☕ Breakfast Service Intercom', `Connecting Suite #${suiteNum} to Breakfast & Kitchen queue...`, 'info');
-      activeGuestTab = 'breakfast';
-      if (window.renderApp) window.renderApp();
-      if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (serviceType === 'TRANSPORT') {
-      automationEngine.showToast('🚕 VIP Transportation Intercom', `Connecting Suite #${suiteNum} to VIP Chauffeur & Transit desk...`, 'info');
-      activeGuestTab = 'transport';
-      if (window.renderApp) window.renderApp();
-      if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
+    let chan = 'kitchen-fb';
+    let deptName = 'Kitchen';
+    let attendant = 'Chef Babatunde Adele';
+    let sType = 'BREAKFAST';
+
+    if (serviceType === 'TRANSPORT' || serviceType === 'VIP_TRANSPORTATION') {
+      chan = 'concierge-frontdesk';
+      deptName = 'VIP Transportation';
+      attendant = 'Ibrahim Bello';
+      sType = 'VIP_TRANSPORTATION';
     } else if (serviceType === 'CONCIERGE') {
-      automationEngine.showToast('🧳 Mary Concierge Intercom', `Connecting Suite #${suiteNum} to Mary (Concierge & Porter)...`, 'info');
-      activeGuestTab = 'concierge';
-      if (window.renderApp) window.renderApp();
-      if (typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'smooth' });
+      chan = 'concierge-frontdesk';
+      deptName = 'Concierge';
+      attendant = 'Mary (Concierge)';
+      sType = 'CONCIERGE';
+    }
+
+    if (typeof window.openDirectIntercomCall === 'function') {
+      window.openDirectIntercomCall(chan, deptName, attendant, sType);
     }
   };
 
@@ -328,8 +328,9 @@ export function initGuestPortal() {
 
     const guest = store.getActiveGuest();
 
-    // Tolani immediately acknowledges selection and asks prompt
-    aiEngine.speak(`Thank you, ${guest.name}. I've received your selection. Would you like to add a drink, snack or dessert to your order?`);
+    const guestTitle = guest.title ? guest.title + ' ' : (guest.name.startsWith('Chief') ? '' : 'Mr. ');
+    const upsellMsg = `Thank you! ${guestTitle}${guest.name}, I've received your selection, Would you like to add a drink, snacks or dessert to your order? Please select your preferred option.`;
+    aiEngine.speak(upsellMsg);
 
     restaurantFlowStep = 'UPSELL_PROMPT';
 
@@ -701,12 +702,8 @@ export function initGuestPortal() {
     automationEngine.playChime('bell');
     automationEngine.showToast('🧳 Porter Dispatched', `Luggage assistance requested for ${location}. Ticket ${req.id} sent to Porter Department.`, 'success');
     
-    // Porter department audible alert and guest confirmation
-    aiEngine.speak(`New porter assistance request from Room ${guest.roomNumber}.`);
-    
-    setTimeout(() => {
-      aiEngine.speak(`Your porter assistance request has been confirmed. Mary and our concierge team will be with you shortly.`);
-    }, 2400);
+    // Porter department audible alert and canonical Mary confirmation (Section 12)
+    aiEngine.speak("New porter assistance has been confirmed, Mary and our concierge team will attend to you shortly, Thanks for staying at Hotel Capitol");
 
     showPorterLocationModal = false;
     if (window.renderApp) window.renderApp();
@@ -1306,7 +1303,7 @@ function renderRestaurantUpsellPrompt(guest, cart, cartTotal) {
         Would you like to add a drink, snack or dessert to your order?
       </h2>
       <p class="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto mb-6">
-        "Thank you, ${guest.name}. I've received your selection. Would you like to pair your meal with our chef's signature refreshments or artisan sweets?"
+        "Thank you! ${guest.title ? guest.title + ' ' : (guest.name.startsWith('Chief') ? '' : 'Mr. ')}${guest.name}, I've received your selection, Would you like to add a drink, snacks or dessert to your order? Please select your preferred option."
       </p>
 
       <!-- Current Selected Items Tray Snippet -->
@@ -2193,7 +2190,7 @@ function renderRoomServiceSection(guest) {
   `;
 }
 
-// 5. VIP TRANSPORTATION & PAYMENT (Lagos Zonal Pricing, One-Time vs Charter, Live Tickers & Rescheduling)
+// 5. VIP TRANSPORTATION & PAYMENT (Section 2 & 3: Centered Hero & 5-Tier Vertical Modal)
 function renderTransportSection(guest) {
   const state = store.getState();
   const zones = state.lagosZones || [];
@@ -2211,33 +2208,45 @@ function renderTransportSection(guest) {
   return `
     <div class="max-w-4xl mx-auto flex flex-col gap-8 animate-fade-in">
       
-      <!-- Top Header & Intercom Dispatch -->
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <span class="text-xs font-bold uppercase tracking-luxury text-gold">Chauffeured Executive Fleet & Transit</span>
-          <h2 class="text-2xl font-serif text-white mt-1">VIP Transportation & Chauffeur Services</h2>
-          <p class="text-xs text-slate-300">Dedicated luxury transfer across Lagos Island, Mainland & Murtala Muhammed Airport.</p>
+      <!-- VIP TRANSPORTATION HERO CARD (Section 2: Centered, Contained, Responsive) -->
+      <div class="glass-panel p-6 sm:p-8 rounded-2xl border-2 border-gold/40 text-center flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold/10 border border-gold/30 text-gold text-xs font-bold mb-3 uppercase tracking-luxury">
+          <span>🚘</span> <span>Chauffeured Executive Fleet & Transit</span>
         </div>
+        <h2 class="text-2xl sm:text-3xl font-serif text-white font-bold mb-2">VIP Transportation & Chauffeur Services</h2>
+        <p class="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto mb-5 leading-relaxed">
+          Dedicated luxury transfers across Lagos Island, Mainland & Murtala Muhammed International Airport with transparent upfront pricing.
+        </p>
         <button 
-          class="intercom-pill-btn"
-          onclick="window.activateTolaniIntercom('VIP_TRANSPORTATION', 'VIP Transportation');"
+          class="intercom-pill-btn py-2.5 px-6 min-h-[44px] cursor-pointer"
+          onclick="window.activateGuestServiceIntercom('VIP_TRANSPORTATION');"
           title="Direct intercom to Lead Concierge & Transport Chauffeur"
+          type="button"
         >
           ${renderIntercomRoundBadge(18)}
-          <span>Intercom Transport</span>
+          <span>INTERCOM VIP TRANSPORTATION</span>
         </button>
       </div>
 
       <!-- Service Mode Switcher: One-Time Drop-off vs Full-Day Charter -->
-      <div class="grid grid-cols-2 gap-3 p-1.5 rounded-2xl bg-navy-950/80 border border-gold/40">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 rounded-2xl bg-navy-950/80 border border-gold/40">
         <button 
-          class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedTransportMode === 'ONE_TIME_DROPOFF' ? 'bg-gold text-black shadow-lg' : 'text-slate-300 hover:text-white'}"
+          class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all min-h-[44px] cursor-pointer ${selectedTransportMode === 'ONE_TIME_DROPOFF' ? 'bg-gold text-black shadow-lg' : 'text-slate-300 hover:text-white'}"
           onclick="window.setTransportMode('ONE_TIME_DROPOFF')"
+          type="button"
         >
           <span>📍</span> <span>ONE-TIME DROP-OFF / TRANSFER</span>
         </button>
         <button 
-          class      <!-- Booking Configuration Panel -->
+          class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all min-h-[44px] cursor-pointer ${selectedTransportMode === 'FULL_DAY_CHARTER' ? 'bg-gold text-black shadow-lg' : 'text-slate-300 hover:text-white'}"
+          onclick="window.setTransportMode('FULL_DAY_CHARTER')"
+          type="button"
+        >
+          <span>⭐</span> <span>FULL-DAY VIP CHAUFFEUR CHARTER</span>
+        </button>
+      </div>
+
+      <!-- Booking Configuration Panel -->
       <div class="glass-panel-gold p-6 sm:p-8 rounded-2xl border-2 border-gold/50 shadow-2xl">
         <h3 class="font-serif text-lg text-white font-bold mb-4 flex items-center gap-2">
           <span>🚗</span> <span>Customize Your Executive Journey</span>
@@ -2389,6 +2398,7 @@ function renderTransportSection(guest) {
           <button 
             class="btn-primary py-3 px-8 text-xs font-bold shadow-xl whitespace-nowrap w-full sm:w-auto cursor-pointer"
             onclick="window.openTransportBookingReview()"
+            type="button"
           >
             Review & Confirm Transit →
           </button>
@@ -2436,15 +2446,17 @@ function renderTransportSection(guest) {
                     
                     <div class="flex items-center gap-2 flex-wrap">
                       <button 
-                        class="btn-secondary text-xs py-1.5 px-3 font-semibold"
+                        class="btn-secondary text-xs py-1.5 px-3 font-semibold cursor-pointer"
                         onclick="window.openTransportRescheduleModal('${b.id}')"
+                        type="button"
                       >
                         📅 Reschedule
                       </button>
 
                       <button 
-                        class="btn-secondary text-xs py-1.5 px-3 font-semibold"
+                        class="btn-secondary text-xs py-1.5 px-3 font-semibold cursor-pointer"
                         onclick="window.openServiceFeedbackModal('TRANSPORTATION')"
+                        type="button"
                       >
                         ⭐ Rate Ride
                       </button>
@@ -2483,52 +2495,99 @@ function renderTransportSection(guest) {
             </div>
 
             <div class="flex items-center justify-end gap-3">
-              <button class="btn-secondary text-xs py-2 px-4" onclick="window.closeTransportRescheduleModal()">Cancel</button>
-              <button class="btn-primary text-xs py-2 px-5 font-bold" onclick="window.submitTransportReschedule('${showTransportRescheduleModal}')">Confirm New Time</button>
+              <button class="btn-secondary text-xs py-2 px-4 cursor-pointer" onclick="window.closeTransportRescheduleModal()" type="button">Cancel</button>
+              <button class="btn-primary text-xs py-2 px-5 font-bold cursor-pointer" onclick="window.submitTransportReschedule('${showTransportRescheduleModal}')" type="button">Confirm New Time</button>
             </div>
           </div>
         </div>
       ` : ''}
 
-      <!-- Transport Review Modal -->
+      <!-- Transport Review Modal (Section 3: Vertically Stacked Order) -->
       ${showTransportReviewModal ? `
-        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div class="glass-panel-gold max-w-lg w-full p-6 sm:p-8 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in">
-            <div class="flex items-center justify-between pb-3 border-b border-gold/30 mb-4">
-              <h3 class="font-serif text-lg text-white font-bold">Review Chauffeur Booking</h3>
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div class="glass-panel-gold max-w-lg w-full p-6 sm:p-8 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in my-8 max-h-[92vh] overflow-y-auto">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-gold/30 mb-5">
+              <div>
+                <span class="text-[10px] font-bold text-gold uppercase tracking-luxury">Chauffeur Dispatch Review</span>
+                <h3 class="font-serif text-lg text-white font-bold">Review Chauffeur Booking</h3>
+              </div>
               <span class="badge-gold text-xs">Suite #${guest.roomNumber}</span>
             </div>
 
-            <div class="flex flex-col gap-2.5 text-xs text-slate-300 mb-6">
-              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
-                <span>Journey Type:</span>
-                <strong class="text-white">${isCharter ? 'Full-Day Charter (12 Hours)' : 'One-Time Transfer'}</strong>
+            <div class="flex flex-col gap-4 text-xs text-slate-300 mb-6">
+              
+              <!-- 1. VEHICLE CLASS -->
+              <div class="p-3.5 rounded-xl bg-navy-950/90 border border-gold/30">
+                <div class="text-[10px] font-bold text-gold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <span>🚗</span> <span>1. VEHICLE CLASS</span>
+                </div>
+                <div class="font-bold text-white text-sm">${selectedVehicle.name}</div>
+                <div class="text-[11px] text-slate-300 mt-0.5">Model: <strong>${selectedVehicle.models}</strong></div>
+                <div class="text-[11px] text-slate-300">Passenger Capacity: <strong>Up to ${selectedVehicle.capacity} Passengers</strong></div>
+                <div class="text-[11px] text-emerald-400 mt-1">Amenities: Climate Control, Complimentary WiFi & Bottled Water</div>
               </div>
-              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
-                <span>Destination:</span>
-                <strong class="text-gold">${isCharter ? selectedZone.name + ' (Charter Base)' : (selectedDestinationLocation ? selectedDestinationLocation + ' (' + selectedZone.name + ')' : selectedZone.name)}</strong>
+
+              <!-- 2. DEPARTURE SCHEDULE -->
+              <div class="p-3.5 rounded-xl bg-navy-950/90 border border-white/10">
+                <div class="text-[10px] font-bold text-gold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <span>📅</span> <span>2. DEPARTURE SCHEDULE</span>
+                </div>
+                <div class="text-[11px] text-slate-200">Date: <strong class="text-white">${selectedDepartureDate}</strong></div>
+                <div class="text-[11px] text-slate-200">Time: <strong class="text-white">${selectedDepartureTime}</strong></div>
+                <div class="text-[11px] text-slate-200">Pickup / Origin: <strong class="text-white">Hotel Capitol Main Entrance (6 Animashaun Close)</strong></div>
+                <div class="text-[11px] text-slate-200 mt-1">Destination: <strong class="text-gold">${isCharter ? selectedZone.name + ' (Full-Day Charter)' : (selectedDestinationLocation ? selectedDestinationLocation + ' (' + selectedZone.name + ')' : selectedZone.name)}</strong></div>
               </div>
-              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
-                <span>Vehicle Class:</span>
-                <strong class="text-white">${selectedVehicle.name} (${selectedVehicle.models})</strong>
-              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
-                <span>Departure Schedule:</span>
-                <strong class="text-white">${selectedDepartureDate} at ${selectedDepartureTime}</strong>
+
+              <!-- 3. PASSENGER DETAILS -->
+              <div class="p-3.5 rounded-xl bg-navy-950/90 border border-white/10">
+                <div class="text-[10px] font-bold text-gold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <span>👤</span> <span>3. PASSENGER DETAILS</span>
+                </div>
+                <div class="text-[11px] text-slate-200">Guest Name: <strong class="text-white">${guest.name}</strong></div>
+                <div class="text-[11px] text-slate-200">Suite Number: <strong class="text-white">Suite #${guest.roomNumber}</strong></div>
+                <div class="text-[11px] text-slate-200">Passenger Count: <strong class="text-white">${selectedPassengers} Guest(s)</strong></div>
               </div>
-              <div class="flex justify-between p-2 rounded bg-navy-950 border border-white/5">
-                <span>Passengers:</span>
-                <strong class="text-white">${selectedPassengers} Guests</strong>
+
+              <!-- 4. BOOKING SUMMARY -->
+              <div class="p-3.5 rounded-xl bg-navy-950/90 border border-gold/40">
+                <div class="text-[10px] font-bold text-gold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <span>💳</span> <span>4. BOOKING SUMMARY / PRICE</span>
+                </div>
+                <div class="flex justify-between text-[11px] text-slate-300">
+                  <span>Zonal Base Fare (${selectedZone.name}):</span>
+                  <span>₦${selectedZone.baseFare.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between text-[11px] text-slate-300">
+                  <span>Vehicle Rate Multiplier:</span>
+                  <span>${isCharter ? 'Full-Day Fixed Daily Rate' : selectedVehicle.multiplier + 'x (' + selectedVehicle.name + ')'}</span>
+                </div>
+                <div class="flex justify-between text-sm font-bold text-white mt-2 pt-2 border-t border-white/10">
+                  <span>Total Folio Charge:</span>
+                  <span class="text-gold text-base font-serif">₦${calculatedFare.toLocaleString()}</span>
+                </div>
               </div>
-              <div class="flex justify-between p-3 rounded-xl bg-navy-950 border border-gold/40 text-sm font-bold text-white mt-2">
-                <span>Total Fare (Charged to Folio):</span>
-                <span class="text-gold text-base">₦${calculatedFare.toLocaleString()}</span>
-              </div>
+
             </div>
 
-            <div class="flex items-center justify-end gap-3">
-              <button class="btn-secondary text-xs py-2.5 px-4 cursor-pointer" onclick="window.closeTransportBookingReview()">Back to Edit</button>
-              <button class="btn-primary text-xs py-2.5 px-6 font-bold cursor-pointer" onclick="window.confirmTransportBooking()">Confirm & Dispatch Driver →</button>
+            <!-- 5. ACTIONS -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
+              <button 
+                class="btn-secondary text-xs py-2.5 px-5 cursor-pointer min-h-[44px] flex items-center justify-center" 
+                onclick="window.closeTransportBookingReview()"
+                type="button"
+              >
+                Back to Edit
+              </button>
+              <button 
+                class="btn-primary text-xs py-2.5 px-6 font-bold cursor-pointer min-h-[44px] flex items-center justify-center shadow-lg" 
+                onclick="window.confirmTransportBooking()"
+                type="button"
+              >
+                Confirm & Dispatch Driver →
+              </button>
             </div>
+
           </div>
         </div>
       ` : ''}
@@ -2538,19 +2597,14 @@ function renderTransportSection(guest) {
         <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div class="glass-panel-gold max-w-md w-full p-6 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in">
             <h3 class="font-serif text-lg text-white font-bold mb-2">Guest Service Feedback</h3>
-            <p class="text-xs text-slate-300 mb-4">How was your ${showFeedbackModal.serviceType.toLowerCase()} experience today?</p>
-            
-            <div class="flex justify-center gap-2 text-2xl mb-4" id="rating-stars">
-              <button class="cursor-pointer bg-transparent border-none" onclick="window.submitServiceFeedback('${showFeedbackModal.serviceType}', 5, 'YES')">⭐⭐⭐⭐⭐</button>
+            <p class="text-xs text-slate-300 mb-4">Please share your experience with Hotel Capitol services:</p>
+            <div class="flex justify-center gap-3 text-2xl mb-4 cursor-pointer">
+              <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
             </div>
-
-            <div class="flex flex-col gap-3 mb-4">
-              <textarea id="feedback-comment" class="input-custom text-xs py-2" rows="3" placeholder="Any comments, compliments or areas of improvement for Tolani and management..."></textarea>
-            </div>
-
-            <div class="flex items-center justify-between gap-3">
-              <button class="btn-secondary text-xs py-2 px-4" onclick="window.closeServiceFeedbackModal()">Close</button>
-              <button class="btn-primary text-xs py-2 px-5 font-bold" onclick="window.submitServiceFeedback('${showFeedbackModal.serviceType}', 5, 'YES', null, document.getElementById('feedback-comment')?.value)">Submit Feedback</button>
+            <textarea class="input-custom text-xs p-3 w-full h-24 mb-4" placeholder="Your comments (optional)..."></textarea>
+            <div class="flex justify-end gap-2">
+              <button class="btn-secondary text-xs py-2 px-4 cursor-pointer" onclick="window.closeServiceFeedbackModal()" type="button">Skip</button>
+              <button class="btn-primary text-xs py-2 px-5 font-bold cursor-pointer" onclick="window.closeServiceFeedbackModal(); alert('Thank you for your valuable feedback!');" type="button">Submit</button>
             </div>
           </div>
         </div>
@@ -2559,6 +2613,7 @@ function renderTransportSection(guest) {
     </div>
   `;
 }
+
 
 // 6. CONCIERGE & PORTER (Clean Luggage Handling & Polished Tolani Voice Language)
 function renderConciergeSection(guest) {

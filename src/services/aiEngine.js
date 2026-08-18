@@ -408,6 +408,20 @@ export class HotelCapitolAI {
       return { intent: 'HUMAN_HANDOFF', service: SERVICES.FRONT_DESK, department: 'FRONT_DESK' };
     }
 
+    
+    // Section 14: Contextual Keyword Routing (Drinks, Desserts, Food, Yes)
+    if (q === 'drinks' || q === 'drink' || q.includes('i want drinks') || q.includes('i want drink') || q.includes('beverage') || q.includes('beverages') || q.includes('cold drink') || q.includes('add drink') || q.includes('add drinks')) {
+      return { intent: 'OPEN_DRINKS_MENU', service: SERVICES.RESTAURANT, department: 'KITCHEN' };
+    }
+
+    if (q === 'dessert' || q === 'desserts' || q.includes('i want dessert') || q.includes('i want desserts') || q.includes('sweet') || q.includes('something sweet') || q.includes('cake') || q.includes('pastry') || q.includes('add dessert')) {
+      return { intent: 'OPEN_DESSERT_MENU', service: SERVICES.RESTAURANT, department: 'KITCHEN' };
+    }
+
+    if (q === 'food' || q.includes('i want to add more food') || q.includes('add more food') || q.includes('another dish') || q.includes('add another item') || q.includes('more food') || q.includes('main dish') || q.includes('add food')) {
+      return { intent: 'OPEN_FOOD_MENU', service: SERVICES.RESTAURANT, department: 'KITCHEN' };
+    }
+
     // Gratitude / Thank you
     if (q === 'thank you' || q === 'thanks' || q === 'thank you tolani' || q === 'thanks tolani' || q === 'appreciate it' || q === 'thank you amara' || q === 'thanks amara') {
       return { intent: 'THANK_YOU', service: currentService, department: this.context.currentDepartment };
@@ -566,6 +580,43 @@ export class HotelCapitolAI {
     }
 
     // --- E. YES PLEASE (Voice Confirmation) ---
+    
+    if (intent === 'OPEN_DRINKS_MENU') {
+      const resp = `Certainly, ${guestName}! Here is our curated drinks and refreshments menu.`;
+      return {
+        text: resp,
+        voiceText: resp,
+        actionType: 'OPEN_RESTAURANT_MENU',
+        actionPayload: { category: 'Drinks' },
+        department: 'KITCHEN',
+        service: SERVICES.RESTAURANT
+      };
+    }
+
+    if (intent === 'OPEN_DESSERT_MENU') {
+      const resp = `Certainly, ${guestName}! Here are our chef's signature artisan desserts and pastries.`;
+      return {
+        text: resp,
+        voiceText: resp,
+        actionType: 'OPEN_RESTAURANT_MENU',
+        actionPayload: { category: 'Desserts' },
+        department: 'KITCHEN',
+        service: SERVICES.RESTAURANT
+      };
+    }
+
+    if (intent === 'OPEN_FOOD_MENU') {
+      const resp = `Certainly, ${guestName}! Here are our gourmet dining entrees and main culinary dishes.`;
+      return {
+        text: resp,
+        voiceText: resp,
+        actionType: 'OPEN_RESTAURANT_MENU',
+        actionPayload: { category: 'Food' },
+        department: 'KITCHEN',
+        service: SERVICES.RESTAURANT
+      };
+    }
+
     if (intent === 'YES_PLEASE') {
       const voiceMsg = `Certainly, ${guestName}. I'll show you the available options.`;
       response.text = `Certainly, ${guestName}. I'll show you the available complementary pairings and refreshments.`;
@@ -896,6 +947,24 @@ export class HotelCapitolAI {
     response.voiceText = defaultVoice;
     this.logAndReturn(userQuery, response);
     return response;
+  }
+
+  
+  // Section 23: Price Source of Truth Guarantee (AI Never Guesses or Estimates)
+  verifySupplierPrice(supplierCode, productId) {
+    const price = store.getApprovedSupplierPrice(supplierCode, productId);
+    if (price === null) {
+      return {
+        approved: false,
+        price: null,
+        message: 'No approved supplier price is available for this item. Procurement approval is required.'
+      };
+    }
+    return {
+      approved: true,
+      price,
+      message: `Approved supplier price: ₦${price.toLocaleString()}`
+    };
   }
 
   logAndReturn(userQuery, response) {
