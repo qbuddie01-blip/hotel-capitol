@@ -996,8 +996,10 @@ export function renderManagerPortal() {
     tabContent = renderAuditLogsTab(state);
   } else if (managerActiveTab === 'rbac-management') {
     tabContent = renderRbacManagementTab(state, currentRole);
-  } else if (managerActiveTab === 'procurement') {
-    tabContent = renderProcurementManagerTab(state, currentRole);
+  } else if (managerActiveTab === 'suppliers-vendors' || managerActiveTab === 'vendors') {
+    tabContent = renderSuppliersAndVendorsTab(state, currentRole);
+  } else if (managerActiveTab === 'procurement-ai-requisitions' || managerActiveTab === 'procurement') {
+    tabContent = renderProcurementAiRequisitionsTab(state, currentRole);
   } else if (managerActiveTab === 'performance-reports') {
     tabContent = renderStaffPerformanceReportsTab(state);
   } else if (managerActiveTab === 'settings') {
@@ -1050,7 +1052,8 @@ export function renderManagerPortal() {
           { id: 'learning', label: '🧠 Tolani Learning' },
           { id: 'staff', label: '👥 Staff Directory' },
           { id: 'rbac-management', label: '🔐 RBAC Governance' },
-          { id: 'procurement', label: '📦 Procurement & Supply' },
+          { id: 'suppliers-vendors', label: '🏢 Suppliers & Vendors' },
+          { id: 'procurement-ai-requisitions', label: '📦 Procurement & AI Requisitions' },
           { id: 'performance-reports', label: '📈 KPI Reports' },
           { id: 'audit', label: '📜 Audit Logs' },
           { id: 'settings', label: '⚙️ Settings' }
@@ -2977,6 +2980,68 @@ function renderProcurementManagerTab(state, currentRole) {
 
     </div>
   `;
+}
+
+// ==========================================
+// 16. SUPPLIERS & VENDORS TAB
+// ==========================================
+function renderSuppliersAndVendorsTab(state, currentRole) {
+  const suppliers = state.suppliers || [];
+
+  return `
+    <div class="flex flex-col gap-6 animate-fade-in max-w-6xl w-full mx-auto px-1 sm:px-2">
+      <!-- HEADER -->
+      <div class="glass-panel p-6 rounded-2xl border-2 border-gold/40 bg-navy-950/90 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">Vendor Management System</span>
+            <span class="badge-gold text-xs font-bold">${suppliers.length} Approved Suppliers</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-serif text-white font-bold">Suppliers & Vendors</h1>
+          <p class="text-xs text-slate-300 mt-1">Centralized supplier network directory, onboarding applications, product categories, and approved contract price lists.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="btn-primary text-xs py-2 px-4 font-bold cursor-pointer" onclick="window.navigatePortal('vendor')">
+            Open Vendor Portal →
+          </button>
+        </div>
+      </div>
+
+      <!-- SUPPLIERS DIRECTORY -->
+      <div class="glass-panel p-6 rounded-2xl border border-white/10">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4 flex-wrap gap-2">
+          <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase">Active Supplier Network & Catalog</h3>
+          <span class="badge-gold text-xs">${suppliers.length} Registered</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          ${suppliers.map(sup => `
+            <div class="p-4 rounded-xl bg-navy-900/90 border border-white/10 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="badge-gold text-[10px] font-mono">${sup.supplierCode}</span>
+                  <span class="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Active
+                  </span>
+                </div>
+                <h4 class="font-serif text-sm font-bold text-white mb-1">${sup.name}</h4>
+                <div class="text-xs text-gold mb-2">${sup.category}</div>
+                <div class="text-[11px] text-slate-300">Contact: ${sup.contactPerson} (${sup.phone})</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">${sup.email}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==========================================
+// 17. PROCUREMENT & AI REQUISITIONS TAB
+// ==========================================
+function renderProcurementAiRequisitionsTab(state, currentRole) {
+  return renderProcurementManagerTab(state, currentRole);
 }
 
 // ==========================================

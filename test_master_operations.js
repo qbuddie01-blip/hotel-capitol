@@ -380,7 +380,8 @@ runTest('Manager Portal renders RBAC Governance and Procurement tabs', () => {
   initManagerPortal();
   const mpHtml = renderManagerPortal();
   assert.ok(mpHtml.includes('RBAC Governance'), 'Contains RBAC Governance');
-  assert.ok(mpHtml.includes('Procurement & Supply'), 'Contains Procurement & Supply');
+  assert.ok(mpHtml.includes('Procurement & AI Requisitions') || mpHtml.includes('Procurement & Supply'), 'Contains Procurement tab');
+  assert.ok(mpHtml.includes('Suppliers & Vendors'), 'Contains Suppliers & Vendors');
   assert.ok(mpHtml.includes('KPI Reports'), 'Contains KPI Reports');
 });
 
