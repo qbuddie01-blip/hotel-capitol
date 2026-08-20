@@ -1037,35 +1037,42 @@ export function renderManagerPortal() {
         </div>
       </div>
 
-      <!-- MAIN NAVIGATION TABS -->
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 scrollbar-thin border-b border-gold/20">
-        ${[
-          { id: 'profile', label: '👤 Admin Profile' },
-          { id: 'overview', label: '📊 Dashboard' },
-          { id: 'content-restaurant', label: '🍽️ Restaurant Menu' },
-          { id: 'content-breakfast', label: '🍳 Breakfast Service' },
-          { id: 'content-amenities', label: '🏊 Amenities' },
-          { id: 'content-services', label: '🛎️ Service Options' },
-          { id: 'content-media', label: '🖼️ Media Library' },
-          { id: 'orders', label: '📦 Orders & Requests' },
-          { id: 'transportation', label: '🚗 VIP Transportation' },
-          { id: 'learning', label: '🧠 Tolani Learning' },
-          { id: 'staff', label: '👥 Staff Directory' },
-          { id: 'rbac-management', label: '🔐 RBAC Governance' },
-          { id: 'suppliers-vendors', label: '🏢 Suppliers & Vendors' },
-          { id: 'procurement-ai-requisitions', label: '📦 Procurement & AI Requisitions' },
-          { id: 'performance-reports', label: '📈 KPI Reports' },
-          { id: 'audit', label: '📜 Audit Logs' },
-          { id: 'settings', label: '⚙️ Settings' }
-        ].map(t => `
-          <button 
-            class="menu-btn-gold ${managerActiveTab === t.id ? 'active' : ''} whitespace-nowrap"
-            style="padding: 7px 14px; font-size: 0.8rem;"
-            onclick="window.navigateManagerTab('${t.id}')"
-          >
-            ${t.label}
-          </button>
-        `).join('')}
+      <!-- MAIN NAVIGATION TABS (2-ROW RESPONSIVE GRID) -->
+      <div class="glass-panel p-3 sm:p-4 rounded-2xl mb-6 border border-gold/30 bg-navy-950/80 w-full max-w-full overflow-hidden shadow-lg">
+        <div class="flex items-center justify-between pb-2 mb-2.5 border-b border-gold/20 px-1">
+          <span class="text-[10px] sm:text-xs font-bold uppercase tracking-luxury text-gold">Console Navigation & Modules</span>
+          <span class="badge-gold text-[10px] font-bold">17 Modules Active</span>
+        </div>
+        <div class="admin-menu-tabs-grid w-full max-w-full">
+          ${[
+            { id: 'profile', label: '👤 Admin Profile' },
+            { id: 'overview', label: '📊 Dashboard' },
+            { id: 'content-restaurant', label: '🍽️ Restaurant Menu' },
+            { id: 'content-breakfast', label: '🍳 Breakfast Service' },
+            { id: 'content-amenities', label: '🏊 Amenities' },
+            { id: 'content-services', label: '🛎️ Service Options' },
+            { id: 'content-media', label: '🖼️ Media Library' },
+            { id: 'orders', label: '📦 Orders & Requests' },
+            { id: 'transportation', label: '🚗 VIP Transportation' },
+            { id: 'learning', label: '🧠 Tolani Learning' },
+            { id: 'staff', label: '👥 Staff Directory' },
+            { id: 'rbac-management', label: '🔐 RBAC Governance' },
+            { id: 'suppliers-vendors', label: '🏢 Suppliers & Vendors' },
+            { id: 'procurement-ai-requisitions', label: '📦 Procurement & AI Requisitions' },
+            { id: 'performance-reports', label: '📈 KPI Reports' },
+            { id: 'audit', label: '📜 Audit Logs' },
+            { id: 'settings', label: '⚙️ Settings' }
+          ].map(t => `
+            <button 
+              class="menu-btn-gold ${managerActiveTab === t.id ? 'active' : ''} text-center justify-center w-full min-w-0"
+              style="padding: 6px 6px; font-size: clamp(0.68rem, 0.75vw, 0.76rem); min-height: 38px; white-space: normal; line-height: 1.2; border-radius: 12px; box-sizing: border-box;"
+              onclick="window.navigateManagerTab('${t.id}')"
+              title="${t.label}"
+            >
+              <span class="truncate block max-w-full text-center">${t.label}</span>
+            </button>
+          `).join('')}
+        </div>
       </div>
 
       <!-- ACTIVE TAB BODY -->
