@@ -1,0 +1,488 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HotelCapitol_Enterprise_Configuration",
+  "description": "Comprehensive schema and state machine definition for Hotel Capitol AI concierge, covering organizational hierarchy, approval matrix, and the end-to-end autonomous procurement workflow.",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "organization_name": { "type": "string", "const": "Hotel Capitol" },
+        "currency": { "type": "string", "const": "NGN" },
+        "schema_version": { "type": "string", "const": "1.0.0" }
+      },
+      "required": ["organization_name", "currency", "schema_version"]
+    },
+    "organizational_hierarchy": {
+      "type": "object",
+      "properties": {
+        "executive_management": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role_id": { "type": "string" },
+              "title": { "type": "string" },
+              "scope_of_work": { "type": "string" },
+              "reports_to": { "type": ["string", "null"] }
+            },
+            "required": ["role_id", "title", "scope_of_work", "reports_to"]
+          }
+        },
+        "departments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "department_id": { "type": "string" },
+              "department_name": { "type": "string" },
+              "executive_supervisor_role_id": { "type": "string" },
+              "direct_supervisor": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "role_id": { "type": "string" }
+                },
+                "required": ["title", "role_id"]
+              },
+              "line_staff_roles": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "core_scope_of_work": { "type": "string" }
+            },
+            "required": [
+              "department_id",
+              "department_name",
+              "executive_supervisor_role_id",
+              "direct_supervisor",
+              "line_staff_roles",
+              "core_scope_of_work"
+            ]
+          }
+        }
+      },
+      "required": ["executive_management", "departments"]
+    },
+    "approval_matrix": {
+      "type": "object",
+      "properties": {
+        "stock_depletion_triggers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "threshold_percentage": { "type": "integer", "enum": [30, 20, 10, 5] },
+              "severity": { "type": "string", "enum": ["WARNING", "LOW", "CRITICAL", "EMERGENCY"] },
+              "target_alert_roles": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["threshold_percentage", "severity", "target_alert_roles"]
+          }
+        },
+        "financial_thresholds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tier_level": { "type": "integer" },
+              "approver_role_id": { "type": "string" },
+              "min_cost_ngn": { "type": "number" },
+              "max_cost_ngn": { "type": ["number", "null"] },
+              "escalation_target_role_id": { "type": ["string", "null"] },
+              "sla_hours": { "type": "integer" }
+            },
+            "required": [
+              "tier_level",
+              "approver_role_id",
+              "min_cost_ngn",
+              "max_cost_ngn",
+              "escalation_target_role_id",
+              "sla_hours"
+            ]
+          }
+        }
+      },
+      "required": ["stock_depletion_triggers", "financial_thresholds"]
+    },
+    "procurement_workflow_engine": {
+      "type": "object",
+      "properties": {
+        "delivery_lifecycle_milestones": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ORDER_CONFIRMED",
+              "PALLETIZED",
+              "DEPOT_DISPATCHED",
+              "IN_TRANSIT",
+              "NEAR_HOTEL",
+              "ARRIVED_AT_GATE",
+              "GOODS_DELIVERED"
+            ]
+          }
+        },
+        "workflow_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step_number": { "type": "integer" },
+              "step_key": { "type": "string" },
+              "actor": { "type": "string" },
+              "action_type": { "type": "string", "enum": ["SYSTEM_AUTOMATION", "HUMAN_APPROVAL", "VENDOR_ACTION", "DUAL_AUTHORIZATION"] },
+              "input_payload": { "type": "array", "items": { "type": "string" } },
+              "output_payload": { "type": "array", "items": { "type": "string" } },
+              "cta_action": { "type": ["string", "null"] },
+              "next_step_success": { "type": ["string", "null"] },
+              "next_step_escalate": { "type": ["string", "null"] }
+            },
+            "required": [
+              "step_number",
+              "step_key",
+              "actor",
+              "action_type",
+              "input_payload",
+              "output_payload",
+              "cta_action",
+              "next_step_success",
+              "next_step_escalate"
+            ]
+          }
+        }
+      },
+      "required": ["delivery_lifecycle_milestones", "workflow_steps"]
+    }
+  },
+  "required": [
+    "metadata",
+    "organizational_hierarchy",
+    "approval_matrix",
+    "procurement_workflow_engine"
+  ],
+  "$defs": {
+    "instance_payload": {
+      "metadata": {
+        "organization_name": "Hotel Capitol",
+        "currency": "NGN",
+        "schema_version": "1.0.0"
+      },
+      "organizational_hierarchy": {
+        "executive_management": [
+          {
+            "role_id": "ROLE_CEO_COO",
+            "title": "Chief Executive Officer / Chief Operating Officer",
+            "scope_of_work": "Overall strategic leadership, financial governance, final executive sign-off for procurements > ₦5,000,000.",
+            "reports_to": null
+          },
+          {
+            "role_id": "ROLE_HM",
+            "title": "Hotel General Manager",
+            "scope_of_work": "Operational leadership, departmental performance, cost controls, approval threshold ₦1,000,001 to ₦5,000,000.",
+            "reports_to": "ROLE_CEO_COO"
+          },
+          {
+            "role_id": "ROLE_AM",
+            "title": "Admin & Operations Manager",
+            "scope_of_work": "Administrative administration, routine supply chain oversight, approval threshold up to ₦1,000,000.",
+            "reports_to": "ROLE_HM"
+          }
+        ],
+        "departments": [
+          {
+            "department_id": "DEP_FRONT_OFFICE",
+            "department_name": "Front Office & Guest Services",
+            "executive_supervisor_role_id": "ROLE_HM",
+            "direct_supervisor": {
+              "title": "Front Desk Supervisor",
+              "role_id": "ROLE_SUP_FRONT_DESK"
+            },
+            "line_staff_roles": ["Front Desk Agents", "Concierge", "Night Auditors", "Porters"],
+            "core_scope_of_work": "Guest registration, concierge services, PMS maintenance, reservation lifecycle, front desk billing."
+          },
+          {
+            "department_id": "DEP_HOUSEKEEPING",
+            "department_name": "Housekeeping & Laundry",
+            "executive_supervisor_role_id": "ROLE_HM",
+            "direct_supervisor": {
+              "title": "Executive Housekeeper",
+              "role_id": "ROLE_SUP_HOUSEKEEPING"
+            },
+            "line_staff_roles": ["Room Attendants", "Public Area Cleaners", "Laundry Staff"],
+            "core_scope_of_work": "Room hygiene, linen turnaround, public sanitation, housekeeping supply logging."
+          },
+          {
+            "department_id": "DEP_FNB",
+            "department_name": "Food & Beverage",
+            "executive_supervisor_role_id": "ROLE_HM",
+            "direct_supervisor": {
+              "title": "F&B Supervisor / Restaurant Manager",
+              "role_id": "ROLE_SUP_FNB"
+            },
+            "line_staff_roles": ["Waitstaff", "Bartenders", "Baristas", "Room Service"],
+            "core_scope_of_work": "Dining room service, beverage dispensing, banquet service, front-of-house consumables restock trigger."
+          },
+          {
+            "department_id": "DEP_KITCHEN",
+            "department_name": "Culinary & Kitchen",
+            "executive_supervisor_role_id": "ROLE_HM",
+            "direct_supervisor": {
+              "title": "Executive Chef / Sous Chef",
+              "role_id": "ROLE_SUP_CHEF"
+            },
+            "line_staff_roles": ["Line Cooks", "Prep Cooks", "Kitchen Stewards"],
+            "core_scope_of_work": "Menu production, food safety regulations, cold/dry storage monitoring, perishable usage logging."
+          },
+          {
+            "department_id": "DEP_PROCUREMENT",
+            "department_name": "Procurement & Stores",
+            "executive_supervisor_role_id": "ROLE_AM",
+            "direct_supervisor": {
+              "title": "Procurement & Inventory Supervisor",
+              "role_id": "ROLE_SUP_PROCUREMENT"
+            },
+            "line_staff_roles": ["Storekeepers", "Receiving Clerks"],
+            "core_scope_of_work": "Stock physical count, receiving verification, invoice and LPO reconciliation, vendor portal coordination."
+          },
+          {
+            "department_id": "DEP_FINANCE",
+            "department_name": "Finance & Accounts",
+            "executive_supervisor_role_id": "ROLE_AM",
+            "direct_supervisor": {
+              "title": "Chief Accountant",
+              "role_id": "ROLE_SUP_ACCOUNTANT"
+            },
+            "line_staff_roles": ["Accounts Payable Officer", "Cashiers"],
+            "core_scope_of_work": "Invoice 3-way match, payment disbursement, tax ledger, physical audit confirmation validation."
+          },
+          {
+            "department_id": "DEP_MAINTENANCE",
+            "department_name": "Maintenance & Engineering",
+            "executive_supervisor_role_id": "ROLE_HM",
+            "direct_supervisor": {
+              "title": "Chief Engineer",
+              "role_id": "ROLE_SUP_ENGINEER"
+            },
+            "line_staff_roles": ["Maintenance Technicians", "Electricians", "Plumbers"],
+            "core_scope_of_work": "Plant operations, HVAC maintenance, plumbing, electrical repairs, spare parts inventory control."
+          },
+          {
+            "department_id": "DEP_SECURITY",
+            "department_name": "Security & Safety",
+            "executive_supervisor_role_id": "ROLE_AM",
+            "direct_supervisor": {
+              "title": "Chief Security Officer",
+              "role_id": "ROLE_SUP_SECURITY"
+            },
+            "line_staff_roles": ["Security Guards", "CCTV Operators"],
+            "core_scope_of_work": "Perimeter security, entry/exit logging, receiving gate passes, asset tracking."
+          }
+        ]
+      },
+      "approval_matrix": {
+        "stock_depletion_triggers": [
+          { "threshold_percentage": 30, "severity": "WARNING", "target_alert_roles": ["ROLE_AM", "ROLE_HM"] },
+          { "threshold_percentage": 20, "severity": "LOW", "target_alert_roles": ["ROLE_AM", "ROLE_HM"] },
+          { "threshold_percentage": 10, "severity": "CRITICAL", "target_alert_roles": ["ROLE_AM", "ROLE_HM"] },
+          { "threshold_percentage": 5, "severity": "EMERGENCY", "target_alert_roles": ["ROLE_AM", "ROLE_HM", "ROLE_CEO_COO"] }
+        ],
+        "financial_thresholds": [
+          {
+            "tier_level": 1,
+            "approver_role_id": "ROLE_AM",
+            "min_cost_ngn": 0,
+            "max_cost_ngn": 1000000,
+            "escalation_target_role_id": "ROLE_HM",
+            "sla_hours": 2
+          },
+          {
+            "tier_level": 2,
+            "approver_role_id": "ROLE_HM",
+            "min_cost_ngn": 1000001,
+            "max_cost_ngn": 5000000,
+            "escalation_target_role_id": "ROLE_CEO_COO",
+            "sla_hours": 4
+          },
+          {
+            "tier_level": 3,
+            "approver_role_id": "ROLE_CEO_COO",
+            "min_cost_ngn": 5000001,
+            "max_cost_ngn": null,
+            "escalation_target_role_id": null,
+            "sla_hours": 12
+          }
+        ]
+      },
+      "procurement_workflow_engine": {
+        "delivery_lifecycle_milestones": [
+          "ORDER_CONFIRMED",
+          "PALLETIZED",
+          "DEPOT_DISPATCHED",
+          "IN_TRANSIT",
+          "NEAR_HOTEL",
+          "ARRIVED_AT_GATE",
+          "GOODS_DELIVERED"
+        ],
+        "workflow_steps": [
+          {
+            "step_number": 1,
+            "step_key": "STOCK_ALERT_TRIGGERED",
+            "actor": "AI_AGENT",
+            "action_type": "SYSTEM_AUTOMATION",
+            "input_payload": ["item_id", "current_stock_level", "depletion_rate"],
+            "output_payload": ["alert_notification_id", "depletion_percentage", "estimated_depletion_time", "suggested_reorder_qty", "preferred_vendor_id"],
+            "cta_action": null,
+            "next_step_success": "APPROVAL_GATEWAY",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 2,
+            "step_key": "APPROVAL_GATEWAY",
+            "actor": "ROLE_AM",
+            "action_type": "HUMAN_APPROVAL",
+            "input_payload": ["alert_notification_id", "estimated_cost_ngn"],
+            "output_payload": ["approval_status", "approver_id", "timestamp"],
+            "cta_action": "APPROVE",
+            "next_step_success": "LPO_GENERATION",
+            "next_step_escalate": "ESCALATION_EVALUATION"
+          },
+          {
+            "step_number": 3,
+            "step_key": "ESCALATION_EVALUATION",
+            "actor": "AI_AGENT",
+            "action_type": "SYSTEM_AUTOMATION",
+            "input_payload": ["estimated_cost_ngn"],
+            "output_payload": ["assigned_escalation_role_id"],
+            "cta_action": null,
+            "next_step_success": "APPROVAL_GATEWAY",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 4,
+            "step_key": "LPO_GENERATION",
+            "actor": "AI_AGENT",
+            "action_type": "SYSTEM_AUTOMATION",
+            "input_payload": ["item_description", "quantity", "estimated_depletion_time", "required_eta", "vendor_contact_details"],
+            "output_payload": ["lpo_document_id", "lpo_pdf_url"],
+            "cta_action": null,
+            "next_step_success": "LPO_REVIEW_AND_DISPATCH",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 5,
+            "step_key": "LPO_REVIEW_AND_DISPATCH",
+            "actor": "ROLE_AM",
+            "action_type": "HUMAN_APPROVAL",
+            "input_payload": ["lpo_document_id"],
+            "output_payload": ["dispatched_order_payload", "dispatch_timestamp"],
+            "cta_action": "REQUEST_ORDER",
+            "next_step_success": "VENDOR_INVOICE_GENERATION",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 6,
+            "step_key": "VENDOR_INVOICE_GENERATION",
+            "actor": "VENDOR_PORTAL_USER",
+            "action_type": "VENDOR_ACTION",
+            "input_payload": ["shared_product_database_pricing", "lpo_document_id"],
+            "output_payload": ["vendor_invoice_id", "invoice_line_items", "total_billed_amount"],
+            "cta_action": "GENERATE_INVOICE",
+            "next_step_success": "VENDOR_ORDER_CONFIRMATION",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 7,
+            "step_key": "VENDOR_ORDER_CONFIRMATION",
+            "actor": "VENDOR_PORTAL_USER",
+            "action_type": "VENDOR_ACTION",
+            "input_payload": ["vendor_invoice_id"],
+            "output_payload": ["active_delivery_lifecycle_status"],
+            "cta_action": "CONFIRM_ORDER",
+            "next_step_success": "DUAL_STREAM_INVOICE_DISPATCH",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 8,
+            "step_key": "DUAL_STREAM_INVOICE_DISPATCH",
+            "actor": "AI_AGENT",
+            "action_type": "SYSTEM_AUTOMATION",
+            "input_payload": ["vendor_invoice_id"],
+            "output_payload": ["management_invoice_stream_id", "procurement_invoice_stream_id"],
+            "cta_action": null,
+            "next_step_success": "PROCUREMENT_AUDIT_REVIEW",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 9,
+            "step_key": "PROCUREMENT_AUDIT_REVIEW",
+            "actor": "ROLE_SUP_PROCUREMENT",
+            "action_type": "HUMAN_APPROVAL",
+            "input_payload": ["inventory_audit_logs", "approval_chain_history", "vendor_invoice_id"],
+            "output_payload": ["procurement_review_status", "ap_queued_timestamp"],
+            "cta_action": "SUBMIT_TO_AP",
+            "next_step_success": "AP_PAYMENT_HOLD",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 10,
+            "step_key": "AP_PAYMENT_HOLD",
+            "actor": "ROLE_SUP_ACCOUNTANT",
+            "action_type": "SYSTEM_AUTOMATION",
+            "input_payload": ["procurement_review_status", "vendor_invoice_id"],
+            "output_payload": ["payment_hold_status"],
+            "cta_action": null,
+            "next_step_success": "DELIVERY_FULFILLMENT",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 11,
+            "step_key": "DELIVERY_FULFILLMENT",
+            "actor": "VENDOR_PORTAL_USER",
+            "action_type": "VENDOR_ACTION",
+            "input_payload": ["active_delivery_lifecycle_status"],
+            "output_payload": ["final_delivery_status"],
+            "cta_action": "SET_GOODS_DELIVERED",
+            "next_step_success": "PHYSICAL_RECEIPT_CONFIRMATION",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 12,
+            "step_key": "PHYSICAL_RECEIPT_CONFIRMATION",
+            "actor": "ROLE_SUP_PROCUREMENT",
+            "action_type": "HUMAN_APPROVAL",
+            "input_payload": ["physical_goods_inspection", "delivery_note_id"],
+            "output_payload": ["receipt_confirmation_token"],
+            "cta_action": "CONFIRM_RECEIPT",
+            "next_step_success": "AP_PAYMENT_RELEASE",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 13,
+            "step_key": "AP_PAYMENT_RELEASE",
+            "actor": "ROLE_SUP_ACCOUNTANT",
+            "action_type": "HUMAN_APPROVAL",
+            "input_payload": ["receipt_confirmation_token", "vendor_invoice_id"],
+            "output_payload": ["disbursement_transaction_id", "settlement_timestamp"],
+            "cta_action": "APPROVE_PAYMENT",
+            "next_step_success": "CLOSEOUT_AUDIT_PDF_GENERATION",
+            "next_step_escalate": null
+          },
+          {
+            "step_number": 14,
+            "step_key": "CLOSEOUT_AUDIT_PDF_GENERATION",
+            "actor": "AI_AGENT",
+            "action_type": "SYSTEM_AUTOMATION",
+            "input_payload": ["disbursement_transaction_id", "lpo_document_id", "vendor_invoice_id", "receipt_confirmation_token"],
+            "output_payload": ["final_audit_pdf_url", "inventory_balance_updated", "workflow_status_closed"],
+            "cta_action": null,
+            "next_step_success": null,
+            "next_step_escalate": null
+          }
+        ]
+      }
+    }
+  }
+}

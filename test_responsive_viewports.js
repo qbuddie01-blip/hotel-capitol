@@ -11,6 +11,8 @@ import { renderGuestPortal, initGuestPortal } from './src/views/guestPortal.js';
 import { renderStaffPortal, initStaffPortal } from './src/views/staffPortal.js';
 import { renderSupervisorPortal, initSupervisorPortal } from './src/views/supervisorPortal.js';
 import { renderManagerPortal, initManagerPortal } from './src/views/managerPortal.js';
+import { renderVendorPortal, initVendorPortal } from './src/views/vendorPortal.js';
+import { renderAccountPortal, initAccountPortal } from './src/views/accountPortal.js';
 import { renderPublicHome } from './src/views/publicHome.js';
 
 // Setup Mock DOM
@@ -49,6 +51,8 @@ initGuestPortal();
 initStaffPortal();
 initSupervisorPortal();
 initManagerPortal();
+initVendorPortal();
+initAccountPortal();
 
 // Clear timer interval to prevent keeping process alive
 if (window.hotelCapitolTimerInterval) {
@@ -161,6 +165,36 @@ for (const vp of REQUIRED_VIEWPORTS) {
   if (!adminTransport.includes('Zonal Pricing') || adminTransport.includes('undefined')) {
     isVpPass = false;
     failureReasons.push('Admin transportation management rendering failed');
+  }
+
+  window.navigateManagerTab('rbac-management');
+  const adminRbac = renderManagerPortal();
+  if (!adminRbac.includes('Hotel Capitol Organizational Structure') || !adminRbac.includes('Executive Management')) {
+    isVpPass = false;
+    failureReasons.push('Admin RBAC management rendering failed');
+  }
+
+  window.navigateManagerTab('procurement');
+  const adminProc = renderManagerPortal();
+  if (!adminProc.includes('AI Stock Monitoring') || !adminProc.includes('Requisition Approval')) {
+    isVpPass = false;
+    failureReasons.push('Admin Procurement rendering failed');
+  }
+
+  // 7. Render and test Vendor Portal
+  window.navigateVendorTab('orders');
+  const vendorOrders = renderVendorPortal();
+  if (!vendorOrders.includes('Purchase Orders') && !vendorOrders.includes('Vendor Portal')) {
+    isVpPass = false;
+    failureReasons.push('Vendor Portal orders pipeline rendering failed');
+  }
+
+  // 8. Render and test Account Portal
+  window.navigateAccountTab('disbursements');
+  const accountDisb = renderAccountPortal();
+  if (!accountDisb.includes('Vendor Payments & Accounts Portal') && !accountDisb.includes('Accounts Payable')) {
+    isVpPass = false;
+    failureReasons.push('Account Portal disbursements rendering failed');
   }
 
   if (isVpPass) {

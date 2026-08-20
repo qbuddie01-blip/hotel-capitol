@@ -47,6 +47,16 @@ export function renderDemoControls() {
           ⚡ Demo Time Machine:
         </span>
 
+        <!-- Watch Walkthrough Video -->
+        <button 
+          class="demo-chip" 
+          style="background: linear-gradient(135deg, rgba(220, 173, 84, 0.3) 0%, rgba(10, 22, 38, 0.95) 100%); border-color: var(--gold-400); color: #fff; font-weight: bold;"
+          onclick="window.toggleVideoWalkthrough(true)"
+          title="Watch Comprehensive SaaS Walkthrough Video"
+        >
+          🎬 Watch Walkthrough Video
+        </button>
+
         <!-- Test AI Voice Concierge Protocol -->
         <button 
           class="demo-chip" 

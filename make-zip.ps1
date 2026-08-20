@@ -49,6 +49,12 @@ Copy-Item (Join-Path $PSScriptRoot "index.html") -Destination $deployFolder
 Copy-Item (Join-Path $PSScriptRoot "hotel-capitol-logo.png") -Destination $deployFolder
 Copy-Item (Join-Path $PSScriptRoot "_redirects") -Destination $deployFolder
 Copy-Item (Join-Path $PSScriptRoot "netlify.toml") -Destination $deployFolder
+if (Test-Path (Join-Path $PSScriptRoot "gemini-code-1787251907996.json")) {
+    Copy-Item (Join-Path $PSScriptRoot "gemini-code-1787251907996.json") -Destination $deployFolder
+}
+if (Test-Path (Join-Path $PSScriptRoot "gemini-code-1787251928685.yaml")) {
+    Copy-Item (Join-Path $PSScriptRoot "gemini-code-1787251928685.yaml") -Destination $deployFolder
+}
 Copy-Item (Join-Path $PSScriptRoot "src") -Destination (Join-Path $deployFolder "src") -Recurse
 
 Write-Host "`nSUCCESS: Created POSIX-compliant hotel-capitol-deploy.zip"

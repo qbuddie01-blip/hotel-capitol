@@ -20,6 +20,7 @@ import { initManagerPortal, renderManagerPortal } from './views/managerPortal.js
 import { initVendorPortal, renderVendorPortal } from './views/vendorPortal.js';
 import { initAccountPortal, renderAccountPortal } from './views/accountPortal.js';
 import { initDeliveryTracker, renderDeliveryTracker } from './components/deliveryTrackerModal.js';
+import { initVideoWalkthroughModal, renderVideoWalkthroughModal } from './components/videoWalkthroughModal.js';
 
 // Global Navigation Router
 window.isGuestDropdownOpen = false;
@@ -147,6 +148,7 @@ function init() {
   try { initAIAssistant(); } catch (e) { console.warn('initAIAssistant error:', e); }
   try { initIntercom(); } catch (e) { console.warn('initIntercom error:', e); }
   try { initDemoControls(); } catch (e) { console.warn('initDemoControls error:', e); }
+  try { initVideoWalkthroughModal(); } catch (e) { console.warn('initVideoWalkthroughModal error:', e); }
 
   // 4. Subscribe to state updates
   try {

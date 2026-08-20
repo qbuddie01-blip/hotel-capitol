@@ -202,10 +202,12 @@ export function renderStaffPortal() {
   }
 
   // Filter Tasks & Requests for active department
-  const myTasks = state.staffTasks.filter(t => t.staffId === staff.id || staff.role.includes('Head') || staff.role.includes('Supervisor') || staff.role.includes('Lead'));
+  const myTasks = (state.staffTasks || []).filter(t => t.staffId === staff.id || staff.role.includes('Head') || staff.role.includes('Supervisor') || staff.role.includes('Lead'));
   const myPendingCount = myTasks.filter(t => t.status !== 'COMPLETED').length;
-  const myRooms = state.rooms.filter(r => r.assignedTo === staff.name || staff.role.includes('Head') || staff.role.includes('Supervisor') || staff.role.includes('Lead'));
+  const myRooms = (state.rooms || []).filter(r => r.assignedTo === staff.name || staff.role.includes('Head') || staff.role.includes('Supervisor') || staff.role.includes('Lead'));
   const activeAlerts = (state.intercomAlerts || []).filter(a => a.status === 'WAITING');
+  const schedule = state.schedule || [];
+  const shiftSwaps = state.shiftSwaps || [];
 
   let tabContent = '';
   if (activeStaffTab === 'profile') {
@@ -217,9 +219,7 @@ export function renderStaffPortal() {
   } else if (activeStaffTab === 'requests') {
     tabContent = renderStaffLiveRequestsTab(state, activeAlerts);
   } else if (activeStaffTab === 'schedule') {
-    tabContent = renderStaffScheduleTab(staff);
-  } else if (activeStaffTab === 'swaps') {
-    tabContent = renderStaffShiftSwapTab(staff);
+    tabContent = renderStaffScheduleTab(schedule, shiftSwaps, staff);
   } else if (activeStaffTab === 'performance') {
     tabContent = renderStaffPerformanceTab(staff);
   }
@@ -281,11 +281,65 @@ export function renderStaffPortal() {
         </div>
       ` : ''}
 
-      <!-- MAIN WORKSPACE GRID: Vertically Stacked Navigation (Left) + Content (Right) -->
+      <!-- NAVIGATION ON MOBILE & TABLET (Horizontal luxury scrolling bar) -->
+      <div class="category-tabs-scroll show-mobile-tablet mb-5">
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'profile' ? 'active' : ''} whitespace-nowrap"
+          onclick="window.navigateStaffTab('profile')"
+        >
+          <span>👤</span> <span>DAILY LOGIN</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'tasks' ? 'active' : ''} whitespace-nowrap"
+          onclick="window.navigateStaffTab('tasks')"
+        >
+          <span>📋</span> <span>MY TASKS</span>
+          ${myPendingCount > 0 ? `<span class="badge-gold text-[10px] ml-1.5">${myPendingCount}</span>` : ''}
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'rooms' ? 'active' : ''} whitespace-nowrap"
+          onclick="window.navigateStaffTab('rooms')"
+        >
+          <span>🛏️</span> <span>MY ROOM TURNOVER</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'requests' ? 'active' : ''} whitespace-nowrap"
+          onclick="window.navigateStaffTab('requests')"
+        >
+          <span>🛎️</span> <span>LIVE SERVICE REQUESTS</span>
+          ${activeAlerts.length > 0 ? `<span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping ml-1"></span>` : ''}
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'schedule' ? 'active' : ''} whitespace-nowrap"
+          onclick="window.navigateStaffTab('schedule')"
+        >
+          <span>📅</span> <span>WORK SCHEDULE</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'swaps' ? 'active' : ''} whitespace-nowrap"
+          onclick="window.navigateStaffTab('swaps')"
+        >
+          <span>🔄</span> <span>SHIFT SWAPS</span>
+        </button>
+
+        <button 
+          class="menu-btn-gold ${activeStaffTab === 'performance' ? 'active' : ''} whitespace-nowrap"
+          onclick="window.navigateStaffTab('performance')"
+        >
+          <span>📊</span> <span>AI PERFORMANCE</span>
+        </button>
+      </div>
+
+      <!-- MAIN WORKSPACE GRID: Vertically Stacked Navigation (Desktop Left) + Content (Right) -->
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        <!-- Left Sidebar: Vertically Stacked 7-Tier Menu (Section 16) -->
-        <div class="lg:col-span-1 flex flex-col gap-2">
+        <!-- Left Sidebar: Vertically Stacked 7-Tier Menu (Desktop Only) -->
+        <div class="lg:col-span-1 hidden lg:flex flex-col gap-2">
           <div class="text-xs font-bold text-slate-400 uppercase tracking-luxury px-3 mb-1">Navigation Menu</div>
           
           <button 
@@ -720,8 +774,9 @@ function renderStaffRequestsTab(requests) {
 }
 
 // 4. ROSTER & SHIFT SWAP (Spec #27 & #28)
-function renderStaffScheduleTab(schedule, shiftSwaps, staff) {
-  const colleagues = store.getState().staffMembers.filter(s => s.id !== staff.id);
+function renderStaffScheduleTab(schedule = [], shiftSwaps = [], staff = {}) {
+  const staffId = staff?.id || 'STAFF-01';
+  const colleagues = (store.getState().staffMembers || []).filter(s => s.id !== staffId);
 
   return `
     <div class="max-w-4xl mx-auto flex flex-col gap-8">
@@ -734,7 +789,7 @@ function renderStaffScheduleTab(schedule, shiftSwaps, staff) {
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          ${schedule.filter(s => s.staffId === staff.id).map(sch => `
+          ${schedule.filter(s => s.staffId === staffId).map(sch => `
             <div class="p-3.5 rounded-xl bg-navy-950 border border-white/10 text-xs">
               <div class="font-serif font-bold text-gold text-sm mb-1">${sch.day}</div>
               <div class="text-white font-semibold mb-1">${sch.shift}</div>
@@ -781,49 +836,229 @@ function renderStaffScheduleTab(schedule, shiftSwaps, staff) {
 
 // 5. AI PERFORMANCE DASHBOARD (Spec #29)
 function renderStaffPerformanceTab(staff) {
+  const state = store.getState();
+  const allStaff = state.staffMembers || [];
+  
+  // Calculate completion percentage and metrics with robust fallbacks
+  const tasksDone = staff.tasksCompleted ?? 42;
+  const tasksTotal = staff.totalTasks ?? (tasksDone > 0 ? tasksDone + 2 : 44);
+  const completionPct = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 100;
+  const score = staff.performanceScore ?? 95;
+  const onTime = staff.onTimeRate || '98%';
+  const feedback = staff.feedback || 'Outstanding';
+  const aiNote = staff.aiNotes || 'Maintains high standard of luxury service, rapid turnaround, and executive guest satisfaction.';
+  
+  // Rating tier badge calculation
+  const ratingTier = score >= 96 ? '🏆 Top 1% Executive Tier' : score >= 93 ? '⭐ Exceptional Performer' : score >= 88 ? '✨ High Standard' : 'Standard Performer';
+  const ratingColor = score >= 93 ? 'text-gold' : 'text-emerald-400';
+
   return `
-    <div class="max-w-3xl mx-auto glass-panel p-6 sm:p-8 rounded-2xl">
-      <div class="flex items-center justify-between pb-4 border-b border-gold/30 mb-6">
-        <div>
-          <span class="text-xs font-bold uppercase tracking-luxury text-gold">AI Operational Appraisal</span>
-          <h2 class="text-2xl font-serif text-white mt-1">Weekly Performance Summary</h2>
-          <div class="text-xs text-slate-300 mt-0.5">Staff Member: <strong class="text-white">${staff.name}</strong> (${staff.role})</div>
-        </div>
-        <div class="text-right">
-          <span class="text-xs text-slate-400">Score</span>
-          <div class="text-3xl font-serif font-bold text-gold">${staff.performanceScore}%</div>
-        </div>
-      </div>
+    <div class="perf-card-container animate-fade-in">
+      <div class="glass-panel p-4 sm:p-7 rounded-2xl border-2 border-gold/35 shadow-2xl bg-navy-900/95" style="background: radial-gradient(circle at 85% 15%, rgba(220, 173, 84, 0.08) 0%, rgba(11, 23, 36, 0.98) 70%);">
+        
+        <!-- TOP APPRAISAL HEADER & PROFILE SELECTOR -->
+        <div class="flex flex-col gap-4 pb-5 border-b border-gold/25 mb-6">
+          
+          <!-- Top Sub-Row: Appraisal Tag + Assessment Period + Inline Staff Switcher -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-luxury text-gold px-2.5 py-1 rounded-full bg-gold/15 border border-gold/30">
+                ✨ AI Operational Appraisal
+              </span>
+              <span class="badge-gold text-[10px] font-bold">Weekly Performance Review</span>
+            </div>
 
-      <!-- KPI Grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
-          <div class="text-xs text-slate-400 mb-1">Tasks Completed</div>
-          <div class="text-xl font-bold text-white">${staff.tasksCompleted} / ${staff.totalTasks}</div>
+            <!-- Fast Staff Profile Review Switcher (Inspect EVERY Profile) -->
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end bg-navy-950/80 px-3 py-1.5 rounded-xl border border-white/10">
+              <span class="text-[11px] text-slate-400 font-semibold whitespace-nowrap">Review Profile:</span>
+              <select 
+                class="input-custom text-xs py-1 px-2.5 bg-navy-900 text-gold border-gold/40 rounded-lg cursor-pointer font-bold focus:outline-none"
+                onchange="store.setActiveStaff(this.value); if(window.renderApp) window.renderApp();"
+                title="Select staff profile to inspect AI performance metrics"
+              >
+                ${allStaff.map(s => `
+                  <option value="${s.id}" ${s.id === staff.id ? 'selected' : ''}>
+                    ${s.name} (${s.role})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- Main Identity Row + Overall Score Card (Guaranteed Zero-Overlap Responsive Layout) -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+            
+            <!-- Left: Staff Avatar, Name, Role & Department Details -->
+            <div class="flex items-center gap-3.5 sm:gap-4">
+              <div class="relative shrink-0">
+                <img 
+                  src="${staff.avatar}" 
+                  alt="${staff.name}" 
+                  class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-gold/60 shadow-xl"
+                  style="box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 15px rgba(220, 173, 84, 0.25);"
+                />
+                <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full ${staff.clockedIn ? 'bg-emerald-500 border-2 border-navy-950' : 'bg-slate-500 border-2 border-navy-950'}" title="${staff.clockedIn ? 'Active On Duty' : 'Off Duty'}"></span>
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Staff Member Appraisal</div>
+                <h2 class="text-xl sm:text-2xl font-serif text-white font-bold tracking-wide truncate" title="${staff.name}">
+                  ${staff.name}
+                </h2>
+                <div class="text-xs font-semibold text-gold mt-0.5 truncate" title="${staff.role}">
+                  ${staff.role} <span class="text-slate-400 font-normal">(${staff.adminRole || 'OPERATIONS'})</span>
+                </div>
+                <div class="text-[11px] text-slate-300 mt-1 flex items-center gap-2 flex-wrap">
+                  <span>Dept: <strong class="text-white capitalize">${staff.department}</strong></span>
+                  <span>•</span>
+                  <span>Shift: <strong class="text-slate-200">${staff.shift || 'Standard Shift'}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Prominent Overall Score Card (Structured & Protected Against Text Overlap) -->
+            <div class="perf-score-widget shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
+              <div class="flex flex-col text-left sm:text-right">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300">Overall Score</span>
+                <span class="text-xs font-bold ${ratingColor}">${ratingTier}</span>
+                <span class="text-[10px] text-emerald-400 font-semibold mt-0.5">Top 5% Property Benchmark</span>
+              </div>
+              <div class="perf-score-circle">
+                <span class="text-xl sm:text-2xl font-serif font-black text-gold leading-none">${score}%</span>
+                <span class="text-[8px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">Score</span>
+              </div>
+            </div>
+
+          </div>
+
         </div>
 
-        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
-          <div class="text-xs text-slate-400 mb-1">On-Time Rate</div>
-          <div class="text-xl font-bold text-emerald-400">${staff.onTimeRate}</div>
+        <!-- 4 CORE KPI METRIC CARDS (Bulletproof 2 cols on mobile, 4 cols on desktop) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          
+          <!-- 1. Tasks Completed -->
+          <div class="perf-kpi-item">
+            <div class="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-400 font-medium mb-2">
+              <span>📋</span>
+              <span class="truncate">Tasks Completed</span>
+            </div>
+            <div class="text-lg sm:text-2xl font-bold font-sans text-white tracking-wide my-1">
+              ${tasksDone} <span class="text-xs sm:text-sm font-normal text-slate-400">/ ${tasksTotal}</span>
+            </div>
+            <div class="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1">
+              <div class="w-full bg-navy-950 rounded-full h-1.5 overflow-hidden border border-white/10">
+                <div class="bg-gradient-to-r from-gold-500 to-gold-400 h-full rounded-full" style="width: ${Math.min(100, completionPct)}%; background: linear-gradient(90deg, #c5a059 0%, #f6edd7 100%);"></div>
+              </div>
+              <span class="text-[10px] text-gold font-semibold">${completionPct}% Completion</span>
+            </div>
+          </div>
+
+          <!-- 2. On-Time Rate -->
+          <div class="perf-kpi-item">
+            <div class="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-400 font-medium mb-2">
+              <span>⏱️</span>
+              <span class="truncate">On-Time Rate</span>
+            </div>
+            <div class="text-lg sm:text-2xl font-bold font-sans text-emerald-400 tracking-wide my-1">
+              ${onTime}
+            </div>
+            <div class="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1">
+              <span class="text-[10px] text-emerald-300 font-semibold flex items-center justify-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Avg Turnaround: 14m
+              </span>
+              <span class="text-[9px] text-slate-400">SLA Target: &lt; 15m</span>
+            </div>
+          </div>
+
+          <!-- 3. Attendance -->
+          <div class="perf-kpi-item">
+            <div class="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-400 font-medium mb-2">
+              <span>📅</span>
+              <span class="truncate">Attendance</span>
+            </div>
+            <div class="text-lg sm:text-2xl font-bold font-sans text-emerald-400 tracking-wide my-1">
+              100%
+            </div>
+            <div class="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1">
+              <span class="text-[10px] ${staff.clockedIn ? 'text-emerald-300' : 'text-slate-300'} font-semibold truncate">
+                ${staff.clockedIn ? `🟢 Clocked In (${staff.clockInTime || 'On Time'})` : '⚪ Scheduled'}
+              </span>
+              <span class="text-[9px] text-slate-400">Punctuality: 100%</span>
+            </div>
+          </div>
+
+          <!-- 4. Guest Feedback -->
+          <div class="perf-kpi-item">
+            <div class="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-400 font-medium mb-2">
+              <span>⭐</span>
+              <span class="truncate">Guest Feedback</span>
+            </div>
+            <div class="text-base sm:text-xl font-bold font-sans text-gold tracking-wide my-1 truncate px-1" title="${feedback}">
+              ${feedback}
+            </div>
+            <div class="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1">
+              <span class="text-[10px] text-gold font-semibold flex items-center justify-center gap-0.5">
+                ★★★★★ <span class="text-[9px] text-slate-300 ml-1">5.0</span>
+              </span>
+              <span class="text-[9px] text-slate-400">Executive Luxury Rating</span>
+            </div>
+          </div>
+
         </div>
 
-        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
-          <div class="text-xs text-slate-400 mb-1">Attendance</div>
-          <div class="text-xl font-bold text-emerald-400">100%</div>
+        <!-- OPERATIONAL QUALITY & SLA COMPLIANCE BENCHMARK ROW -->
+        <div class="p-3.5 sm:p-4 rounded-xl bg-navy-950/80 border border-white/10 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📊</span>
+            <div>
+              <div class="font-bold text-white text-xs">Department Operational Index</div>
+              <div class="text-[11px] text-slate-300">Prompt SLA Compliance: <strong class="text-emerald-400">98.4%</strong> · Quality Rating: <strong class="text-gold">99.1%</strong></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="badge-gold text-[10px] font-bold">Tolani AI Verified</span>
+          </div>
         </div>
 
-        <div class="p-4 rounded-xl bg-navy-950 border border-white/10 text-center">
-          <div class="text-xs text-slate-400 mb-1">Guest Feedback</div>
-          <div class="text-xl font-bold text-gold">${staff.feedback}</div>
-        </div>
-      </div>
+        <!-- AI OPERATIONAL COACHING NOTE (Spec #29) -->
+        <div class="glass-panel-gold p-4 sm:p-6 rounded-2xl border-2 border-gold/40 shadow-xl bg-gradient-to-br from-gold/15 to-navy-950/90">
+          <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-gold/20 flex-wrap">
+            <div class="font-bold text-gold text-xs uppercase tracking-luxury flex items-center gap-2">
+              ${getIcon('sparkles', 16)} <span>AI OPERATIONAL COACHING NOTE:</span>
+            </div>
+            <span class="text-[10px] text-slate-300 italic">Continuous Quality Improvement</span>
+          </div>
+          
+          <div class="relative pl-4 border-l-2 border-gold/60 my-2">
+            <p class="text-xs sm:text-sm text-slate-100 leading-relaxed italic font-sans font-medium">
+              "${aiNote}"
+            </p>
+          </div>
 
-      <!-- AI Recommendation -->
-      <div class="glass-panel-gold p-4 rounded-xl">
-        <div class="font-bold text-gold text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
-          ${getIcon('sparkles', 16)} AI Operational Coaching Note:
+          <div class="mt-4 pt-3 border-t border-gold/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <span class="text-[10px] text-slate-400">
+              Assessed for <strong>${staff.name}</strong> (${staff.role})
+            </span>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button 
+                class="btn-secondary text-[11px] py-1.5 px-3 flex-1 sm:flex-none cursor-pointer"
+                onclick="window.triggerStaffIntercom()"
+                title="Connect with Supervisor or Team via Live Radio"
+              >
+                📻 Call Supervisor Radio
+              </button>
+              <button 
+                class="btn-primary text-[11px] py-1.5 px-3 flex-1 sm:flex-none cursor-pointer"
+                onclick="window.navigateStaffTab('tasks')"
+                title="View active daily tasks"
+              >
+                📋 View Assigned Tasks
+              </button>
+            </div>
+          </div>
         </div>
-        <p class="text-xs text-slate-200 leading-relaxed">${staff.aiNotes}</p>
+
       </div>
     </div>
   `;

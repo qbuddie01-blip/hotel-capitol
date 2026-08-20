@@ -53,45 +53,33 @@ export function initVendorPortal() {
     }
   };
 
-  window.generateInvoiceForOrder = (orderId) => {
+  window.vendorGenerateInvoiceAction = (reqId) => {
     try {
-      const inv = store.generateVendorInvoice(orderId);
+      const updated = store.submitVendorInvoice(reqId);
       automationEngine.playChime('success');
-      alert(`Invoice ${inv.invoiceNumber} generated for PO ${orderId} (₦${inv.totalAmount.toLocaleString()}) and submitted to Procurement for approval.`);
+      automationEngine.showToast('Digital Invoice Generated', `Invoice ${updated.invoice?.invoiceNumber} generated at contracted rate and broadcasted to Hotel Management & Procurement.`, 'success');
       if (window.renderApp) window.renderApp();
     } catch (err) {
       alert(err.message);
     }
   };
 
-  window.generateAndSubmitReceipt = (paymentId) => {
+  window.vendorConfirmOrderAction = (reqId) => {
     try {
-      const rcp = store.generateVendorReceipt(paymentId);
+      const updated = store.confirmVendorOrder(reqId);
       automationEngine.playChime('success');
-      alert(`Official Receipt ${rcp.receiptNumber} generated for Payment ${rcp.paymentRef} (₦${rcp.amount.toLocaleString()}) and submitted to Hotel Capitol Accounts.`);
+      automationEngine.showToast('Order Confirmed', `Order acknowledged! Logistics dispatch pipeline initialized with 7 tracking milestones.`, 'success');
       if (window.renderApp) window.renderApp();
     } catch (err) {
       alert(err.message);
     }
   };
 
-  window.submitPriceUpdateRequestForm = (e) => {
-    e.preventDefault();
+  window.vendorAdvanceMilestoneAction = (reqId, milestone) => {
     try {
-      const supplierCode = document.getElementById('pur-supplier-code').value;
-      const supplierName = document.getElementById('pur-supplier-name').value;
-      const productId = document.getElementById('pur-product-id').value;
-      const productName = document.getElementById('pur-product-name').value;
-      const currentPrice = Number(document.getElementById('pur-curr-price').value);
-      const proposedPrice = Number(document.getElementById('pur-prop-price').value);
-      const reason = document.getElementById('pur-reason').value.trim();
-
-      const req = store.submitPriceUpdateRequest({
-        supplierCode, supplierName, productId, productName, currentPrice, proposedPrice, reason
-      });
-
-      automationEngine.playChime('success');
-      alert(`Proposed price update for ${productName} (₦${proposedPrice.toLocaleString()}) submitted. Status: PENDING PROCUREMENT APPROVAL.`);
+      const updated = store.updateDeliveryMilestone(reqId, milestone);
+      automationEngine.playChime('bell');
+      automationEngine.showToast('Logistics Milestone Updated', `Dispatch advanced to: ${milestone}`, 'info');
       if (window.renderApp) window.renderApp();
     } catch (err) {
       alert(err.message);
@@ -176,51 +164,112 @@ export function renderVendorPortal() {
         </button>
       </div>
 
-      <!-- TAB 1: PURCHASE ORDERS -->
+      <!-- TAB 1: PURCHASE ORDERS & DISPATCH WORKFLOW -->
       ${vendorActiveTab === 'orders' ? `
-        <div class="glass-panel p-6 rounded-2xl border border-white/10 flex flex-col gap-4">
+        <div class="glass-panel p-6 rounded-2xl border border-white/10 flex flex-col gap-6">
           <div class="flex items-center justify-between pb-3 border-b border-white/10">
-            <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase">DOCUMENTED PURCHASE ORDERS (HOTEL CAPITOL)</h3>
-            <span class="badge-gold text-xs">${myOrders.length} Orders</span>
+            <div>
+              <h3 class="font-serif text-sm font-bold text-white tracking-luxury uppercase">LIVE DISPATCH & REQUISITIONS PIPELINE</h3>
+              <p class="text-xs text-slate-400">Manage incoming LPOs, contracted digital invoicing, and live 7-milestone shipment tracking.</p>
+            </div>
+            <span class="badge-gold text-xs">${(state.procurementRequisitions || []).length} Active Pipelines</span>
           </div>
 
-          ${myOrders.length === 0 ? `
-            <div class="p-8 text-center text-xs text-slate-400">No active purchase orders issued.</div>
-          ` : `
-            <div class="flex flex-col gap-3">
-              ${myOrders.map(o => `
-                <div class="p-4 rounded-xl bg-navy-950 border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div>
-                    <div class="flex items-center gap-2 mb-1">
-                      <strong class="text-white text-sm font-mono">${o.id}</strong>
-                      <span class="badge-gold text-xs font-mono">${o.supplierCode}</span>
-                      <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-bold">
-                        ${o.status}
-                      </span>
+          <!-- Section 1: Canonical 14-Stage Procurement Requisitions -->
+          <div class="flex flex-col gap-4">
+            ${(state.procurementRequisitions || []).map(req => {
+              const milestones = ['Order Confirmed', 'Palletized', 'Depot Dispatched', 'In Transit', 'Near Hotel', 'Arrived at Gate', 'Goods Delivered'];
+              const currMilestone = req.delivery?.milestone || 'NOT_STARTED';
+              const currIdx = milestones.indexOf(currMilestone);
+              const nextMilestone = currIdx >= 0 && currIdx < milestones.length - 1 ? milestones[currIdx + 1] : null;
+
+              return `
+                <div class="p-5 rounded-2xl bg-navy-950 border border-gold/30 flex flex-col gap-4 shadow-xl">
+                  <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-white/10">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1 flex-wrap">
+                        <strong class="text-white text-sm font-mono">${req.lpo?.lpoNumber || req.id}</strong>
+                        <span class="badge-gold text-[10px] font-mono">${req.sku}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-bold font-mono">
+                          ${req.status}
+                        </span>
+                      </div>
+                      <div class="font-bold text-white text-base">${req.itemName}</div>
+                      <div class="text-xs text-slate-300 mt-0.5">Quantity: <strong class="text-white">${req.reorderQuantity} units</strong> · Unit Rate: ₦${(req.unitPrice || 0).toLocaleString()} · Required ETA: ${req.requiredEta}</div>
                     </div>
-                    <div class="text-xs text-slate-300">Item: <strong class="text-white">${o.productName}</strong> (${o.quantity} ${o.unit} @ ₦${o.unitPrice.toLocaleString()})</div>
-                    <div class="text-sm font-bold text-gold font-serif mt-1">Total Order Value: ₦${o.totalAmount.toLocaleString()}</div>
-                    <div class="text-[11px] text-slate-400 mt-1">Required Delivery: ${o.requiredDeliveryDate} · Location: ${o.deliveryLocation}</div>
+                    <div class="text-left md:text-right shrink-0">
+                      <div class="text-xs text-slate-400">Total Contract Value:</div>
+                      <div class="text-lg font-serif font-bold text-gold">₦${(req.estimatedCost || 0).toLocaleString()}</div>
+                    </div>
                   </div>
 
+                  <!-- 7 Delivery Milestones Stepper -->
                   <div>
-                    ${!myInvoices.some(i => i.orderId === o.id) ? `
-                      <button 
-                        class="btn-primary text-xs py-2 px-5 font-bold cursor-pointer shadow-md"
-                        onclick="window.generateInvoiceForOrder('${o.id}')"
-                      >
-                        📄 Generate Invoice →
-                      </button>
-                    ` : `
-                      <div class="text-xs text-emerald-400 font-semibold flex items-center gap-1">
-                        <span>✓</span> <span>Invoice Generated</span>
-                      </div>
-                    `}
+                    <div class="text-[10px] font-bold text-gold uppercase tracking-luxury mb-2">7-Stage Logistics Pipeline:</div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 text-center">
+                      ${milestones.map((m, idx) => {
+                        const isDone = currIdx >= idx;
+                        const isCurrent = currMilestone === m;
+                        const col = isCurrent ? 'bg-amber-950/80 border-amber-400 text-amber-300 font-bold' : isDone ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-navy-900/60 border-white/10 text-slate-500';
+                        return `
+                          <div class="p-1.5 rounded-lg border text-[9px] ${col}">
+                            <div>${isDone ? '✓' : '○'} Stage ${idx + 1}</div>
+                            <div class="truncate mt-0.5" title="${m}">${m}</div>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
+                    <div class="text-xs text-slate-400">
+                      Current Milestone: <strong class="text-emerald-400">${currMilestone}</strong>
+                      ${req.receiving ? ` · Stores Waybill: <strong class="text-white">${req.receiving.waybillNumber}</strong>` : ''}
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                      ${req.status === 'LPO_REQUESTED' ? `
+                        <button class="btn-primary text-xs py-1.5 px-4 font-bold cursor-pointer" onclick="window.vendorGenerateInvoiceAction('${req.id}')">
+                          🧾 Generate Contracted Invoice →
+                        </button>
+                      ` : ''}
+
+                      ${req.status === 'VENDOR_INVOICE_GENERATED' ? `
+                        <button class="btn-primary text-xs py-1.5 px-4 font-bold cursor-pointer" onclick="window.vendorConfirmOrderAction('${req.id}')">
+                          📦 Confirm Order & Schedule Dispatch →
+                        </button>
+                      ` : ''}
+
+                      ${(req.status === 'ORDER_CONFIRMED' || req.status === 'IN_TRANSIT') && nextMilestone ? `
+                        <button class="btn-primary text-xs py-1.5 px-4 font-bold cursor-pointer shadow-md" onclick="window.vendorAdvanceMilestoneAction('${req.id}', '${nextMilestone}')">
+                          🚚 Advance to: ${nextMilestone} ➔
+                        </button>
+                      ` : ''}
+
+                      ${req.status === 'GOODS_DELIVERED' && !req.receiving ? `
+                        <span class="text-xs text-amber-400 font-semibold">
+                          ⏳ Delivered at Gate — Awaiting Hotel Stores Dock Inspection & Receipt Sign-Off
+                        </span>
+                      ` : ''}
+
+                      ${req.status === 'RECEIPT_CONFIRMED' ? `
+                        <span class="text-xs text-emerald-400 font-semibold">
+                          ✓ Physical Receiving Verified by Stores — Payment Hold Released!
+                        </span>
+                      ` : ''}
+
+                      ${req.status === 'AUDIT_CLOSED' ? `
+                        <span class="text-xs text-emerald-400 font-semibold font-mono">
+                          ✓ Settled & Closed (Ref: ${req.payment?.paymentRef || 'PAID'})
+                        </span>
+                      ` : ''}
+                    </div>
                   </div>
                 </div>
-              `).join('')}
-            </div>
-          `}
+              `;
+            }).join('')}
+          </div>
         </div>
       ` : ''}
 

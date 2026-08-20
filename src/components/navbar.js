@@ -69,7 +69,7 @@ export function renderNavbar() {
                 onclick="window.toggleGuestDropdown(event)"
                 title="Click to switch resident suite"
               >
-                <span>${guest.roomNumber}- ${guest.name.split(' ')[0]}- ⭐ -VIP</span>
+                <span class="truncate max-w-[120px] sm:max-w-none">${guest.roomNumber}- ${guest.name.split(' ')[0]}- ⭐ -VIP</span>
                 <svg 
                   width="11" 
                   height="7" 
@@ -136,6 +136,15 @@ export function renderNavbar() {
               <span>←</span> <span>Back</span>
             </button>
           ` : ''}
+
+          <!-- Watch Product Walkthrough Video Modal Trigger -->
+          <button 
+            class="glass-panel text-xs py-1.5 px-3 flex items-center gap-1.5 border border-gold/40 hover:border-gold cursor-pointer transition-all text-gold hover:text-white rounded-xl hide-mobile"
+            onclick="window.toggleVideoWalkthrough(true)"
+            title="Watch Hotel Capitol Product Walkthrough Video"
+          >
+            <span>🎬</span> <span>Video Tour</span>
+          </button>
 
           <!-- Floating Staff Intercom Trigger (Visible in Staff / Supervisor / Manager / Vendor / Public Modes, Hidden in Guest Mode) -->
           ${state.activeRole !== 'guest' ? `

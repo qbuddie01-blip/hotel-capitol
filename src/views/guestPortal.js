@@ -904,8 +904,8 @@ function renderGuestHomeCards(guest, activeOrders) {
   ];
 
   return `
-    <!-- SUITE DIRECT INTERCOM CARD (3 Dedicated Service Entry Points) -->
-    <div class="intercom-banner-gold p-6 sm:p-8 rounded-2xl mb-8 flex flex-col items-start justify-between min-h-[260px] gap-6">
+    <!-- SUITE DIRECT INTERCOM CARD (Vertically Stretched, Glowy Gold Background, Black Contents, Vertically Stacked Tabs to the Left) -->
+    <div class="intercom-banner-gold p-6 sm:p-8 rounded-2xl mb-8 flex flex-col items-start justify-between min-h-[300px] gap-6">
       
       <!-- Top Row: Icon + Title + Line Live Label -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full border-b border-black/20 pb-5">
@@ -923,35 +923,35 @@ function renderGuestHomeCards(guest, activeOrders) {
           </div>
         </div>
 
-        <!-- Line Live Label -->
+        <!-- Line Live Label (Bold Black Font, Chocolate Brown Rounded Borders) -->
         <div class="line-live-badge self-start sm:self-auto">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-700 animate-pulse"></span>
           <span>Line Live</span>
         </div>
       </div>
 
-      <!-- Exactly Three Service Intercom CTAs (Touch friendly, >=44px, wrap naturally) -->
-      <div class="flex flex-col sm:flex-row items-stretch gap-3.5 w-full pt-2 pb-1 flex-wrap">
+      <!-- Vertically Stacked Tabs to the Left Side of Card: Intercom Front Desk, Intercom Kitchen, Intercom Housekeeping -->
+      <div class="flex flex-col items-start gap-3 w-full sm:w-auto pt-2 pb-1">
         <button 
-          class="intercom-gold-tab-btn flex-1 min-h-[44px] justify-center sm:justify-start" 
-          onclick="window.activateGuestServiceIntercom('BREAKFAST');" 
-          title="Intercom Breakfast Service"
+          class="intercom-gold-tab-btn min-h-[44px] justify-start" 
+          onclick="window.openDirectIntercomCall('concierge-frontdesk', 'Front Desk', 'Supervisor Tariq');" 
+          title="Direct 2-way voice to Front Desk"
         >
-          ${renderIntercomBlackBadge(20)} <span>INTERCOM BREAKFAST SERVICE</span>
+          ${renderIntercomBlackBadge(20)} <span>INTERCOM FRONT DESK</span>
         </button>
         <button 
-          class="intercom-gold-tab-btn flex-1 min-h-[44px] justify-center sm:justify-start" 
-          onclick="window.activateGuestServiceIntercom('TRANSPORT');" 
-          title="Intercom VIP Transportation"
+          class="intercom-gold-tab-btn min-h-[44px] justify-start" 
+          onclick="window.openDirectIntercomCall('kitchen-fb', 'Kitchen', 'Chef Babatunde');" 
+          title="Direct 2-way voice to Kitchen"
         >
-          ${renderIntercomBlackBadge(20)} <span>INTERCOM VIP TRANSPORTATION</span>
+          ${renderIntercomBlackBadge(20)} <span>INTERCOM KITCHEN</span>
         </button>
         <button 
-          class="intercom-gold-tab-btn flex-1 min-h-[44px] justify-center sm:justify-start" 
-          onclick="window.activateGuestServiceIntercom('CONCIERGE');" 
-          title="Intercom Mary Concierge"
+          class="intercom-gold-tab-btn min-h-[44px] justify-start" 
+          onclick="window.openDirectIntercomCall('housekeeping', 'Housekeeping', 'Amara Nwosu');" 
+          title="Direct 2-way voice to Housekeeping"
         >
-          ${renderIntercomBlackBadge(20)} <span>INTERCOM CONCIERGE</span>
+          ${renderIntercomBlackBadge(20)} <span>INTERCOM HOUSEKEEPING</span>
         </button>
       </div>
 

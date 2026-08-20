@@ -46,6 +46,9 @@ export function renderPublicHome() {
             <button class="btn-secondary py-3.5 px-7 text-base font-semibold" onclick="window.navigatePortal('guest')">
               Explore Hotel Services & Guest Portal →
             </button>
+            <button class="glass-panel py-3.5 px-6 text-base font-bold text-gold hover:text-white border-2 border-gold/60 hover:border-gold shadow-lg cursor-pointer flex items-center gap-2 rounded-xl" onclick="window.toggleVideoWalkthrough(true)">
+              <span>🎬</span> Watch Product Walkthrough
+            </button>
           </div>
 
           <!-- Live Check-in Demo Link Generator (From Spec #7) -->

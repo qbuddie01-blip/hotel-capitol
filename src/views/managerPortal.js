@@ -8,13 +8,13 @@
  */
 
 import { getIcon, renderIntercomRoundBadge } from '../assets/icons.js';
-import { store, ADMIN_ROLES, ROLE_PERMISSIONS } from '../store/state.js';
+import { store, ADMIN_ROLES, ROLE_PERMISSIONS, ORGANIZATIONAL_HIERARCHY, APPROVAL_MATRIX_CONFIG } from '../store/state.js';
 import { aiEngine } from '../services/aiEngine.js';
 import { automationEngine } from '../services/automationRules.js';
 import { learningEngine } from '../services/learningEngine.js';
 
 let managerActiveTab = 'profile'; 
-// 'profile' | 'overview' | 'content-restaurant' | 'content-breakfast' | 'content-amenities' | 'content-services' | 'content-media' | 'orders' | 'transportation' | 'learning' | 'staff' | 'audit' | 'settings'
+// 'profile' | 'overview' | 'content-restaurant' | 'content-breakfast' | 'content-amenities' | 'content-services' | 'content-media' | 'orders' | 'transportation' | 'learning' | 'staff' | 'rbac-management' | 'procurement' | 'performance-reports' | 'audit' | 'settings'
 let adminIntercomState = 'ready'; // 'ready' | 'active' | 'delivered'
 
 // Modal UI States
@@ -24,6 +24,8 @@ let activeEditStaffId = null;
 let activeVersionModal = null; // { entityType: 'MENU_ITEM', entityId: 'M-01', title: '...' }
 let activeEvidenceModal = null; // sugId
 let activeMediaUploadModal = false;
+let activeDockReceivingReqId = null;
+let activeAuditPdfReqId = null;
 
 // Filter States
 let logSearchFilter = '';
@@ -33,6 +35,7 @@ let logOutcomeFilter = 'ALL';
 let menuCategoryFilter = 'ALL';
 let auditSearchFilter = '';
 let auditModuleFilter = 'ALL';
+let procurementReqFilter = 'ALL';
 
 export function initManagerPortal() {
   window.navigateManagerTab = (tab) => {
@@ -65,6 +68,141 @@ export function initManagerPortal() {
     store.setActiveStaffId(staffId);
     const staff = store.getActiveStaff();
     automationEngine.showToast('Administrator Switched', `Active user: ${staff.name} (${staff.adminRole || staff.role})`, 'info');
+    if (window.renderApp) window.renderApp();
+  };
+
+  // --- AUTONOMOUS PROCUREMENT WORKFLOW ACTIONS ---
+  window.triggerStockDepletionEvaluation = () => {
+    try {
+      const res = store.evaluateAIStockDepletion();
+      automationEngine.playChime('success');
+      automationEngine.showToast('AI Stock Scan Complete', `Evaluated all items against depletion matrix (30%, 20%, 10%, 5%). ${res.alertsTriggered} new requisitions generated.`, 'success');
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.setProcurementFilter = (filter) => {
+    procurementReqFilter = filter;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.approveRequisitionAction = (reqId) => {
+    try {
+      const staff = store.getActiveStaff();
+      const role = staff.adminRole || 'ROLE_AM';
+      const updated = store.processRequisitionApproval(reqId, 'APPROVE', role, staff.name);
+      automationEngine.playChime('success');
+      if (updated.status === 'APPROVED') {
+        automationEngine.showToast('Requisition Approved', `Approved! LPO ${updated.lpo?.lpoNumber} generated autonomously. Ready for order dispatch.`, 'success');
+      } else {
+        automationEngine.showToast('Requisition Escalated', `Procurement value exceeds approval authority. Automatically escalated to ${updated.assignedApproverTitle}.`, 'warning');
+      }
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.escalateRequisitionAction = (reqId) => {
+    try {
+      const staff = store.getActiveStaff();
+      const role = staff.adminRole || 'ROLE_AM';
+      const updated = store.processRequisitionApproval(reqId, 'ESCALATE', role, staff.name, 'Manually escalated for executive budget review');
+      automationEngine.playChime('bell');
+      automationEngine.showToast('Requisition Escalated', `Requisition escalated to ${updated.assignedApproverTitle}.`, 'info');
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.rejectRequisitionAction = (reqId) => {
+    try {
+      const reason = prompt('Reason for declining this procurement requisition:', 'Budget constraint / non-essential period');
+      if (!reason) return;
+      const staff = store.getActiveStaff();
+      const role = staff.adminRole || 'ROLE_AM';
+      store.processRequisitionApproval(reqId, 'REJECT', role, staff.name, reason);
+      automationEngine.playChime('bell');
+      automationEngine.showToast('Requisition Declined', `Requisition ${reqId} marked as REJECTED.`, 'info');
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.dispatchLPOAction = (reqId) => {
+    try {
+      const staff = store.getActiveStaff();
+      const updated = store.dispatchLPOToVendor(reqId, staff.name);
+      automationEngine.playChime('success');
+      automationEngine.showToast('LPO Dispatched', `LPO ${updated.lpo?.lpoNumber} transmitted to official Vendor Portal (${updated.preferredVendorName}).`, 'success');
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.verifyInvoiceAction = (reqId) => {
+    try {
+      const staff = store.getActiveStaff();
+      const updated = store.verifyProcurementInvoice(reqId, staff.name + ' (Procurement Supervisor)');
+      automationEngine.playChime('success');
+      automationEngine.showToast('Invoice Verified', `Invoice verified against LPO and queued to AP with mandatory receiving hold.`, 'success');
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.openDockReceivingModal = (reqId) => {
+    activeDockReceivingReqId = reqId;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.closeDockReceivingModal = () => {
+    activeDockReceivingReqId = null;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.submitDockReceivingForm = (e) => {
+    if (e) e.preventDefault();
+    try {
+      const reqId = activeDockReceivingReqId;
+      if (!reqId) return;
+      const waybillNumber = document.getElementById('dock-waybill')?.value?.trim();
+      const itemsAcceptedQuantity = parseInt(document.getElementById('dock-qty')?.value, 10);
+      const conditionStatus = document.getElementById('dock-condition')?.value;
+      const dockNotes = document.getElementById('dock-notes')?.value?.trim();
+      const staff = store.getActiveStaff();
+
+      const updated = store.confirmPhysicalStoreReceipt(reqId, {
+        inspectorName: staff.name,
+        inspectorRole: staff.adminRole || 'ROLE_SUP_PROCUREMENT',
+        waybillNumber,
+        itemsAcceptedQuantity,
+        conditionStatus,
+        dockNotes
+      });
+
+      automationEngine.playChime('success');
+      automationEngine.showToast('Dock Receiving Confirmed', `Physical inspection PASSED! Accounts Payable payment release unlocked.`, 'success');
+      activeDockReceivingReqId = null;
+      if (window.renderApp) window.renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  window.viewAuditPDFModal = (reqId) => {
+    activeAuditPdfReqId = reqId;
+    if (window.renderApp) window.renderApp();
+  };
+
+  window.closeAuditPDFModal = () => {
+    activeAuditPdfReqId = null;
     if (window.renderApp) window.renderApp();
   };
 
@@ -931,7 +1069,7 @@ export function renderManagerPortal() {
       ${tabContent}
 
       <!-- MODALS -->
-      ${renderModals(state, activeEditMenuItemId, activeEditAmenityId, activeEditStaffId, activeVersionModal, activeEvidenceModal, activeMediaUploadModal)}
+      ${renderModals(state, activeEditMenuItemId, activeEditAmenityId, activeEditStaffId, activeVersionModal, activeEvidenceModal, activeMediaUploadModal, activeDockReceivingReqId, activeAuditPdfReqId)}
 
     </div>
   `;
@@ -2254,9 +2392,597 @@ function renderSystemSettingsTab(state, currentRole) {
 }
 
 // ==========================================
+// 13. STAFF AI PERFORMANCE & KPI REPORTS TAB
+// ==========================================
+function renderStaffPerformanceReportsTab(state) {
+  const staffList = state.staffMembers || [];
+  
+  // Calculate aggregate hotel staff averages
+  const avgScore = staffList.length > 0 ? Math.round(staffList.reduce((acc, s) => acc + (s.performanceScore || 90), 0) / staffList.length) : 95;
+  const totalCompleted = staffList.reduce((acc, s) => acc + (s.tasksCompleted || 0), 0);
+  const totalTasks = staffList.reduce((acc, s) => acc + (s.totalTasks || 0), 0);
+  const aggregateRate = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 97;
+
+  return `
+    <div class="flex flex-col gap-6 animate-fade-in max-w-6xl mx-auto">
+      
+      <!-- TOP EXECUTIVE KPI PERFORMANCE BANNER -->
+      <div class="glass-panel p-5 sm:p-6 rounded-2xl border-2 border-gold/30 bg-navy-900/90 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-[11px] font-bold uppercase tracking-luxury text-gold">Executive Intelligence</span>
+            <span class="badge-gold text-[10px] font-bold">Week 34 Assessment</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-serif text-white font-bold">Staff Performance & AI Appraisal Matrix</h2>
+          <p class="text-xs text-slate-300 mt-0.5">Centralized operational appraisal, SLA execution rates, guest feedback, and AI operational coaching across all 6 departments.</p>
+        </div>
+
+        <div class="flex items-center gap-4 bg-navy-950/80 p-3 rounded-xl border border-gold/30 shrink-0">
+          <div class="text-center px-2">
+            <div class="text-xs text-slate-400 font-semibold uppercase">Hotel Average</div>
+            <div class="text-2xl font-serif font-black text-gold">${avgScore}%</div>
+          </div>
+          <div class="h-8 w-px bg-white/15"></div>
+          <div class="text-center px-2">
+            <div class="text-xs text-slate-400 font-semibold uppercase">SLA Execution</div>
+            <div class="text-2xl font-serif font-black text-emerald-400">${aggregateRate}%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALL STAFF PERFORMANCE CARDS GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        ${staffList.map(s => {
+          const score = s.performanceScore || 95;
+          const tasksDone = s.tasksCompleted ?? 42;
+          const tasksTot = s.totalTasks ?? 44;
+          const pct = tasksTot > 0 ? Math.round((tasksDone / tasksTot) * 100) : 100;
+          const tier = score >= 96 ? '🏆 Top Tier' : score >= 93 ? '⭐ Exceptional' : '✨ High Standard';
+
+          return `
+            <div class="glass-panel p-5 rounded-2xl border border-white/10 hover:border-gold/50 transition-all flex flex-col justify-between shadow-xl bg-navy-950/90">
+              <div>
+                
+                <!-- Staff Profile Header -->
+                <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3 gap-2">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <img src="${s.avatar}" alt="${s.name}" class="w-12 h-12 rounded-xl object-cover border border-gold/40 shrink-0" />
+                    <div class="min-w-0">
+                      <div class="font-serif font-bold text-white text-base truncate" title="${s.name}">${s.name}</div>
+                      <div class="text-gold text-xs font-semibold truncate" title="${s.role}">${s.role}</div>
+                      <div class="text-[10px] text-slate-400 capitalize">${s.department} · ${s.shift || 'Shift Duty'}</div>
+                    </div>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <div class="text-lg font-serif font-black text-gold">${score}%</div>
+                    <span class="text-[9px] font-bold text-emerald-400">${tier}</span>
+                  </div>
+                </div>
+
+                <!-- 4 KPI Metrics Row -->
+                <div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-navy-900/90 border border-white/5 text-xs mb-3">
+                  <div class="p-1.5 rounded-lg bg-navy-950/60 flex flex-col">
+                    <span class="text-[10px] text-slate-400">Tasks Completed:</span>
+                    <strong class="text-white text-xs mt-0.5">${tasksDone} / ${tasksTot} (${pct}%)</strong>
+                  </div>
+                  <div class="p-1.5 rounded-lg bg-navy-950/60 flex flex-col">
+                    <span class="text-[10px] text-slate-400">On-Time SLA:</span>
+                    <strong class="text-emerald-400 text-xs mt-0.5">${s.onTimeRate || '98%'}</strong>
+                  </div>
+                  <div class="p-1.5 rounded-lg bg-navy-950/60 flex flex-col">
+                    <span class="text-[10px] text-slate-400">Attendance:</span>
+                    <strong class="${s.clockedIn ? 'text-emerald-400' : 'text-slate-300'} text-xs mt-0.5">
+                      ${s.clockedIn ? '🟢 Active' : '⚪ Scheduled'}
+                    </strong>
+                  </div>
+                  <div class="p-1.5 rounded-lg bg-navy-950/60 flex flex-col">
+                    <span class="text-[10px] text-slate-400">Guest Feedback:</span>
+                    <strong class="text-gold text-xs mt-0.5 truncate" title="${s.feedback || 'Outstanding'}">${s.feedback || 'Outstanding'}</strong>
+                  </div>
+                </div>
+
+                <!-- AI Operational Coaching Note -->
+                <div class="p-3 rounded-xl bg-gold/10 border border-gold/25 text-xs mb-3">
+                  <div class="text-[10px] text-gold font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <span>✨</span> <span>AI Coaching Insight:</span>
+                  </div>
+                  <p class="text-slate-200 text-[11px] italic leading-relaxed">"${s.aiNotes || 'Maintains high standard of service and operational efficiency.'}"</p>
+                </div>
+
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                <button 
+                  class="btn-secondary text-[11px] py-1 px-3 flex-1"
+                  onclick="store.setActiveStaff('${s.id}'); window.navigateStaffTab && window.navigateStaffTab('performance');"
+                >
+                  📊 Inspect Profile
+                </button>
+                <button 
+                  class="btn-secondary text-[11px] py-1 px-3 flex-1"
+                  onclick="window.openEditStaffModal('${s.id}')"
+                >
+                  ✏️ Edit Record
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+    </div>
+  `;
+}
+
+// ==========================================
+// 14. RBAC GOVERNANCE & ORGANIZATIONAL HIERARCHY TAB
+// ==========================================
+function renderRbacManagementTab(state, currentRole) {
+  const staffList = state.staffMembers || [];
+  const execs = ORGANIZATIONAL_HIERARCHY.executive_management || [];
+  const depts = ORGANIZATIONAL_HIERARCHY.departments || [];
+
+  // Canonical Executive Portraits
+  const execAvatars = {
+    'ROLE_CEO_COO': './src/assets/wga.jpg',
+    'ROLE_HM': './src/assets/general-manager-seyi.jpg',
+    'ROLE_AM': './src/assets/supervisor-tariq.jpg'
+  };
+
+  // Canonical Department Supervisor Portraits
+  const deptSupervisorAvatars = {
+    'DEP_FRONT_OFFICE': './src/assets/transport-manager-bello.jpg',
+    'DEP_HOUSEKEEPING': './src/assets/housekeeping-amara.jpg',
+    'DEP_FNB': './src/assets/content-manager-chidinma.jpg',
+    'DEP_KITCHEN': './src/assets/executive-chef-babatunde.jpg',
+    'DEP_PROCUREMENT': './src/assets/supervisor-tariq.jpg',
+    'DEP_FINANCE': './src/assets/BBB.jpg',
+    'DEP_MAINTENANCE': './src/assets/wga.jpg',
+    'DEP_SECURITY': './src/assets/supervisor-tariq.jpg'
+  };
+
+  return `
+    <div class="flex flex-col gap-6 sm:gap-8 animate-fade-in max-w-6xl w-full mx-auto px-1 sm:px-2 overflow-hidden">
+      
+      <!-- TOP EXECUTIVE HEADER -->
+      <div class="glass-panel p-4 sm:p-6 rounded-2xl border-2 border-gold/40 bg-navy-950/90 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full max-w-full overflow-hidden">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">Institutional Governance</span>
+            <span class="badge-gold text-xs font-bold">8 Departments · 3 Executive Tiers</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-serif text-white font-bold leading-tight">Hotel Capitol Organizational Structure & RBAC</h1>
+          <p class="text-xs text-slate-300 mt-1 leading-relaxed">Authoritative organizational hierarchy, reporting chains, supervisory oversight, and financial approval limits.</p>
+        </div>
+
+        <div class="flex items-center gap-2.5 sm:gap-3 flex-wrap shrink-0">
+          <button class="glass-panel text-xs py-2 px-3.5 border border-gold/40 hover:border-gold text-gold hover:text-white rounded-xl cursor-pointer flex items-center gap-1.5 transition-all" onclick="window.toggleVideoWalkthrough(true)">
+            <span>🎬</span> <span>Watch Video Tour</span>
+          </button>
+          <button class="btn-secondary text-xs py-2 px-4 cursor-pointer" onclick="window.navigateManagerTab('procurement')">
+            📦 View Approval Matrix →
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 1: EXECUTIVE MANAGEMENT HIERARCHY (3 TIERS) -->
+      <div class="w-full max-w-full overflow-hidden">
+        <div class="flex items-center justify-between mb-3.5 sm:mb-4 flex-wrap gap-2">
+          <div>
+            <h3 class="font-serif text-base sm:text-lg font-bold text-white tracking-wide uppercase">1. Executive Management & Financial Governance</h3>
+            <p class="text-xs text-slate-400">Authoritative sign-off authorities according to total procurement valuation.</p>
+          </div>
+          <span class="badge-gold text-xs">Approval Thresholds</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 w-full max-w-full">
+          ${execs.map((exec, idx) => {
+            const isHigh = exec.role_id === 'ROLE_CEO_COO';
+            const isMed = exec.role_id === 'ROLE_HM';
+            const isLow = exec.role_id === 'ROLE_AM';
+            const borderCol = isHigh ? 'border-gold shadow-lg shadow-gold/10' : isMed ? 'border-blue-400/50' : 'border-emerald-400/50';
+            const badgeCol = isHigh ? 'bg-gold/20 text-gold border-gold/40' : isMed ? 'bg-blue-900/40 text-blue-300 border-blue-400/40' : 'bg-emerald-900/40 text-emerald-300 border-emerald-400/40';
+            const limitText = isHigh ? '₦5,000,001 and above (Terminal Authority)' : isMed ? '₦1,000,001 – ₦5,000,000' : 'Up to ₦1,000,000 (Routine Governance)';
+            const photoUrl = execAvatars[exec.role_id] || './src/assets/general-manager-seyi.jpg';
+
+            return `
+              <div class="glass-panel p-4 sm:p-5 rounded-2xl border-2 ${borderCol} flex flex-col justify-between bg-navy-900/90 w-full max-w-full overflow-hidden">
+                <div>
+                  
+                  <!-- Executive Profile Card Header with Portrait -->
+                  <div class="flex items-center gap-3 pb-3 border-b border-white/10 mb-3 min-w-0">
+                    <img 
+                      src="${photoUrl}" 
+                      alt="${exec.title}" 
+                      class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover shrink-0 border-2 border-gold/50 shadow-md"
+                      style="width: 52px; height: 52px; min-width: 52px; max-width: 52px; min-height: 52px; max-height: 52px; object-fit: cover; border-radius: 14px; flex-shrink: 0;" 
+                    />
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center justify-between gap-1 mb-0.5">
+                        <span class="text-[9px] sm:text-[10px] font-bold font-mono px-2 py-0.5 rounded border ${badgeCol}">TIER ${idx + 1}</span>
+                        <span class="text-[10px] text-slate-400 truncate">${exec.reports_to ? 'Reports: ' + exec.reports_to.replace('ROLE_', '') : 'Top Tier'}</span>
+                      </div>
+                      <h4 class="font-serif text-sm sm:text-base font-bold text-white leading-tight truncate" title="${exec.title}">${exec.title}</h4>
+                      <div class="text-[10px] text-gold-light font-mono truncate">${exec.role_id}</div>
+                    </div>
+                  </div>
+
+                  <div class="p-2.5 rounded-xl bg-navy-950/80 border border-white/5 mb-3">
+                    <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Financial Sign-off Authority</div>
+                    <div class="text-xs font-mono font-bold text-gold mt-0.5 break-words">${limitText}</div>
+                  </div>
+
+                  <p class="text-xs text-slate-300 leading-relaxed break-words">${exec.scope_of_work}</p>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-white/10 text-[11px] text-slate-400 flex items-center justify-between gap-2 flex-wrap">
+                  <span>Role ID: <strong class="text-white font-mono text-[10px]">${exec.role_id}</strong></span>
+                  <span class="text-emerald-400 font-semibold text-[10px] flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Active Executive
+                  </span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- SECTION 2: 8 CANONICAL OPERATIONAL DEPARTMENTS -->
+      <div class="w-full max-w-full overflow-hidden" style="max-width: 100%; box-sizing: border-box;">
+        <div class="flex items-center justify-between mb-3.5 sm:mb-4 flex-wrap gap-2">
+          <div>
+            <h3 class="font-serif text-base sm:text-lg font-bold text-white tracking-wide uppercase">2. Departmental Hierarchy & Supervisory Chains</h3>
+            <p class="text-xs text-slate-400">Supervisory relationships, line-staff allocations, and departmental scopes of work.</p>
+          </div>
+          <span class="badge-gold text-xs">8 Core Departments</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 w-full max-w-full overflow-hidden" style="width: 100%; max-width: 100%; box-sizing: border-box;">
+          ${depts.map(dept => {
+            const supervisorPhoto = deptSupervisorAvatars[dept.department_id] || './src/assets/supervisor-tariq.jpg';
+
+            return `
+              <div class="glass-panel p-4 rounded-2xl border border-white/10 hover:border-gold/40 transition-all flex flex-col justify-between bg-navy-950/90 w-full max-w-full overflow-hidden" style="min-width: 0; max-width: 100%; box-sizing: border-box;">
+                <div class="w-full max-w-full overflow-hidden">
+                  <div class="flex items-center justify-between pb-2 border-b border-white/10 mb-2.5 min-w-0">
+                    <span class="font-mono text-[10px] text-gold font-bold">${dept.department_id}</span>
+                    <span class="text-[10px] text-slate-400 truncate">Exec: <strong class="text-white">${dept.executive_supervisor_role_id.replace('ROLE_', '')}</strong></span>
+                  </div>
+
+                  <h4 class="font-serif text-sm font-bold text-white mb-2.5 leading-snug break-words">${dept.department_name}</h4>
+                  
+                  <!-- Direct Supervisor with Profile Avatar -->
+                  <div class="p-2 sm:p-2.5 rounded-xl bg-navy-900/90 border border-white/5 flex items-center gap-2.5 mb-2.5 min-w-0 overflow-hidden" style="max-width: 100%;">
+                    <img 
+                      src="${supervisorPhoto}" 
+                      alt="${dept.direct_supervisor.title}" 
+                      class="w-10 h-10 rounded-xl object-cover shrink-0 border border-gold/40 shadow-sm"
+                      style="width: 40px; height: 40px; min-width: 40px; max-width: 40px; min-height: 40px; max-height: 40px; object-fit: cover; border-radius: 10px; flex-shrink: 0;" 
+                    />
+                    <div class="min-w-0 flex-1 overflow-hidden">
+                      <div class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold truncate">Direct Supervisor</div>
+                      <div class="font-bold text-gold text-xs leading-tight truncate" title="${dept.direct_supervisor.title}">${dept.direct_supervisor.title}</div>
+                      <div class="font-mono text-[9px] text-slate-400 truncate">${dept.direct_supervisor.role_id}</div>
+                    </div>
+                  </div>
+
+                  <div class="text-xs mb-2 overflow-hidden">
+                    <div class="text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wider">Line Staff Roles:</div>
+                    <div class="flex flex-wrap gap-1 max-w-full">
+                      ${dept.line_staff_roles.map(r => `<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-200 border border-white/10 truncate max-w-full">${r}</span>`).join('')}
+                    </div>
+                  </div>
+
+                  <p class="text-[11px] text-slate-300 italic leading-snug mt-2 break-words max-w-full">"${dept.core_scope_of_work}"</p>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- SECTION 3: STAFF ACCOUNT & ROLE ASSIGNMENT TABLE -->
+      <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-gold/30 w-full max-w-full overflow-hidden">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h3 class="font-serif text-base sm:text-lg font-bold text-white tracking-wide uppercase">3. Staff Account RBAC & Module Authority</h3>
+            <p class="text-xs text-slate-300">Active personnel accounts, assigned departmental roles, and access privileges.</p>
+          </div>
+          <span class="badge-gold text-xs">${staffList.length} Active Accounts</span>
+        </div>
+
+        <div class="overflow-x-auto w-full max-w-full scrollbar-thin rounded-xl border border-white/10" style="-webkit-overflow-scrolling: touch;">
+          <table class="w-full text-left text-xs border-collapse min-w-[640px]">
+            <thead>
+              <tr class="border-b border-white/10 text-gold uppercase tracking-wider text-[10px] bg-navy-950/80">
+                <th class="py-3 px-3">Staff Member</th>
+                <th class="py-3 px-3">Department</th>
+                <th class="py-3 px-3">Assigned Role ID</th>
+                <th class="py-3 px-3">Supervisory Scope</th>
+                <th class="py-3 px-3">Status</th>
+                <th class="py-3 px-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 text-slate-200">
+              ${staffList.map(s => `
+                <tr class="hover:bg-white/5 transition-colors">
+                  <td class="py-3 px-3 font-semibold text-white">
+                    <div class="flex items-center gap-2.5">
+                      <img src="${s.avatar}" class="w-8 h-8 rounded-full object-cover shrink-0 border border-gold/40 shadow-sm" style="width: 32px; height: 32px; min-width: 32px; max-width: 32px; min-height: 32px; max-height: 32px; object-fit: cover; border-radius: 9999px; flex-shrink: 0;" alt="${s.name}" />
+                      <div class="min-w-0">
+                        <div class="font-medium text-white truncate">${s.name}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">${s.id}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 capitalize">${s.department}</td>
+                  <td class="py-3 px-3">
+                    <span class="badge-gold text-[10px] font-bold font-mono">${s.adminRole || 'FRONT_DESK'}</span>
+                  </td>
+                  <td class="py-3 px-3 text-slate-300">${s.role}</td>
+                  <td class="py-3 px-3">
+                    <span class="${s.active !== false ? 'text-emerald-400' : 'text-red-400'} font-semibold text-[11px] flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full ${s.active !== false ? 'bg-emerald-400' : 'bg-red-400'}"></span>
+                      ${s.active !== false ? 'Active' : 'Disabled'}
+                    </span>
+                  </td>
+                  <td class="py-3 px-3 text-right">
+                    <button class="btn-secondary text-[10px] py-1 px-2.5 cursor-pointer hover:border-gold transition-all" onclick="window.openEditStaffModal('${s.id}')">
+                      Configure →
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+// ==========================================
+// 15. AI STOCK MONITORING & 14-STAGE AUTONOMOUS PROCUREMENT TAB
+// ==========================================
+function renderProcurementManagerTab(state, currentRole) {
+  const inventory = state.inventory || [];
+  const requisitions = state.procurementRequisitions || [];
+  const filteredReqs = procurementReqFilter === 'ALL' ? requisitions :
+    procurementReqFilter === 'APPROVAL' ? requisitions.filter(r => r.status === 'PENDING_APPROVAL' || r.status.startsWith('ESCALATED')) :
+    procurementReqFilter === 'LOGISTICS' ? requisitions.filter(r => r.status === 'LPO_REQUESTED' || r.status === 'ORDER_CONFIRMED' || r.status === 'IN_TRANSIT' || r.status === 'VENDOR_INVOICE_GENERATED') :
+    procurementReqFilter === 'RECEIVING' ? requisitions.filter(r => r.status === 'GOODS_DELIVERED' || r.status === 'PROCUREMENT_VERIFIED') :
+    procurementReqFilter === 'CLOSED' ? requisitions.filter(r => r.status === 'AUDIT_CLOSED' || r.status === 'RECEIPT_CONFIRMED') : requisitions;
+
+  const lowCount = inventory.filter(i => i.status !== 'NORMAL').length;
+
+  return `
+    <div class="flex flex-col gap-8 animate-fade-in max-w-6xl mx-auto">
+      
+      <!-- TOP BANNER -->
+      <div class="glass-panel p-6 rounded-2xl border-2 border-gold/40 bg-navy-950/90 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-xs font-bold uppercase tracking-luxury text-gold">Autonomous Supply Chain Engine</span>
+            <span class="badge-gold text-xs font-bold">14-Stage Workflow</span>
+          </div>
+          <h1 class="text-2xl font-serif text-white font-bold">AI Stock Monitoring & Autonomous Procurement</h1>
+          <p class="text-xs text-slate-300 mt-1">Multi-tier financial approval matrix (≤₦1M AM, ₦1M–₦5M HM, >₦5M CEO), dual-stream invoice verification, two-way payment release hold, and PDF closeout.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button class="btn-primary text-xs py-2.5 px-4 font-bold cursor-pointer shadow-lg" onclick="window.triggerStockDepletionEvaluation()">
+            🤖 Run AI Stock Scan
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 1: AI STOCK MONITORING & DEPLETION MATRIX -->
+      <div class="glass-panel p-6 rounded-2xl border border-white/10 bg-navy-900/90">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4 flex-wrap gap-2">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-luxury text-gold">Real-Time Inventory Surveillance</div>
+            <h3 class="font-serif text-lg font-bold text-white">Stock Depletion Watchlist (30% Warning, 20% Low, 10% Critical, 5% Emergency)</h3>
+          </div>
+          <span class="badge-gold text-xs">${lowCount} Items Requiring Replenishment</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          ${inventory.map(item => {
+            const pct = Math.round((item.quantity / item.maxCapacity) * 100);
+            const isCrit = pct <= 10;
+            const isLow = pct <= 20;
+            const isWarn = pct <= 30;
+            const barCol = isCrit ? 'bg-red-500' : isLow ? 'bg-amber-500' : isWarn ? 'bg-yellow-500' : 'bg-emerald-500';
+            const badgeClass = isCrit ? 'bg-red-950 text-red-300 border-red-500/50' : isLow ? 'bg-amber-950 text-amber-300 border-amber-500/50' : isWarn ? 'bg-yellow-950 text-yellow-300 border-yellow-500/50' : 'bg-emerald-950 text-emerald-300 border-emerald-500/50';
+
+            return `
+              <div class="p-4 rounded-xl bg-navy-950 border ${isCrit ? 'border-red-500/40' : isLow ? 'border-amber-500/40' : 'border-white/5'} flex flex-col justify-between text-xs">
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-mono text-[10px] text-slate-400">${item.sku || item.id}</span>
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded border ${badgeClass}">${pct}% (${item.status})</span>
+                  </div>
+                  <div class="font-bold text-white text-sm mb-1">${item.name}</div>
+                  <div class="text-slate-400 text-[11px] capitalize">${item.category} · ${item.supplier || item.supplierCode}</div>
+                  
+                  <div class="w-full bg-navy-900 rounded-full h-2 my-2.5 overflow-hidden">
+                    <div class="${barCol} h-full rounded-full transition-all" style="width: ${pct}%"></div>
+                  </div>
+
+                  <div class="flex justify-between text-[11px] text-slate-300">
+                    <span>Stock: <strong class="text-white">${item.quantity} ${item.unit}</strong></span>
+                    <span>Max: ${item.maxCapacity} ${item.unit}</span>
+                  </div>
+                </div>
+
+                <div class="mt-3 pt-2 border-t border-white/10 flex justify-between items-center text-[11px]">
+                  <span class="text-gold font-bold">₦${(item.unitCost || 0).toLocaleString()}/unit</span>
+                  <span class="text-slate-400">${item.dailyConsumptionRate ? item.dailyConsumptionRate + '/day usage' : 'Active'}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- SECTION 2: 14-STAGE AUTONOMOUS REQUISITIONS QUEUE & APPROVAL MATRIX -->
+      <div class="glass-panel p-6 rounded-2xl border border-gold/30">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4 flex-wrap gap-3">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-luxury text-gold">Autonomous Procurement State Machine</div>
+            <h3 class="font-serif text-lg font-bold text-white">Requisition Approval & Lifecycle Queue (${requisitions.length})</h3>
+          </div>
+
+          <!-- Filter Pills -->
+          <div class="flex items-center gap-1.5 flex-wrap text-xs">
+            <button class="menu-btn-gold ${procurementReqFilter === 'ALL' ? 'active' : ''} text-xs py-1 px-3 rounded-lg cursor-pointer" onclick="window.setProcurementFilter('ALL')">All (${requisitions.length})</button>
+            <button class="menu-btn-gold ${procurementReqFilter === 'APPROVAL' ? 'active' : ''} text-xs py-1 px-3 rounded-lg cursor-pointer" onclick="window.setProcurementFilter('APPROVAL')">Pending Approval</button>
+            <button class="menu-btn-gold ${procurementReqFilter === 'LOGISTICS' ? 'active' : ''} text-xs py-1 px-3 rounded-lg cursor-pointer" onclick="window.setProcurementFilter('LOGISTICS')">In Logistics</button>
+            <button class="menu-btn-gold ${procurementReqFilter === 'RECEIVING' ? 'active' : ''} text-xs py-1 px-3 rounded-lg cursor-pointer" onclick="window.setProcurementFilter('RECEIVING')">Dock Receiving</button>
+            <button class="menu-btn-gold ${procurementReqFilter === 'CLOSED' ? 'active' : ''} text-xs py-1 px-3 rounded-lg cursor-pointer" onclick="window.setProcurementFilter('CLOSED')">Settled & Closed</button>
+          </div>
+        </div>
+
+        ${filteredReqs.length === 0 ? `
+          <div class="p-8 text-center text-xs text-slate-400">
+            No procurement requisitions matching the selected filter.
+          </div>
+        ` : `
+          <div class="flex flex-col gap-4">
+            ${filteredReqs.map(req => {
+              const isPending = req.status === 'PENDING_APPROVAL' || req.status === 'ESCALATED_TO_HM' || req.status === 'ESCALATED_TO_CEO';
+              const isApproved = req.status === 'APPROVED';
+              const isDispatched = req.status === 'LPO_REQUESTED' || req.status === 'SENT_TO_VENDOR';
+              const isInvoiceGenerated = req.status === 'VENDOR_INVOICE_GENERATED';
+              const isLogistics = req.status === 'ORDER_CONFIRMED' || req.status === 'IN_TRANSIT' || req.status === 'GOODS_DELIVERED';
+              const isVerified = req.status === 'PROCUREMENT_VERIFIED';
+              const isReceiptConfirmed = req.status === 'RECEIPT_CONFIRMED';
+              const isClosed = req.status === 'AUDIT_CLOSED';
+
+              const tierBadge = req.tierLevel === 1 ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40' : req.tierLevel === 2 ? 'bg-blue-950 text-blue-300 border-blue-500/40' : 'bg-purple-950 text-purple-300 border-purple-500/40';
+
+              return `
+                <div class="p-5 rounded-2xl bg-navy-950 border border-gold/30 flex flex-col gap-4 shadow-xl">
+                  
+                  <!-- Top Card Info -->
+                  <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-white/10">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1 flex-wrap">
+                        <span class="font-mono text-xs font-bold text-gold">${req.id}</span>
+                        <span class="badge-gold text-[10px] font-mono">${req.sku}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${tierBadge}">
+                          TIER ${req.tierLevel}: ${req.assignedApproverTitle}
+                        </span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-navy-900 text-slate-300 border border-white/10">
+                          SLA: ⏱ ${req.slaHours}h (${req.approvalDeadline})
+                        </span>
+                      </div>
+                      <h4 class="font-serif text-base font-bold text-white">${req.itemName}</h4>
+                      <div class="text-xs text-slate-300 mt-0.5">
+                        Department: <strong>${req.departmentName}</strong> · Supplier: <strong class="text-gold">${req.preferredVendorName} (${req.preferredVendorCode})</strong>
+                      </div>
+                    </div>
+
+                    <div class="text-left md:text-right shrink-0">
+                      <div class="text-xs text-slate-400">Total Procurement Value:</div>
+                      <div class="text-xl font-serif font-black text-gold">₦${(req.estimatedCost || 0).toLocaleString()}</div>
+                      <div class="text-[11px] text-slate-400">${req.reorderQuantity} units @ ₦${(req.unitPrice || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <!-- Workflow State Stepper Pipeline -->
+                  <div class="p-3 rounded-xl bg-navy-900/80 border border-white/5 flex items-center justify-between gap-2 overflow-x-auto text-[10px]">
+                    <div class="flex items-center gap-1 shrink-0 ${isPending ? 'text-amber-400 font-bold' : 'text-emerald-400'}">
+                      <span>${isPending ? '⏳' : '✓'}</span> <span>1. AI Alert</span>
+                    </div>
+                    <span class="text-white/20">→</span>
+                    <div class="flex items-center gap-1 shrink-0 ${req.status === 'APPROVED' ? 'text-amber-400 font-bold' : isPending ? 'text-slate-500' : 'text-emerald-400'}">
+                      <span>${req.status === 'APPROVED' ? '⏳' : isPending ? '○' : '✓'}</span> <span>2. Approval</span>
+                    </div>
+                    <span class="text-white/20">→</span>
+                    <div class="flex items-center gap-1 shrink-0 ${isDispatched ? 'text-amber-400 font-bold' : (isInvoiceGenerated || isLogistics || isVerified || isReceiptConfirmed || isClosed) ? 'text-emerald-400' : 'text-slate-500'}">
+                      <span>${isDispatched ? '⏳' : (isInvoiceGenerated || isLogistics || isVerified || isReceiptConfirmed || isClosed) ? '✓' : '○'}</span> <span>3. LPO Dispatched</span>
+                    </div>
+                    <span class="text-white/20">→</span>
+                    <div class="flex items-center gap-1 shrink-0 ${isInvoiceGenerated ? 'text-amber-400 font-bold' : (isLogistics || isVerified || isReceiptConfirmed || isClosed) ? 'text-emerald-400' : 'text-slate-500'}">
+                      <span>${isInvoiceGenerated ? '⏳' : (isLogistics || isVerified || isReceiptConfirmed || isClosed) ? '✓' : '○'}</span> <span>4. Invoice Verified</span>
+                    </div>
+                    <span class="text-white/20">→</span>
+                    <div class="flex items-center gap-1 shrink-0 ${(isLogistics || isVerified) ? 'text-amber-400 font-bold' : (isReceiptConfirmed || isClosed) ? 'text-emerald-400' : 'text-slate-500'}">
+                      <span>${(isLogistics || isVerified) ? '⏳' : (isReceiptConfirmed || isClosed) ? '✓' : '○'}</span> <span>5. Dock Receiving</span>
+                    </div>
+                    <span class="text-white/20">→</span>
+                    <div class="flex items-center gap-1 shrink-0 ${isClosed ? 'text-emerald-400 font-bold' : 'text-slate-500'}">
+                      <span>${isClosed ? '✓' : '○'}</span> <span>6. Payout & PDF</span>
+                    </div>
+                  </div>
+
+                  <!-- Details & Action Buttons Bar -->
+                  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
+                    <div class="text-xs text-slate-300">
+                      Current State: <strong class="text-gold font-mono">${req.status}</strong>
+                      ${req.lpo ? `· LPO: <span class="font-mono text-white font-bold">${req.lpo.lpoNumber}</span>` : ''}
+                      ${req.invoice ? `· Inv: <span class="font-mono text-white">${req.invoice.invoiceNumber}</span>` : ''}
+                      ${req.delivery?.milestone ? `· Milestone: <span class="text-emerald-400 font-semibold">${req.delivery.milestone}</span>` : ''}
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                      ${isPending ? `
+                        <button class="btn-primary text-xs py-1.5 px-3.5 font-bold cursor-pointer" onclick="window.approveRequisitionAction('${req.id}')">
+                          ✓ Approve (${req.assignedApproverTitle.split(' ')[0]})
+                        </button>
+                        <button class="btn-secondary text-xs py-1.5 px-3 cursor-pointer" onclick="window.escalateRequisitionAction('${req.id}')">
+                          ⬆ Escalate
+                        </button>
+                        <button class="btn-secondary text-xs py-1.5 px-3 text-red-400 hover:text-red-300 cursor-pointer" onclick="window.rejectRequisitionAction('${req.id}')">
+                          ✕ Reject
+                        </button>
+                      ` : ''}
+
+                      ${isApproved ? `
+                        <button class="btn-primary text-xs py-1.5 px-4 font-bold cursor-pointer" onclick="window.dispatchLPOAction('${req.id}')">
+                          📦 Request Order & Dispatch LPO →
+                        </button>
+                      ` : ''}
+
+                      ${isInvoiceGenerated ? `
+                        <button class="btn-primary text-xs py-1.5 px-4 font-bold cursor-pointer" onclick="window.verifyInvoiceAction('${req.id}')">
+                          🔍 3-Way Match & Submit to AP →
+                        </button>
+                      ` : ''}
+
+                      ${(req.status === 'GOODS_DELIVERED' || req.status === 'IN_TRANSIT' || isVerified) && !req.receiving ? `
+                        <button class="btn-primary text-xs py-1.5 px-4 font-bold cursor-pointer" onclick="window.openDockReceivingModal('${req.id}')">
+                          📋 Inspect & Confirm Dock Receipt →
+                        </button>
+                      ` : ''}
+
+                      ${(isClosed || isReceiptConfirmed) ? `
+                        <button class="btn-secondary text-xs py-1.5 px-3 font-bold text-gold border-gold/40 cursor-pointer" onclick="window.viewAuditPDFModal('${req.id}')">
+                          🧾 View Audit PDF Certificate
+                        </button>
+                      ` : ''}
+                    </div>
+                  </div>
+
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      </div>
+
+    </div>
+  `;
+}
+
+// ==========================================
 // MODAL RENDERERS (CREATE/EDIT/MEDIA/HISTORY)
 // ==========================================
-function renderModals(state, editMenuId, editAmenityId, editStaffId, versionModal, evidenceId, mediaUploadOpen) {
+function renderModals(state, editMenuId, editAmenityId, editStaffId, versionModal, evidenceId, mediaUploadOpen, dockReceivingReqId, auditPdfReqId) {
   let modalHtml = '';
 
   // 1. MENU EDIT / CREATE MODAL
@@ -2683,7 +3409,97 @@ function renderModals(state, editMenuId, editAmenityId, editStaffId, versionModa
           </div>
 
           <div class="flex justify-end pt-4 mt-2 border-t border-white/10">
-            <button class="btn-primary text-xs py-1.5 px-5 font-bold" onclick="window.closeEvidenceModal()">Close</button>
+            <button class="btn-primary text-xs py-1.5 px-5 font-bold cursor-pointer" onclick="window.closeEvidenceModal()">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 7. DOCK RECEIVING & PHYSICAL INSPECTION MODAL
+  if (dockReceivingReqId) {
+    const req = (state.procurementRequisitions || []).find(r => r.id === dockReceivingReqId);
+    modalHtml += `
+      <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4">
+        <div class="glass-panel max-w-lg w-full p-4 sm:p-6 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in max-h-[92vh] overflow-y-auto" style="background: rgba(8, 17, 28, 0.98);">
+          <div class="flex items-center justify-between pb-3 border-b border-gold/20 mb-4">
+            <div>
+              <span class="text-[10px] text-gold font-bold uppercase tracking-luxury">Stores & Receiving Gate</span>
+              <h3 class="font-serif text-lg text-white font-bold">Physical Dock Receiving Inspection</h3>
+            </div>
+            <button class="text-slate-400 hover:text-white bg-transparent border-none text-lg cursor-pointer" onclick="window.closeDockReceivingModal()">✕</button>
+          </div>
+
+          <form onsubmit="window.submitDockReceivingForm(event)" class="flex flex-col gap-3.5 text-xs">
+            <div class="p-3 rounded-xl bg-navy-950 border border-white/10">
+              <div class="font-bold text-white text-sm mb-1">${req?.itemName} (${req?.sku})</div>
+              <div class="text-slate-300">Requisition: <strong class="text-gold font-mono">${req?.id}</strong> · Supplier: <strong class="text-white">${req?.preferredVendorName}</strong></div>
+              <div class="text-slate-300 mt-1">Expected Quantity: <strong class="text-emerald-400">${req?.reorderQuantity} units</strong> (₦${(req?.estimatedCost || 0).toLocaleString()})</div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Carrier Waybill / Delivery Note Number:</label>
+              <input type="text" id="dock-waybill" class="input-custom text-xs" value="WB-${req?.preferredVendorCode || 'SUP'}-${new Date().getFullYear()}-${Math.floor(Math.random()*9000)+1000}" required />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Physical Quantity Accepted:</label>
+                <input type="number" id="dock-qty" class="input-custom text-xs" value="${req?.reorderQuantity || 1}" min="1" max="${req?.reorderQuantity || 10000}" required />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Condition Inspection:</label>
+                <select id="dock-condition" class="input-custom text-xs">
+                  <option value="PASSED" selected>✓ PASSED (Pristine & Sealed)</option>
+                  <option value="PARTIAL_ACCEPTANCE">⚠️ PARTIAL ACCEPTANCE</option>
+                  <option value="DAMAGED_REJECTED">✕ DAMAGED / REJECTED</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">Dock Inspection Notes:</label>
+              <textarea id="dock-notes" class="input-custom text-xs h-20 resize-none">Delivered to Hotel Capitol Loading Bay 1. Seals intact, expiry dates verified, batch inspection passed.</textarea>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-[11px] text-emerald-300">
+              ℹ️ Confirming receipt verifies physical possession and <strong>releases the Accounts Payable payment hold</strong>.
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-white/10 mt-2">
+              <button type="button" class="btn-secondary text-xs py-2 px-4 cursor-pointer" onclick="window.closeDockReceivingModal()">Cancel</button>
+              <button type="submit" class="btn-primary text-xs py-2 px-6 font-bold cursor-pointer">✓ Sign & Confirm Receipt →</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
+
+  // 8. SIMULATED PDF AUDIT CLOSEOUT CERTIFICATE MODAL
+  if (auditPdfReqId) {
+    const cert = store.generateSimulatedAuditPDF(auditPdfReqId);
+    modalHtml += `
+      <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-panel max-w-3xl w-full p-6 rounded-2xl border-2 border-gold shadow-2xl animate-fade-in my-8" style="background: rgba(8, 17, 28, 0.98);">
+          <div class="flex items-center justify-between pb-3 border-b border-gold/20 mb-4">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-luxury text-gold">Official Closeout Document</span>
+              <span class="badge-gold text-[10px] font-mono">${cert?.docId}</span>
+            </div>
+            <button class="text-slate-400 hover:text-white bg-transparent border-none text-lg cursor-pointer" onclick="window.closeAuditPDFModal()">✕</button>
+          </div>
+
+          <div class="max-h-[70vh] overflow-y-auto p-2 rounded-xl bg-navy-950 border border-white/10">
+            ${cert?.htmlMarkup || '<div class="p-8 text-center text-slate-400">Certificate not available.</div>'}
+          </div>
+
+          <div class="flex items-center justify-between pt-4 mt-3 border-t border-white/10 flex-wrap gap-2">
+            <span class="text-xs text-slate-400">Cryptographically Signed & Sealed by Hotel Capitol ERP</span>
+            <div class="flex items-center gap-2">
+              <button class="btn-secondary text-xs py-1.5 px-4 cursor-pointer" onclick="window.print()">🖨️ Print Certificate</button>
+              <button class="btn-primary text-xs py-1.5 px-5 font-bold cursor-pointer" onclick="window.closeAuditPDFModal()">Done</button>
+            </div>
           </div>
         </div>
       </div>

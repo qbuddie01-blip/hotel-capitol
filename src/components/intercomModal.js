@@ -368,7 +368,7 @@ export function renderIntercomModal() {
 
   root.innerHTML = `
     <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style="background: rgba(4, 9, 15, 0.85); backdrop-filter: blur(8px);" onclick="window.toggleIntercomModal(false)">
-      <div class="w-full max-w-2xl bg-navy-900 border border-gold rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in max-h-[92vh] sm:max-h-[85vh] h-[640px]" onclick="event.stopPropagation()">
+      <div class="w-full max-w-2xl bg-navy-900 border border-gold rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in max-h-[92vh] sm:max-h-[85vh]" style="height: min(640px, 92vh);" onclick="event.stopPropagation()">
         
         <!-- Header -->
         <div class="p-3.5 sm:p-4 bg-navy-950 border-b border-gold flex items-center justify-between gap-2 flex-wrap">

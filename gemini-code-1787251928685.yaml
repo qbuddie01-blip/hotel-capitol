@@ -1,0 +1,649 @@
+openapi: 3.1.0
+info:
+  title: Hotel Capitol Autonomous Inventory & Procurement API
+  version: 1.0.0
+  description: >
+    Production-grade RESTful API and Webhook event specifications for Hotel Capitol's
+    AI-driven inventory monitoring, tiered managerial approval matrix (NGN), vendor lifecycle
+    progress tracking, and two-way settlement closeout.
+servers:
+  - url: https://api.hotelcapitol.ng/v1
+    description: Production Gateway (Lagos/West Africa)
+  - url: https://sandbox.hotelcapitol.ng/v1
+    description: Staging & Simulation Sandbox
+
+security:
+  - BearerAuth: []
+
+paths:
+  /inventory/alerts/depletion:
+    post:
+      summary: Dispatch AI Stock Depletion Alert
+      description: >
+        Triggered autonomously by the Hotel AI Monitoring Agent when stock level crosses 30%, 20%, 10%, or 5%.
+        Initializes an audit trace and generates notification payloads for Admin and Hotel Managers.
+      operationId: triggerDepletionAlert
+      tags:
+        - AI Monitoring & Inventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepletionAlertRequest'
+      responses:
+        '201':
+          description: Alert registered, order lifecycle state initialized to PENDING_MANAGEMENT_APPROVAL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequisitionStateResponse'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '401':
+          $ref: '#/components/responses/401Unauthorized'
+
+  /procurement/orders/{order_id}/approval:
+    post:
+      summary: Process Managerial Approval / Escalation
+      description: >
+        Evaluates the approval submission against the NGN matrix:
+        - Cost <= 1,000,000 NGN: Admin Manager (EXEC_AM) sign-off.
+        - Cost 1,000,001 - 5,000,000 NGN: Hotel Manager (EXEC_HM) sign-off.
+        - Cost > 5,000,000 NGN: CEO/COO (EXEC_CEO) sign-off.
+        Escalates automatically if the actor does not possess the requisite financial authority.
+      operationId: processOrderApproval
+      tags:
+        - Managerial Workflow & Approvals
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalActionRequest'
+      responses:
+        '200':
+          description: Decision applied. Returns generated LPO if terminal approval is reached, or updated escalation state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalActionResponse'
+        '403':
+          description: Actor role unauthorized or approval limit exceeded without escalation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+
+  /procurement/orders/{order_id}/dispatch-lpo:
+    post:
+      summary: Admin Manager LPO Review & Order Dispatch
+      description: >
+        Triggered when the Admin Manager reviews the AI-generated LPO and executes the "REQUEST ORDER" action.
+        Dispatches a secure event to the designated Vendor Portal.
+      operationId: dispatchLPOToVendor
+      tags:
+        - Managerial Workflow & Approvals
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      responses:
+        '200':
+          description: LPO transmitted to vendor portal; status set to VENDOR_ORDER_REQUESTED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequisitionStateResponse'
+        '409':
+          description: Conflict. Order is not in an approved state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /vendor/orders/{order_id}/invoice:
+    post:
+      summary: Vendor Generate Invoice & Order Confirmation
+      description: >
+        Executed by the vendor via the Vendor Portal. Pulls item details and contracted prices 
+        from the shared database, attaches the digital invoice, and transitions lifecycle to LOGISTICS_IN_PROGRESS.
+      operationId: submitVendorInvoice
+      tags:
+        - Vendor Portal Operations
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorInvoiceSubmission'
+      responses:
+        '201':
+          description: Invoice accepted and broadcast simultaneously to Hotel Management and Procurement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceAcceptanceResponse'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+
+  /vendor/orders/{order_id}/lifecycle:
+    patch:
+      summary: Update Vendor Delivery Lifecycle Progress
+      description: >
+        Vendor updates sequential dispatch and transit stages. Reaching "Goods Delivered" flags 
+        Procurement for physical dock receiving.
+      operationId: updateDeliveryLifecycle
+      tags:
+        - Vendor Portal Operations
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleUpdateRequest'
+      responses:
+        '200':
+          description: Milestone logged in audit registry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequisitionStateResponse'
+        '422':
+          description: Invalid transition sequence (e.g. out of chronological order).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /procurement/orders/{order_id}/confirm-receipt:
+    post:
+      summary: Procurement Physical Inspection & Receipt Sign-Off
+      description: >
+        Executed by the Procurement & Stores Supervisor (SUP_PROC) upon physical verification at the dock.
+        Signals Accounts Payable for two-way release of funds.
+      operationId: confirmPhysicalReceipt
+      tags:
+        - Receiving & Financial Settlement
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptConfirmationRequest'
+      responses:
+        '200':
+          description: Receiving confirmed. AP hold released for payout.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequisitionStateResponse'
+        '400':
+          description: Delivery condition verification failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /finance/orders/{order_id}/approve-payment:
+    post:
+      summary: Accounts Payable Final Settlement
+      description: >
+        Executed by Accounts Payable (WRK_AP) or Chief Accountant (SUP_FIN). Releases payment to vendor, 
+        generates the downloadable PDF Goods Receipt, updates inventory balances, and marks transaction CLOSED.
+      operationId: processPaymentRelease
+      tags:
+        - Receiving & Financial Settlement
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentExecutionRequest'
+      responses:
+        '200':
+          description: Payment finalized. PDF receipt generated and archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloseoutSummaryResponse'
+        '412':
+          description: Precondition Failed. Physical delivery has not been confirmed by Procurement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+webhooks:
+  stockDepletionAlert:
+    post:
+      summary: Stock Depletion Outbound Event
+      description: Dispatched to Admin and Hotel Manager dashboards when stock drops to alert thresholds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepletionWebhookPayload'
+      responses:
+        '200':
+          description: Webhook acknowledged by client listener.
+
+  vendorOrderNotification:
+    post:
+      summary: Vendor LPO Request Event
+      description: Dispatched to external Vendor Webhook Endpoint containing LPO details and actionable deep link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorNotificationPayload'
+      responses:
+        '200':
+          description: Acknowledged by vendor ERP/portal gateway.
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enterprise JWT containing role_id and system scopes.
+
+  parameters:
+    OrderIdPathParam:
+      name: order_id
+      in: path
+      required: true
+      description: Unique UUID of the procurement/order transaction.
+      schema:
+        type: string
+        format: uuid
+        example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+
+  schemas:
+    DepletionAlertRequest:
+      type: object
+      required:
+        - item_id
+        - item_description
+        - department_id
+        - current_stock_level
+        - total_capacity
+        - threshold_percentage
+        - projected_stockout_eta
+        - reorder_quantity
+        - estimated_unit_cost_ngn
+        - preferred_vendor_id
+      properties:
+        item_id:
+          type: string
+          example: "INV-HK-0042"
+        item_description:
+          type: string
+          example: "Luxury Egyptian Cotton Bath Towels (White, 700 GSM)"
+        department_id:
+          type: string
+          enum: [DEP_PROC, DEP_FIN, DEP_FO, DEP_HK, DEP_FB, DEP_CUL, DEP_ENG, DEP_SEC]
+          example: "DEP_HK"
+        current_stock_level:
+          type: integer
+          example: 10
+        total_capacity:
+          type: integer
+          example: 100
+        threshold_percentage:
+          type: integer
+          enum: [30, 20, 10, 5]
+          example: 10
+        projected_stockout_eta:
+          type: string
+          format: date-time
+          example: "2026-08-21T18:00:00Z"
+        reorder_quantity:
+          type: integer
+          example: 90
+        estimated_unit_cost_ngn:
+          type: number
+          format: double
+          example: 15000.00
+        preferred_vendor_id:
+          type: string
+          example: "VEND-LAG-981"
+
+    ApprovalActionRequest:
+      type: object
+      required:
+        - actor_role_id
+        - action
+      properties:
+        actor_role_id:
+          type: string
+          enum: [EXEC_AM, EXEC_HM, EXEC_CEO]
+          example: "EXEC_AM"
+        action:
+          type: string
+          enum: [APPROVE, ESCALATE, REJECT]
+          example: "APPROVE"
+        escalate_to:
+          type: string
+          enum: [EXEC_HM, EXEC_CEO]
+          nullable: true
+          example: null
+        notes:
+          type: string
+          example: "Approved within standard Admin Manager ₦1,000,000 threshold."
+
+    VendorInvoiceSubmission:
+      type: object
+      required:
+        - vendor_id
+        - invoice_reference
+        - total_amount_ngn
+        - line_items
+      properties:
+        vendor_id:
+          type: string
+          example: "VEND-LAG-981"
+        invoice_reference:
+          type: string
+          example: "INV-2026-08991"
+        total_amount_ngn:
+          type: number
+          format: double
+          example: 1350000.00
+        line_items:
+          type: array
+          items:
+            type: object
+            required:
+              - sku
+              - description
+              - unit_price_ngn
+              - quantity
+            properties:
+              sku:
+                type: string
+                example: "TOWEL-LUX-WHT"
+              description:
+                type: string
+                example: "Luxury Egyptian Cotton Bath Towels"
+              unit_price_ngn:
+                type: number
+                format: double
+                example: 15000.00
+              quantity:
+                type: integer
+                example: 90
+
+    LifecycleUpdateRequest:
+      type: object
+      required:
+        - milestone
+        - updated_by_agent
+      properties:
+        milestone:
+          type: string
+          enum:
+            - Order Confirmed
+            - Palletized
+            - Depot Dispatched
+            - In Transit
+            - Near Hotel
+            - Arrived at Gate
+            - Goods Delivered
+          example: "In Transit"
+        updated_by_agent:
+          type: string
+          example: "Logistics Partner - Dispatch Driver #4"
+        location_coordinates:
+          type: string
+          nullable: true
+          example: "6.5244, 3.3792"
+
+    ReceiptConfirmationRequest:
+      type: object
+      required:
+        - inspector_role_id
+        - items_accepted_quantity
+        - condition_status
+      properties:
+        inspector_role_id:
+          type: string
+          enum: [SUP_PROC, WRK_STORE, WRK_RECV]
+          example: "SUP_PROC"
+        items_accepted_quantity:
+          type: integer
+          example: 90
+        condition_status:
+          type: string
+          enum: [PASSED, DAMAGED_REJECTED, PARTIAL_ACCEPTANCE]
+          example: "PASSED"
+        waybill_number:
+          type: string
+          example: "WB-2026-08-9921"
+        dock_notes:
+          type: string
+          example: "All 90 units inspected at security dock. Quality verification passed."
+
+    PaymentExecutionRequest:
+      type: object
+      required:
+        - executor_role_id
+        - payment_channel
+        - payment_reference
+      properties:
+        executor_role_id:
+          type: string
+          enum: [WRK_AP, SUP_FIN]
+          example: "WRK_AP"
+        payment_channel:
+          type: string
+          enum: [NIBSS_INSTANT_PAYMENT, DIRECT_BANK_TRANSFER, CORPORATE_CARD]
+          example: "NIBSS_INSTANT_PAYMENT"
+        payment_reference:
+          type: string
+          example: "NIP-TXN-20260820-998124"
+        amount_paid_ngn:
+          type: number
+          format: double
+          example: 1350000.00
+
+    RequisitionStateResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        current_state:
+          type: string
+          enum:
+            - STOCK_ALERT_TRIGGERED
+            - PENDING_MANAGEMENT_APPROVAL
+            - LPO_GENERATED
+            - VENDOR_ORDER_REQUESTED
+            - VENDOR_INVOICE_GENERATED
+            - LOGISTICS_IN_PROGRESS
+            - PENDING_RECEIPT_CONFIRMATION
+            - PENDING_PAYMENT_RELEASE
+            - TRANSACTION_CLOSED
+          example: "LOGISTICS_IN_PROGRESS"
+        active_milestone:
+          type: string
+          example: "In Transit"
+        total_cost_ngn:
+          type: number
+          format: double
+          example: 1350000.00
+        last_updated_at:
+          type: string
+          format: date-time
+          example: "2026-08-20T18:45:00Z"
+
+    ApprovalActionResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ESCALATED, APPROVED_LPO_READY, REJECTED]
+        current_state:
+          type: string
+        assigned_to_role:
+          type: string
+        lpo_details:
+          type: object
+          nullable: true
+          properties:
+            lpo_number:
+              type: string
+              example: "LPO-CAPITOL-2026-0044"
+            generated_at:
+              type: string
+              format: date-time
+            item_description:
+              type: string
+            quantity:
+              type: integer
+            estimated_total_ngn:
+              type: number
+            vendor_contact:
+              type: string
+
+    InvoiceAcceptanceResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        invoice_reference:
+          type: string
+        broadcast_recipients:
+          type: array
+          items:
+            type: string
+          example: ["Hotel General Manager", "Procurement Department"]
+        next_step:
+          type: string
+          example: "Awaiting shipment milestone updates via vendor portal."
+
+    CloseoutSummaryResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: "TRANSACTION_CLOSED"
+        payment_settled:
+          type: boolean
+          example: true
+        stock_updated:
+          type: boolean
+          example: true
+        new_stock_level:
+          type: integer
+          example: 100
+        audit_pdf_download_url:
+          type: string
+          format: uri
+          example: "https://api.hotelcapitol.ng/v1/audit/procurement-receipt-9b1deb4d.pdf"
+        timestamp:
+          type: string
+          format: date-time
+
+    DepletionWebhookPayload:
+      type: object
+      properties:
+        event_type:
+          type: string
+          example: "INVENTORY_DEPLETION_ALERT"
+        alert_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+        threshold_percentage:
+          type: integer
+          example: 10
+        severity:
+          type: string
+          example: "CRITICAL"
+        recipients:
+          type: array
+          items:
+            type: string
+          example: ["EXEC_AM", "EXEC_HM"]
+        projected_stockout_eta:
+          type: string
+          format: date-time
+
+    VendorNotificationPayload:
+      type: object
+      properties:
+        event_type:
+          type: string
+          example: "PURCHASE_ORDER_ISSUED"
+        order_id:
+          type: string
+          format: uuid
+        lpo_number:
+          type: string
+          example: "LPO-CAPITOL-2026-0044"
+        action_required:
+          type: string
+          example: "GENERATE_INVOICE"
+        vendor_portal_cta_url:
+          type: string
+          format: uri
+          example: "https://vendor.hotelcapitol.ng/orders/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: "APPROVAL_LIMIT_EXCEEDED"
+        message:
+          type: string
+          example: "Order cost (₦1,350,000.00) exceeds Admin Manager limit (₦1,000,000.00). Must escalate to Hotel Manager."
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    400BadRequest:
+      description: Malformed payload or validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    401Unauthorized:
+      description: Authentication credentials missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    404NotFound:
+      description: Order ID or resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

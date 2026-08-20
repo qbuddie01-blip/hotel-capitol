@@ -3,17 +3,157 @@
  * 6 Animashaun Close, Ikeja, Lagos
  */
 
-export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V13';
+export const STORAGE_KEY = 'HOTEL_CAPITOL_STATE_V15';
+
+// Authoritative Hotel Capitol Organizational Hierarchy Definition (gemini-code-1787251907996.json)
+export const ORGANIZATIONAL_HIERARCHY = {
+  executive_management: [
+    {
+      role_id: 'ROLE_CEO_COO',
+      legacy_key: 'CEO',
+      title: 'Chief Executive Officer / Chief Operating Officer',
+      scope_of_work: 'Overall strategic leadership, financial governance, final executive sign-off for procurements > ₦5,000,000.',
+      reports_to: null,
+      approval_limit_ngn: null,
+      min_approval_ngn: 5000001
+    },
+    {
+      role_id: 'ROLE_HM',
+      legacy_key: 'HOTEL_MANAGER',
+      title: 'Hotel General Manager',
+      scope_of_work: 'Operational leadership, departmental performance, cost controls, approval threshold ₦1,000,001 to ₦5,000,000.',
+      reports_to: 'ROLE_CEO_COO',
+      approval_limit_ngn: 5000000,
+      min_approval_ngn: 1000001
+    },
+    {
+      role_id: 'ROLE_AM',
+      legacy_key: 'ADMIN_OPERATIONS_MANAGER',
+      title: 'Admin & Operations Manager',
+      scope_of_work: 'Administrative administration, routine supply chain oversight, approval threshold up to ₦1,000,000.',
+      reports_to: 'ROLE_HM',
+      approval_limit_ngn: 1000000,
+      min_approval_ngn: 0
+    }
+  ],
+  departments: [
+    {
+      department_id: 'DEP_FRONT_OFFICE',
+      department_name: 'Front Office & Guest Services',
+      executive_supervisor_role_id: 'ROLE_HM',
+      direct_supervisor: { title: 'Front Desk Supervisor', role_id: 'ROLE_SUP_FRONT_DESK' },
+      line_staff_roles: ['Front Desk Agents', 'Concierge', 'Night Auditors', 'Porters'],
+      core_scope_of_work: 'Guest registration, concierge services, PMS maintenance, reservation lifecycle, front desk billing.'
+    },
+    {
+      department_id: 'DEP_HOUSEKEEPING',
+      department_name: 'Housekeeping & Laundry',
+      executive_supervisor_role_id: 'ROLE_HM',
+      direct_supervisor: { title: 'Executive Housekeeper', role_id: 'ROLE_SUP_HOUSEKEEPING' },
+      line_staff_roles: ['Room Attendants', 'Public Area Cleaners', 'Laundry Staff'],
+      core_scope_of_work: 'Room hygiene, linen turnaround, public sanitation, housekeeping supply logging.'
+    },
+    {
+      department_id: 'DEP_FNB',
+      department_name: 'Food & Beverage',
+      executive_supervisor_role_id: 'ROLE_HM',
+      direct_supervisor: { title: 'F&B Supervisor / Restaurant Manager', role_id: 'ROLE_SUP_FNB' },
+      line_staff_roles: ['Waitstaff', 'Bartenders', 'Baristas', 'Room Service'],
+      core_scope_of_work: 'Dining room service, beverage dispensing, banquet service, front-of-house consumables restock trigger.'
+    },
+    {
+      department_id: 'DEP_KITCHEN',
+      department_name: 'Culinary & Kitchen',
+      executive_supervisor_role_id: 'ROLE_HM',
+      direct_supervisor: { title: 'Executive Chef / Sous Chef', role_id: 'ROLE_SUP_CHEF' },
+      line_staff_roles: ['Line Cooks', 'Prep Cooks', 'Kitchen Stewards'],
+      core_scope_of_work: 'Menu production, food safety regulations, cold/dry storage monitoring, perishable usage logging.'
+    },
+    {
+      department_id: 'DEP_PROCUREMENT',
+      department_name: 'Procurement & Stores',
+      executive_supervisor_role_id: 'ROLE_AM',
+      direct_supervisor: { title: 'Procurement & Inventory Supervisor', role_id: 'ROLE_SUP_PROCUREMENT' },
+      line_staff_roles: ['Storekeepers', 'Receiving Clerks'],
+      core_scope_of_work: 'Stock physical count, receiving verification, invoice and LPO reconciliation, vendor portal coordination.'
+    },
+    {
+      department_id: 'DEP_FINANCE',
+      department_name: 'Finance & Accounts',
+      executive_supervisor_role_id: 'ROLE_AM',
+      direct_supervisor: { title: 'Chief Accountant', role_id: 'ROLE_SUP_ACCOUNTANT' },
+      line_staff_roles: ['Accounts Payable Officer', 'Cashiers'],
+      core_scope_of_work: 'Invoice 3-way match, payment disbursement, tax ledger, physical audit confirmation validation.'
+    },
+    {
+      department_id: 'DEP_MAINTENANCE',
+      department_name: 'Maintenance & Engineering',
+      executive_supervisor_role_id: 'ROLE_HM',
+      direct_supervisor: { title: 'Chief Engineer', role_id: 'ROLE_SUP_ENGINEER' },
+      line_staff_roles: ['Maintenance Technicians', 'Electricians', 'Plumbers'],
+      core_scope_of_work: 'Plant operations, HVAC maintenance, plumbing, electrical repairs, spare parts inventory control.'
+    },
+    {
+      department_id: 'DEP_SECURITY',
+      department_name: 'Security & Safety',
+      executive_supervisor_role_id: 'ROLE_AM',
+      direct_supervisor: { title: 'Chief Security Officer', role_id: 'ROLE_SUP_SECURITY' },
+      line_staff_roles: ['Security Guards', 'CCTV Operators'],
+      core_scope_of_work: 'Perimeter security, entry/exit logging, receiving gate passes, asset tracking.'
+    }
+  ]
+};
+
+// Authoritative Approval Matrix Configuration
+export const APPROVAL_MATRIX_CONFIG = {
+  stock_depletion_triggers: [
+    { threshold_percentage: 30, severity: 'WARNING', target_alert_roles: ['ROLE_AM', 'ROLE_HM'] },
+    { threshold_percentage: 20, severity: 'LOW', target_alert_roles: ['ROLE_AM', 'ROLE_HM'] },
+    { threshold_percentage: 10, severity: 'CRITICAL', target_alert_roles: ['ROLE_AM', 'ROLE_HM'] },
+    { threshold_percentage: 5, severity: 'EMERGENCY', target_alert_roles: ['ROLE_AM', 'ROLE_HM', 'ROLE_CEO_COO'] }
+  ],
+  financial_thresholds: [
+    { tier_level: 1, approver_role_id: 'ROLE_AM', min_cost_ngn: 0, max_cost_ngn: 1000000, escalation_target_role_id: 'ROLE_HM', sla_hours: 2, title: 'Admin & Operations Manager' },
+    { tier_level: 2, approver_role_id: 'ROLE_HM', min_cost_ngn: 1000001, max_cost_ngn: 5000000, escalation_target_role_id: 'ROLE_CEO_COO', sla_hours: 4, title: 'Hotel General Manager' },
+    { tier_level: 3, approver_role_id: 'ROLE_CEO_COO', min_cost_ngn: 5000001, max_cost_ngn: null, escalation_target_role_id: null, sla_hours: 12, title: 'CEO / COO' }
+  ]
+};
 
 // Real Role-Based Access Control Definitions
 export const ADMIN_ROLES = {
+  // Executive Tier
+  CEO: 'ROLE_CEO_COO',
+  COO: 'ROLE_CEO_COO',
+  HOTEL_MANAGER: 'ROLE_HM',
+  ADMIN_OPERATIONS_MANAGER: 'ROLE_AM',
   SUPER_ADMIN: 'SUPER_ADMIN',
   HOTEL_ADMIN: 'HOTEL_ADMIN',
   MANAGER: 'MANAGER',
   CONTENT_MANAGER: 'CONTENT_MANAGER',
   TRANSPORT_MANAGER: 'TRANSPORT_MANAGER',
   RESTAURANT_MANAGER: 'RESTAURANT_MANAGER',
+
+  // Supervisory Tier
+  FRONT_DESK_SUPERVISOR: 'ROLE_SUP_FRONT_DESK',
+  EXECUTIVE_HOUSEKEEPER: 'ROLE_SUP_HOUSEKEEPING',
+  FNB_SUPERVISOR: 'ROLE_SUP_FNB',
+  EXECUTIVE_CHEF: 'ROLE_SUP_CHEF',
+  SOUS_CHEF: 'ROLE_SUP_SOUS_CHEF',
+  PROCUREMENT_INVENTORY_SUPERVISOR: 'ROLE_SUP_PROCUREMENT',
+  CHIEF_ACCOUNTANT: 'ROLE_SUP_ACCOUNTANT',
+  CHIEF_ENGINEER: 'ROLE_SUP_ENGINEER',
+  MAINTENANCE_SUPERVISOR: 'ROLE_SUP_MAINTENANCE',
+  CHIEF_SECURITY_OFFICER: 'ROLE_SUP_SECURITY',
   SUPERVISOR: 'SUPERVISOR',
+
+  // Line Staff Tier
+  STOREKEEPER: 'ROLE_WRK_STORE',
+  RECEIVING_CLERK: 'ROLE_WRK_RECV',
+  AP_OFFICER: 'ROLE_WRK_AP',
+  CASHIER: 'ROLE_WRK_CASHIER',
+  SECURITY_GUARD: 'ROLE_WRK_SEC_GUARD',
+  CCTV_OPERATOR: 'ROLE_WRK_CCTV',
+  LINE_STAFF: 'ROLE_WRK_LINE_STAFF',
   FRONT_DESK: 'FRONT_DESK',
   KITCHEN: 'KITCHEN',
   HOUSEKEEPING: 'HOUSEKEEPING',
@@ -26,17 +166,44 @@ export const ADMIN_ROLES = {
 };
 
 export const ROLE_PERMISSIONS = {
+  // Executive Management
+  ROLE_CEO_COO: ['ALL', 'VIEW_DASHBOARD', 'APPROVE_HIGH_VALUE_PROCUREMENT', 'TERMINAL_APPROVAL', 'VIEW_AUDIT_LOGS', 'MANAGE_RBAC', 'EXPORT_AUDIT_PDF'],
+  ROLE_HM: ['VIEW_DASHBOARD', 'APPROVE_MEDIUM_VALUE_PROCUREMENT', 'ESCALATE_PROCUREMENT', 'MANAGE_STAFF', 'VIEW_AUDIT_LOGS', 'MANAGE_MENU', 'EXPORT_AUDIT_PDF'],
+  ROLE_AM: ['VIEW_DASHBOARD', 'APPROVE_LOW_VALUE_PROCUREMENT', 'ESCALATE_PROCUREMENT', 'REQUEST_ORDERS', 'GENERATE_LPO', 'MANAGE_PROCUREMENT', 'VIEW_AUDIT_LOGS', 'MANAGE_RBAC', 'EXPORT_AUDIT_PDF'],
+
+  // Supervisory Roles
+  ROLE_SUP_FRONT_DESK: ['VIEW_DASHBOARD', 'MANAGE_ORDERS', 'DISPATCH_TRANSPORT', 'MANAGE_INTERCOM', 'VIEW_GUESTS', 'VIEW_AUDIT_LOGS'],
+  ROLE_SUP_HOUSEKEEPING: ['VIEW_DASHBOARD', 'MANAGE_ROOMS', 'MANAGE_TASKS', 'MANAGE_INTERCOM', 'REQUEST_RESTOCK', 'VIEW_AUDIT_LOGS'],
+  ROLE_SUP_FNB: ['VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_ORDERS', 'REQUEST_RESTOCK', 'VIEW_AUDIT_LOGS'],
+  ROLE_SUP_CHEF: ['VIEW_DASHBOARD', 'MANAGE_ORDERS', 'MANAGE_BREAKFAST', 'MANAGE_INTERCOM', 'REQUEST_RESTOCK', 'VIEW_AUDIT_LOGS'],
+  ROLE_SUP_SOUS_CHEF: ['VIEW_DASHBOARD', 'MANAGE_ORDERS', 'MANAGE_BREAKFAST', 'MANAGE_INTERCOM', 'REQUEST_RESTOCK'],
+  ROLE_SUP_PROCUREMENT: ['VIEW_DASHBOARD', 'MANAGE_PROCUREMENT', 'ONBOARD_VENDORS', 'APPROVE_VENDORS', 'MANAGE_SUPPLIERS', 'VERIFY_INVOICES', 'CONFIRM_RECEIPT', 'VIEW_AUDIT_LOGS', 'MANAGE_INVENTORY', 'EXPORT_AUDIT_PDF'],
+  ROLE_SUP_ACCOUNTANT: ['VIEW_DASHBOARD', 'MANAGE_ACCOUNTS', 'APPROVE_PAYMENTS', 'CONFIRM_PAYMENTS', 'RELEASE_PAYMENT', 'VIEW_PAYMENT_HISTORY', 'VIEW_AUDIT_LOGS', 'EXPORT_AUDIT_PDF'],
+  ROLE_SUP_ENGINEER: ['VIEW_DASHBOARD', 'MANAGE_SERVICES', 'REQUEST_RESTOCK', 'VIEW_AUDIT_LOGS'],
+  ROLE_SUP_MAINTENANCE: ['VIEW_DASHBOARD', 'MANAGE_SERVICES', 'REQUEST_RESTOCK'],
+  ROLE_SUP_SECURITY: ['VIEW_DASHBOARD', 'MANAGE_SECURITY', 'LOG_GATE_RECEIVING', 'VIEW_AUDIT_LOGS'],
+
+  // Line Staff Roles
+  ROLE_WRK_STORE: ['VIEW_DASHBOARD', 'MANAGE_INVENTORY', 'COUNT_STOCK', 'INSPECT_DELIVERIES', 'CONFIRM_RECEIPT'],
+  ROLE_WRK_RECV: ['VIEW_DASHBOARD', 'INSPECT_DELIVERIES', 'LOG_WAYBILL', 'CONFIRM_RECEIPT'],
+  ROLE_WRK_AP: ['VIEW_DASHBOARD', 'MANAGE_ACCOUNTS', 'QUEUE_PAYMENT', 'RELEASE_PAYMENT', 'VIEW_PAYMENT_HISTORY'],
+  ROLE_WRK_CASHIER: ['VIEW_DASHBOARD', 'RECORD_SETTLEMENT'],
+  ROLE_WRK_SEC_GUARD: ['VIEW_DASHBOARD', 'GATE_ENTRY_PASS', 'LOG_GATE_RECEIVING'],
+  ROLE_WRK_CCTV: ['VIEW_DASHBOARD', 'PERIMETER_MONITORING'],
+  ROLE_WRK_LINE_STAFF: ['VIEW_DASHBOARD', 'MANAGE_TASKS'],
+
+  // Backward Compatible Existing Roles
   SUPER_ADMIN: ['ALL'],
   HOTEL_ADMIN: [
     'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
     'MANAGE_MEDIA', 'MANAGE_SERVICES', 'MANAGE_TRANSPORT_PRICING', 'DISPATCH_TRANSPORT',
     'APPROVE_TOLANI_LEARNING', 'ROLLBACK_TOLANI_LEARNING', 'MANAGE_STAFF', 'VIEW_AUDIT_LOGS',
-    'MANAGE_SETTINGS', 'MANAGE_PROCUREMENT', 'MANAGE_ACCOUNTS', 'MANAGE_RBAC'
+    'MANAGE_SETTINGS', 'MANAGE_PROCUREMENT', 'MANAGE_ACCOUNTS', 'MANAGE_RBAC', 'EXPORT_AUDIT_PDF'
   ],
   MANAGER: [
     'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
     'MANAGE_MEDIA', 'MANAGE_SERVICES', 'MANAGE_TRANSPORT_PRICING', 'DISPATCH_TRANSPORT',
-    'MANAGE_STAFF', 'VIEW_AUDIT_LOGS', 'MANAGE_PROCUREMENT', 'APPROVE_INVOICES'
+    'MANAGE_STAFF', 'VIEW_AUDIT_LOGS', 'MANAGE_PROCUREMENT', 'APPROVE_INVOICES', 'EXPORT_AUDIT_PDF'
   ],
   CONTENT_MANAGER: [
     'VIEW_DASHBOARD', 'MANAGE_MENU', 'PUBLISH_MENU', 'MANAGE_BREAKFAST', 'MANAGE_AMENITIES',
@@ -70,13 +237,13 @@ export const ROLE_PERMISSIONS = {
     'VIEW_DASHBOARD', 'DISPATCH_TRANSPORT', 'MANAGE_INTERCOM'
   ],
   PROCUREMENT: [
-    'VIEW_DASHBOARD', 'MANAGE_PROCUREMENT', 'ONBOARD_VENDORS', 'APPROVE_VENDORS', 'MANAGE_SUPPLIERS', 'REQUEST_ORDERS', 'APPROVE_INVOICES', 'VIEW_AUDIT_LOGS'
+    'VIEW_DASHBOARD', 'MANAGE_PROCUREMENT', 'ONBOARD_VENDORS', 'APPROVE_VENDORS', 'MANAGE_SUPPLIERS', 'REQUEST_ORDERS', 'APPROVE_INVOICES', 'CONFIRM_RECEIPT', 'VIEW_AUDIT_LOGS', 'EXPORT_AUDIT_PDF'
   ],
   ACCOUNTS: [
-    'VIEW_DASHBOARD', 'MANAGE_ACCOUNTS', 'APPROVE_PAYMENTS', 'CONFIRM_PAYMENTS', 'VIEW_PAYMENT_HISTORY', 'VIEW_AUDIT_LOGS'
+    'VIEW_DASHBOARD', 'MANAGE_ACCOUNTS', 'APPROVE_PAYMENTS', 'CONFIRM_PAYMENTS', 'RELEASE_PAYMENT', 'VIEW_PAYMENT_HISTORY', 'VIEW_AUDIT_LOGS', 'EXPORT_AUDIT_PDF'
   ],
   VENDOR: [
-    'VIEW_VENDOR_PORTAL', 'GENERATE_INVOICE', 'CONFIRM_PAYMENT_RECEIVED', 'GENERATE_RECEIPT', 'UPDATE_PRICE'
+    'VIEW_VENDOR_PORTAL', 'GENERATE_INVOICE', 'CONFIRM_ORDER', 'UPDATE_DELIVERY_PROGRESS', 'CONFIRM_PAYMENT_RECEIVED', 'GENERATE_RECEIPT', 'UPDATE_PRICE'
   ]
 };
 
@@ -1298,7 +1465,7 @@ const defaultState = {
       clockedIn: true,
       clockInTime: '06:52 AM',
       clockStatus: 'On Time',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
+      avatar: './src/assets/housekeeping-amara.jpg',
       performanceScore: 94,
       tasksCompleted: 48,
       totalTasks: 50,
@@ -1317,7 +1484,7 @@ const defaultState = {
       clockedIn: true,
       clockInTime: '05:50 AM',
       clockStatus: 'On Time',
-      avatar: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=600&q=80',
+      avatar: './src/assets/executive-chef-babatunde.jpg',
       performanceScore: 96,
       tasksCompleted: 62,
       totalTasks: 64,
@@ -1336,7 +1503,7 @@ const defaultState = {
       clockedIn: true,
       clockInTime: '07:55 AM',
       clockStatus: 'On Time',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+      avatar: './src/assets/transport-manager-bello.jpg',
       performanceScore: 91,
       tasksCompleted: 35,
       totalTasks: 38,
@@ -1355,7 +1522,7 @@ const defaultState = {
       clockedIn: true,
       clockInTime: '07:45 AM',
       clockStatus: 'On Time',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
+      avatar: './src/assets/supervisor-tariq.jpg',
       performanceScore: 95,
       tasksCompleted: 70,
       totalTasks: 72,
@@ -1374,7 +1541,7 @@ const defaultState = {
       clockedIn: true,
       clockInTime: '07:30 AM',
       clockStatus: 'On Time',
-      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80',
+      avatar: './src/assets/general-manager-seyi.jpg',
       performanceScore: 98,
       tasksCompleted: 85,
       totalTasks: 85,
@@ -1393,7 +1560,7 @@ const defaultState = {
       clockedIn: true,
       clockInTime: '08:50 AM',
       clockStatus: 'On Time',
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80',
+      avatar: './src/assets/content-manager-chidinma.jpg',
       performanceScore: 95,
       tasksCompleted: 42,
       totalTasks: 44,
@@ -1487,7 +1654,9 @@ const defaultState = {
   inventory: [
     {
       id: 'INV-01',
+      sku: 'RICE-PAR-50KG',
       category: 'Kitchen',
+      departmentId: 'DEP_KITCHEN',
       name: 'Premium Long Grain Rice (50kg Bag)',
       quantity: 4,
       unit: 'bags',
@@ -1495,12 +1664,16 @@ const defaultState = {
       reorderThreshold: 5,
       criticalThreshold: 2,
       supplier: 'Lagos Farm Fresh Produce',
+      supplierCode: 'LFF-002',
       unitCost: 78000,
-      status: 'LOW STOCK' // Calculated: 4/15 = 26.6% -> LOW STOCK (<30%)
+      dailyConsumptionRate: 0.5,
+      status: 'LOW STOCK' // 4/15 = 26.6% -> LOW STOCK (<=30% Warning)
     },
     {
       id: 'INV-02',
+      sku: 'OIL-VEG-25L',
       category: 'Kitchen',
+      departmentId: 'DEP_KITCHEN',
       name: 'Pure Vegetable Cooking Oil (25L Canister)',
       quantity: 2,
       unit: 'canisters',
@@ -1508,12 +1681,16 @@ const defaultState = {
       reorderThreshold: 3,
       criticalThreshold: 1,
       supplier: 'Lagos Farm Fresh Produce',
+      supplierCode: 'LFF-002',
       unitCost: 45000,
-      status: 'VERY LOW' // 2/10 = 20% -> VERY LOW (<=20%)
+      dailyConsumptionRate: 0.8,
+      status: 'VERY LOW' // 2/10 = 20% -> VERY LOW (<=20% Low)
     },
     {
       id: 'INV-03',
+      sku: 'TOWEL-LUX-WHT',
       category: 'Housekeeping',
+      departmentId: 'DEP_HOUSEKEEPING',
       name: 'Capitol Egyptian Cotton Bath Towels (White)',
       quantity: 18,
       unit: 'pieces',
@@ -1521,12 +1698,16 @@ const defaultState = {
       reorderThreshold: 30,
       criticalThreshold: 10,
       supplier: 'Capitol Linen & Amenities Supplies',
-      unitCost: 12000,
-      status: 'VERY LOW' // 18/100 = 18% -> VERY LOW
+      supplierCode: 'CLA-003',
+      unitCost: 15000,
+      dailyConsumptionRate: 6.0,
+      status: 'VERY LOW' // 18/100 = 18% -> VERY LOW (<=20% Low)
     },
     {
       id: 'INV-04',
+      sku: 'TOIL-BOT-KIT',
       category: 'Toiletries',
+      departmentId: 'DEP_HOUSEKEEPING',
       name: 'Luxury Botanical Toiletry Kits (Bottles)',
       quantity: 34,
       unit: 'sets',
@@ -1534,12 +1715,16 @@ const defaultState = {
       reorderThreshold: 60,
       criticalThreshold: 20,
       supplier: 'Capitol Linen & Amenities Supplies',
+      supplierCode: 'CLA-003',
       unitCost: 3500,
-      status: 'VERY LOW' // 34/200 = 17% -> VERY LOW
+      dailyConsumptionRate: 15.0,
+      status: 'VERY LOW' // 34/200 = 17% -> VERY LOW (<=20% Low)
     },
     {
       id: 'INV-05',
+      sku: 'INSECT-HD-CAN',
       category: 'Housekeeping',
+      departmentId: 'DEP_HOUSEKEEPING',
       name: 'Heavy-Duty Room Insecticide & Sanitizer Spray',
       quantity: 3,
       unit: 'cans',
@@ -1547,12 +1732,16 @@ const defaultState = {
       reorderThreshold: 12,
       criticalThreshold: 4,
       supplier: 'Capitol Linen & Amenities Supplies',
+      supplierCode: 'CLA-003',
       unitCost: 6500,
-      status: 'CRITICAL' // 3/40 = 7.5% -> CRITICAL (<=10%)
+      dailyConsumptionRate: 2.0,
+      status: 'CRITICAL' // 3/40 = 7.5% -> CRITICAL (<=10% Critical)
     },
     {
       id: 'INV-06',
+      sku: 'PRW-ATL-JUM',
       category: 'Restaurant',
+      departmentId: 'DEP_FNB',
       name: 'Fresh Jumbo Atlantic Tiger Prawns',
       quantity: 14,
       unit: 'kg',
@@ -1560,21 +1749,249 @@ const defaultState = {
       reorderThreshold: 6,
       criticalThreshold: 2,
       supplier: 'Ikeja Prime Poultry & Seafood',
+      supplierCode: 'IPP-004',
       unitCost: 16000,
+      dailyConsumptionRate: 3.0,
       status: 'NORMAL' // 14/20 = 70%
     },
     {
       id: 'INV-07',
+      sku: 'WINE-MOET-750',
       category: 'Bar',
+      departmentId: 'DEP_FNB',
       name: 'Moët & Chandon Brut Champagne (750ml)',
       quantity: 12,
       unit: 'bottles',
       maxCapacity: 18,
       reorderThreshold: 5,
       criticalThreshold: 2,
-      supplier: 'Golden Beverage Distributors',
+      supplier: 'ABC Foods Limited',
+      supplierCode: 'ABC-001',
       unitCost: 68000,
+      dailyConsumptionRate: 1.5,
       status: 'NORMAL'
+    },
+    {
+      id: 'INV-08',
+      sku: 'GEN-DIESEL-ENG',
+      category: 'Maintenance',
+      departmentId: 'DEP_MAINTENANCE',
+      name: 'Standby Power Generator Heavy Overhaul & Fuel Reserves',
+      quantity: 1,
+      unit: 'service sets',
+      maxCapacity: 10,
+      reorderThreshold: 3,
+      criticalThreshold: 1,
+      supplier: 'ABC Foods Limited',
+      supplierCode: 'ABC-001',
+      unitCost: 750000,
+      dailyConsumptionRate: 0.1,
+      status: 'CRITICAL' // 1/10 = 10% (Critical)
+    }
+  ],
+
+  procurementRequisitions: [
+    {
+      id: 'REQ-2026-001',
+      itemId: 'INV-02',
+      sku: 'OIL-VEG-25L',
+      itemName: 'Pure Vegetable Cooking Oil (25L Canister)',
+      departmentId: 'DEP_KITCHEN',
+      departmentName: 'Culinary & Kitchen',
+      currentStock: 2,
+      maxCapacity: 10,
+      depletionPercentage: 20,
+      severity: 'LOW',
+      reorderQuantity: 8,
+      unitPrice: 45000,
+      estimatedCost: 360000, // 8 * 45,000 = ₦360,000 (Tier 1: Admin Manager)
+      approverRoleId: 'ROLE_AM',
+      assignedApproverTitle: 'Admin & Operations Manager',
+      tierLevel: 1,
+      slaHours: 2,
+      approvalStartedAt: '2026-08-20 09:30 AM',
+      approvalDeadline: '2026-08-20 11:30 AM',
+      preferredVendorId: 'SUP-02',
+      preferredVendorCode: 'LFF-002',
+      preferredVendorName: 'Lagos Farm Fresh Produce',
+      status: 'PENDING_APPROVAL',
+      deliveryLocation: 'Hotel Capitol Main Kitchen Loading Bay',
+      requiredEta: '2026-08-22',
+      approvalHistory: [],
+      lpo: null,
+      invoice: null,
+      delivery: {
+        milestone: 'NOT_STARTED',
+        history: []
+      },
+      receiving: null,
+      payment: null,
+      auditPdf: null
+    },
+    {
+      id: 'REQ-2026-002',
+      itemId: 'INV-03',
+      sku: 'TOWEL-LUX-WHT',
+      itemName: 'Capitol Egyptian Cotton Bath Towels (White)',
+      departmentId: 'DEP_HOUSEKEEPING',
+      departmentName: 'Housekeeping & Laundry',
+      currentStock: 18,
+      maxCapacity: 100,
+      depletionPercentage: 18,
+      severity: 'LOW',
+      reorderQuantity: 82,
+      unitPrice: 15000,
+      estimatedCost: 1230000, // 82 * 15,000 = ₦1,230,000 (Tier 2: Hotel Manager, escalated from AM)
+      approverRoleId: 'ROLE_HM',
+      assignedApproverTitle: 'Hotel General Manager',
+      tierLevel: 2,
+      slaHours: 4,
+      approvalStartedAt: '2026-08-20 08:45 AM',
+      approvalDeadline: '2026-08-20 12:45 PM',
+      preferredVendorId: 'SUP-03',
+      preferredVendorCode: 'CLA-003',
+      preferredVendorName: 'Capitol Linen & Amenities Supplies',
+      status: 'ESCALATED_TO_HM',
+      deliveryLocation: 'Hotel Capitol Central Linen Stores',
+      requiredEta: '2026-08-23',
+      approvalHistory: [
+        { step: 'ESCALATION_EVALUATION', actor: 'System AI Monitor', role: 'AI_AGENT', decision: 'ESCALATED_TO_HM', timestamp: '2026-08-20 08:45 AM', notes: 'Estimated procurement cost (₦1,230,000) exceeds Admin Manager limit (₦1,000,000). Escalated to Hotel General Manager.' }
+      ],
+      lpo: null,
+      invoice: null,
+      delivery: {
+        milestone: 'NOT_STARTED',
+        history: []
+      },
+      receiving: null,
+      payment: null,
+      auditPdf: null
+    },
+    {
+      id: 'REQ-2026-003',
+      itemId: 'INV-08',
+      sku: 'GEN-DIESEL-ENG',
+      itemName: 'Standby Power Generator Heavy Overhaul & Fuel Reserves',
+      departmentId: 'DEP_MAINTENANCE',
+      departmentName: 'Maintenance & Engineering',
+      currentStock: 1,
+      maxCapacity: 10,
+      depletionPercentage: 10,
+      severity: 'CRITICAL',
+      reorderQuantity: 9,
+      unitPrice: 750000,
+      estimatedCost: 6750000, // ₦6,750,000 (Tier 3: CEO / COO Terminal Approval)
+      approverRoleId: 'ROLE_CEO_COO',
+      assignedApproverTitle: 'CEO / COO',
+      tierLevel: 3,
+      slaHours: 12,
+      approvalStartedAt: '2026-08-20 07:15 AM',
+      approvalDeadline: '2026-08-20 07:15 PM',
+      preferredVendorId: 'SUP-01',
+      preferredVendorCode: 'ABC-001',
+      preferredVendorName: 'ABC Foods Limited',
+      status: 'ESCALATED_TO_CEO',
+      deliveryLocation: 'Hotel Capitol Utility Bay & Power Plant',
+      requiredEta: '2026-08-25',
+      approvalHistory: [
+        { step: 'ESCALATION_EVALUATION', actor: 'System AI Monitor', role: 'AI_AGENT', decision: 'ESCALATED_TO_CEO', timestamp: '2026-08-20 07:15 AM', notes: 'Estimated cost (₦6,750,000) exceeds ₦5,000,000. Executive CEO/COO terminal approval required.' }
+      ],
+      lpo: null,
+      invoice: null,
+      delivery: {
+        milestone: 'NOT_STARTED',
+        history: []
+      },
+      receiving: null,
+      payment: null,
+      auditPdf: null
+    },
+    {
+      id: 'REQ-2026-004',
+      itemId: 'INV-04',
+      sku: 'TOIL-BOT-KIT',
+      itemName: 'Luxury Botanical Toiletry Kits (Bottles)',
+      departmentId: 'DEP_HOUSEKEEPING',
+      departmentName: 'Housekeeping & Laundry',
+      currentStock: 200,
+      maxCapacity: 200,
+      depletionPercentage: 100,
+      severity: 'NORMAL',
+      reorderQuantity: 150,
+      unitPrice: 3500,
+      estimatedCost: 525000,
+      approverRoleId: 'ROLE_AM',
+      assignedApproverTitle: 'Admin & Operations Manager',
+      tierLevel: 1,
+      slaHours: 2,
+      approvalStartedAt: '2026-08-19 09:00 AM',
+      approvalDeadline: '2026-08-19 11:00 AM',
+      preferredVendorId: 'SUP-03',
+      preferredVendorCode: 'CLA-003',
+      preferredVendorName: 'Capitol Linen & Amenities Supplies',
+      status: 'AUDIT_CLOSED',
+      deliveryLocation: 'Hotel Capitol Housekeeping Central Depot',
+      requiredEta: '2026-08-20',
+      approvalHistory: [
+        { step: 'APPROVAL_GATEWAY', actor: 'Seyi Adeyemi (AM)', role: 'ROLE_AM', decision: 'APPROVED', timestamp: '2026-08-19 09:40 AM', notes: 'Approved within ₦1M standard limit.' }
+      ],
+      lpo: {
+        lpoNumber: 'LPO-CAPITOL-2026-0038',
+        generatedAt: '2026-08-19 09:45 AM',
+        dispatchedAt: '2026-08-19 10:00 AM',
+        requestedBy: 'Seyi Adeyemi (Admin Manager)',
+        sku: 'TOIL-BOT-KIT',
+        quantity: 150,
+        unitPrice: 3500,
+        estimatedTotal: 525000,
+        requiredEta: '2026-08-20',
+        vendorContact: 'Mrs. Chidinma Eze (+234 803 776 2201)'
+      },
+      invoice: {
+        invoiceNumber: 'INV-CLA-2026-092',
+        generatedAt: '2026-08-19 10:30 AM',
+        totalAmount: 525000,
+        status: 'VERIFIED_ROUTED_TO_AP',
+        procurementVerifiedAt: '2026-08-19 11:15 AM',
+        procurementVerifiedBy: 'Kunle Adeleke (Procurement Supervisor)'
+      },
+      delivery: {
+        milestone: 'Goods Delivered',
+        updatedBy: 'Dispatch Driver #3 (Capitol Logistics)',
+        updatedAt: '2026-08-19 02:30 PM',
+        history: [
+          { status: 'Order Confirmed', time: '10:35 AM', note: 'Vendor confirmed order' },
+          { status: 'Palletized', time: '11:00 AM', note: '150 sets packed & sealed' },
+          { status: 'Depot Dispatched', time: '11:45 AM', note: 'Departed Oregun Industrial Estate' },
+          { status: 'In Transit', time: '12:30 PM', note: 'Along Mobolaji Bank Anthony Way' },
+          { status: 'Near Hotel', time: '01:50 PM', note: 'Turning onto Animashaun Close' },
+          { status: 'Arrived at Gate', time: '02:15 PM', note: 'Security gate clearance granted' },
+          { status: 'Goods Delivered', time: '02:30 PM', note: 'Unloaded at Housekeeping Bay' }
+        ]
+      },
+      receiving: {
+        inspectorName: 'Amara Nwosu',
+        inspectorRole: 'ROLE_SUP_HOUSEKEEPING',
+        waybillNumber: 'WB-CLA-2026-883',
+        itemsAcceptedQuantity: 150,
+        conditionStatus: 'PASSED',
+        dockNotes: 'All 150 luxury botanical bottles sealed and in perfect condition.',
+        confirmedAt: '2026-08-19 02:45 PM'
+      },
+      payment: {
+        paymentRef: 'NIP-TXN-20260819-7734',
+        amount: 525000,
+        status: 'RELEASED',
+        releasedAt: '2026-08-19 03:30 PM',
+        officerName: 'Ngozi Okonjo (Chief Accountant)',
+        paymentChannel: 'NIBSS Instant Payment (Zenith Bank Corporate)'
+      },
+      auditPdf: {
+        generatedAt: '2026-08-19 03:35 PM',
+        pdfDocId: 'AUD-PDF-2026-0038',
+        downloadUrl: '#audit-pdf-download',
+        closeoutStatus: 'CLOSED'
+      }
     }
   ],
 
@@ -2003,7 +2420,7 @@ class StateStore {
 
   loadState() {
     try {
-      // Purge legacy outdated cache keys so browser loads fresh FSM configuration cleanly
+      // Purge legacy outdated cache keys so browser loads fresh FSM configuration and latest portraits cleanly
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V1');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V2');
@@ -2014,9 +2431,18 @@ class StateStore {
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V10');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V11');
         localStorage.removeItem('HOTEL_CAPITOL_STATE_V12');
+        localStorage.removeItem('HOTEL_CAPITOL_STATE_V13');
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          // Always ensure staff avatars are synced with current canonical assets
+          if (parsed.staffMembers && defaultState.staffMembers) {
+            parsed.staffMembers = parsed.staffMembers.map(s => {
+              const def = defaultState.staffMembers.find(d => d.id === s.id);
+              return def ? { ...s, avatar: def.avatar, name: def.name, role: def.role } : s;
+            });
+          }
+          return parsed;
         }
       }
     } catch (e) {
@@ -2111,6 +2537,10 @@ class StateStore {
 
   setActiveStaffId(id) {
     this.setState(s => ({ ...s, activeStaffId: id }));
+  }
+
+  setActiveStaff(id) {
+    this.setActiveStaffId(id);
   }
 
   // Add Restaurant Order (Genuine SUBMITTED state with exact timestamps)
@@ -3797,6 +4227,730 @@ class StateStore {
 
     this.addAudit('DELIVERY_TRACKING_UPDATED', `Order ${existing.orderId} (${existing.supplierCode})`, `Delivery status transitioned: ${nextStatus}`, 'Automated Dispatch AI', 'Delivery Tracking', existing, updated, note);
     return updated;
+  }
+
+  // =========================================================================
+  // --- END-TO-END AUTONOMOUS PROCUREMENT WORKFLOW ENGINE (14 STAGES) ---
+  // =========================================================================
+
+  getAppropriateApprover(estimatedCost) {
+    const cost = Number(estimatedCost) || 0;
+    if (cost <= 1000000) {
+      return {
+        roleId: 'ROLE_AM',
+        title: 'Admin & Operations Manager',
+        tierLevel: 1,
+        slaHours: 2,
+        maxLimit: 1000000,
+        escalationTarget: 'ROLE_HM'
+      };
+    } else if (cost <= 5000000) {
+      return {
+        roleId: 'ROLE_HM',
+        title: 'Hotel General Manager',
+        tierLevel: 2,
+        slaHours: 4,
+        maxLimit: 5000000,
+        escalationTarget: 'ROLE_CEO_COO'
+      };
+    } else {
+      return {
+        roleId: 'ROLE_CEO_COO',
+        title: 'CEO / COO',
+        tierLevel: 3,
+        slaHours: 12,
+        maxLimit: null,
+        escalationTarget: null
+      };
+    }
+  }
+
+  // STAGE 1: AI Stock Depletion Evaluation & Alert Distribution
+  evaluateAIStockDepletion() {
+    const state = this.getState();
+    const inventory = state.inventory || [];
+    let updatedInventory = [];
+    let newRequisitions = [...(state.procurementRequisitions || [])];
+    let alertsTriggered = 0;
+
+    inventory.forEach(item => {
+      const ratio = item.quantity / item.maxCapacity;
+      let severity = 'NORMAL';
+      let status = 'NORMAL';
+
+      if (ratio <= 0.05) {
+        severity = 'EMERGENCY';
+        status = 'EMERGENCY RESTOCK';
+      } else if (ratio <= 0.10) {
+        severity = 'CRITICAL';
+        status = 'CRITICAL';
+      } else if (ratio <= 0.20) {
+        severity = 'LOW';
+        status = 'VERY LOW';
+      } else if (ratio <= 0.30) {
+        severity = 'WARNING';
+        status = 'LOW STOCK';
+      }
+
+      updatedInventory.push({ ...item, status });
+
+      if (severity !== 'NORMAL') {
+        const existingReq = newRequisitions.find(r => r.itemId === item.id && r.status !== 'AUDIT_CLOSED' && r.status !== 'REJECTED');
+        if (!existingReq) {
+          const reorderQty = item.maxCapacity - item.quantity;
+          const estCost = reorderQty * item.unitCost;
+          const approverInfo = this.getAppropriateApprover(estCost);
+          const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const deadlineDate = new Date(Date.now() + (approverInfo.slaHours * 3600 * 1000));
+          const deadlineStr = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+          const newReq = {
+            id: 'REQ-2026-' + String(newRequisitions.length + 1).padStart(3, '0'),
+            itemId: item.id,
+            sku: item.sku || 'SKU-' + item.id,
+            itemName: item.name,
+            departmentId: item.departmentId || 'DEP_PROCUREMENT',
+            departmentName: item.category || 'General Hotel Operations',
+            currentStock: item.quantity,
+            maxCapacity: item.maxCapacity,
+            depletionPercentage: Math.round(ratio * 100),
+            severity,
+            reorderQuantity: reorderQty,
+            unitPrice: item.unitCost,
+            estimatedCost: estCost,
+            approverRoleId: approverInfo.roleId,
+            assignedApproverTitle: approverInfo.title,
+            tierLevel: approverInfo.tierLevel,
+            slaHours: approverInfo.slaHours,
+            approvalStartedAt: nowStr,
+            approvalDeadline: deadlineStr,
+            preferredVendorId: item.supplierCode || 'SUP-01',
+            preferredVendorCode: item.supplierCode || 'SUP-01',
+            preferredVendorName: item.supplier || 'Approved Hotel Supplier',
+            status: approverInfo.tierLevel === 1 ? 'PENDING_APPROVAL' : (approverInfo.tierLevel === 2 ? 'ESCALATED_TO_HM' : 'ESCALATED_TO_CEO'),
+            deliveryLocation: 'Hotel Capitol Main Loading Bay 1',
+            requiredEta: new Date(Date.now() + (2 * 86400000)).toISOString().slice(0, 10),
+            approvalHistory: [
+              {
+                step: 'STOCK_ALERT_TRIGGERED',
+                actor: 'AI Stock Monitoring Agent',
+                role: 'AI_AGENT',
+                decision: 'ALERT_DISPATCHED',
+                timestamp: nowStr,
+                notes: `Depletion crossed ${Math.round(ratio * 100)}% threshold (${severity}). Reorder recommendation generated.`
+              }
+            ],
+            lpo: null,
+            invoice: null,
+            delivery: { milestone: 'NOT_STARTED', history: [] },
+            receiving: null,
+            payment: null,
+            auditPdf: null
+          };
+
+          newRequisitions.unshift(newReq);
+          alertsTriggered++;
+          this.addAudit('AI_STOCK_DEPLETION_ALERT', `${item.name} (${item.id})`, `Stock ratio ${Math.round(ratio*100)}% triggered ${severity} alert (Est: ₦${estCost.toLocaleString()})`, 'AI Stock Monitor', 'AI Automation', null, newReq, 'Autonomous depletion alert');
+        }
+      }
+    });
+
+    this.setState(s => ({
+      ...s,
+      inventory: updatedInventory,
+      procurementRequisitions: newRequisitions
+    }));
+
+    return { alertsTriggered, count: newRequisitions.length };
+  }
+
+  // STAGE 2 & 3: Managerial Approval & Dynamic Escalation Evaluation
+  processRequisitionApproval(reqId, action, actorRole = 'ROLE_AM', actorName = 'Admin Manager', notes = '') {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const cost = existing.estimatedCost;
+    let nextStatus = existing.status;
+    let escalationReason = null;
+    let generatedLpo = existing.lpo;
+
+    if (action === 'APPROVE') {
+      // Dynamic financial threshold & role boundary validation
+      if ((actorRole === 'ROLE_AM' || actorRole === 'ADMIN_OPERATIONS_MANAGER') && cost > 1000000) {
+        // Exceeds AM ₦1,000,000 threshold -> Escalate automatically to HM
+        nextStatus = 'ESCALATED_TO_HM';
+        escalationReason = `Total procurement value (₦${cost.toLocaleString()}) exceeds Admin Manager threshold of ₦1,000,000. System escalated to Hotel General Manager.`;
+      } else if ((actorRole === 'ROLE_HM' || actorRole === 'HOTEL_MANAGER') && cost > 5000000) {
+        // Exceeds HM ₦5,000,000 threshold -> Escalate automatically to CEO/COO
+        nextStatus = 'ESCALATED_TO_CEO';
+        escalationReason = `Total procurement value (₦${cost.toLocaleString()}) exceeds Hotel Manager threshold of ₦5,000,000. System escalated to CEO / COO for terminal sign-off.`;
+      } else {
+        // Authorized approval reached! Generate LPO draft autonomously (Stage 4)
+        nextStatus = 'APPROVED';
+        const lpoNumber = `LPO-CAPITOL-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`;
+        generatedLpo = {
+          lpoNumber,
+          generatedAt: nowStr,
+          dispatchedAt: null,
+          requestedBy: null,
+          sku: existing.sku,
+          quantity: existing.reorderQuantity,
+          unitPrice: existing.unitPrice,
+          estimatedTotal: existing.estimatedCost,
+          requiredEta: existing.requiredEta,
+          vendorContact: `${existing.preferredVendorName} (${existing.preferredVendorCode})`
+        };
+      }
+    } else if (action === 'ESCALATE') {
+      if (existing.tierLevel === 1 || existing.status === 'PENDING_APPROVAL') {
+        nextStatus = 'ESCALATED_TO_HM';
+        escalationReason = notes || 'Manually escalated by Admin Manager for Hotel Manager departmental budget review.';
+      } else {
+        nextStatus = 'ESCALATED_TO_CEO';
+        escalationReason = notes || 'Escalated to Chief Executive Officer / Chief Operating Officer for executive sign-off.';
+      }
+    } else if (action === 'REJECT') {
+      nextStatus = 'REJECTED';
+    }
+
+    const updatedHistory = [
+      ...(existing.approvalHistory || []),
+      {
+        step: escalationReason ? 'ESCALATION_EVALUATION' : 'APPROVAL_GATEWAY',
+        actor: actorName,
+        role: actorRole,
+        decision: nextStatus,
+        timestamp: nowStr,
+        notes: escalationReason || notes || `Decision ${action} recorded by ${actorName} (${actorRole}).`
+      }
+    ];
+
+    const updatedReq = {
+      ...existing,
+      status: nextStatus,
+      lpo: generatedLpo,
+      approvalHistory: updatedHistory
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r)
+    }));
+
+    this.addAudit('REQUISITION_APPROVAL_DECISION', `${reqId} (₦${cost.toLocaleString()})`, `Action: ${action} → New Status: ${nextStatus}`, actorName, 'Procurement Management', existing, updatedReq, escalationReason || notes);
+    return updatedReq;
+  }
+
+  // STAGE 5: LPO Review & Order Dispatch
+  dispatchLPOToVendor(reqId, actorName = 'Seyi Adeyemi (Admin Manager)') {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+    if (existing.status !== 'APPROVED' || !existing.lpo) {
+      throw new Error(`Requisition ${reqId} must be in APPROVED state with generated LPO before dispatch.`);
+    }
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const updatedLpo = {
+      ...existing.lpo,
+      dispatchedAt: nowStr,
+      requestedBy: actorName
+    };
+
+    const updatedReq = {
+      ...existing,
+      status: 'LPO_REQUESTED',
+      lpo: updatedLpo,
+      approvalHistory: [
+        ...(existing.approvalHistory || []),
+        {
+          step: 'LPO_REVIEW_AND_DISPATCH',
+          actor: actorName,
+          role: 'ROLE_AM',
+          decision: 'REQUEST_ORDER',
+          timestamp: nowStr,
+          notes: `LPO ${updatedLpo.lpoNumber} dispatched to official Vendor Portal (${existing.preferredVendorName}).`
+        }
+      ]
+    };
+
+    // Also sync to procurementOrders for vendor portal visibility
+    const newOrder = {
+      id: updatedLpo.lpoNumber,
+      reqId: existing.id,
+      supplierCode: existing.preferredVendorCode,
+      supplierName: existing.preferredVendorName,
+      productId: existing.itemId,
+      productName: existing.itemName,
+      quantity: existing.reorderQuantity,
+      unit: 'units',
+      unitPrice: existing.unitPrice,
+      totalAmount: existing.estimatedCost,
+      deliveryLocation: existing.deliveryLocation,
+      requiredDeliveryDate: existing.requiredEta,
+      notes: `Autonomously dispatched LPO ${updatedLpo.lpoNumber}`,
+      status: 'REQUESTED',
+      createdAt: nowStr,
+      createdBy: actorName
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r),
+      procurementOrders: [newOrder, ...(s.procurementOrders || []).filter(o => o.id !== newOrder.id)]
+    }));
+
+    this.addAudit('LPO_DISPATCHED_TO_VENDOR', `${updatedLpo.lpoNumber} (${existing.preferredVendorCode})`, `Dispatched LPO order to ${existing.preferredVendorName} (₦${existing.estimatedCost.toLocaleString()})`, actorName, 'Procurement Management', existing, updatedReq, 'Vendor dispatch');
+    return updatedReq;
+  }
+
+  // STAGE 6: Vendor Generate Invoice & Dual-Stream Broadcast
+  submitVendorInvoice(reqId, customInvoiceData = null) {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const invNumber = customInvoiceData?.invoiceNumber || `INV-${existing.preferredVendorCode}-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`;
+
+    const newInvoice = {
+      invoiceNumber: invNumber,
+      orderId: existing.lpo?.lpoNumber || existing.id,
+      supplierCode: existing.preferredVendorCode,
+      supplierName: existing.preferredVendorName,
+      generatedAt: nowStr,
+      lineItems: [
+        {
+          sku: existing.sku,
+          description: existing.itemName,
+          unitPrice: existing.unitPrice,
+          quantity: existing.reorderQuantity,
+          total: existing.estimatedCost
+        }
+      ],
+      totalAmount: existing.estimatedCost,
+      status: 'UNDER_REVIEW',
+      procurementVerifiedAt: null,
+      procurementVerifiedBy: null
+    };
+
+    const updatedReq = {
+      ...existing,
+      status: 'VENDOR_INVOICE_GENERATED',
+      invoice: newInvoice,
+      approvalHistory: [
+        ...(existing.approvalHistory || []),
+        {
+          step: 'VENDOR_INVOICE_GENERATION',
+          actor: existing.preferredVendorName,
+          role: 'VENDOR_PORTAL_USER',
+          decision: 'GENERATE_INVOICE',
+          timestamp: nowStr,
+          notes: `Vendor digital invoice ${invNumber} generated using contracted rate (₦${existing.estimatedCost.toLocaleString()}). Broadcasted to Management & Procurement.`
+        }
+      ]
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r),
+      vendorInvoices: [
+        {
+          id: 'INV-' + Date.now().toString().slice(-4),
+          invoiceNumber: invNumber,
+          orderId: existing.lpo?.lpoNumber || existing.id,
+          supplierCode: existing.preferredVendorCode,
+          supplierName: existing.preferredVendorName,
+          items: newInvoice.lineItems,
+          totalAmount: newInvoice.totalAmount,
+          issueDate: new Date().toISOString().slice(0, 10),
+          status: 'PENDING_APPROVAL',
+          goodsReceivedConfirmed: false,
+          procurementApprovedBy: null,
+          procurementApprovedAt: null,
+          paymentRef: null
+        },
+        ...(s.vendorInvoices || [])
+      ]
+    }));
+
+    this.addAudit('VENDOR_INVOICE_BROADCAST', `${invNumber} (${existing.preferredVendorCode})`, `Dual-stream invoice received: broadcasted simultaneously to Hotel Management & Procurement`, existing.preferredVendorName, 'Vendor Invoicing', null, updatedReq, 'Invoice acceptance');
+    return updatedReq;
+  }
+
+  // STAGE 7: Vendor Order Confirmation & Logistics Initialization
+  confirmVendorOrder(reqId, actorName = 'Supplier Partner') {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const updatedDelivery = {
+      milestone: 'Order Confirmed',
+      updatedBy: actorName,
+      updatedAt: nowStr,
+      history: [
+        { status: 'Order Confirmed', time: timeStr, note: 'Supplier confirmed production and delivery schedule.' }
+      ]
+    };
+
+    const updatedReq = {
+      ...existing,
+      status: 'ORDER_CONFIRMED',
+      delivery: updatedDelivery,
+      approvalHistory: [
+        ...(existing.approvalHistory || []),
+        {
+          step: 'VENDOR_ORDER_CONFIRMATION',
+          actor: actorName,
+          role: 'VENDOR_PORTAL_USER',
+          decision: 'CONFIRM_ORDER',
+          timestamp: nowStr,
+          notes: 'Supplier acknowledged order and scheduled dispatch logistics.'
+        }
+      ]
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r)
+    }));
+
+    this.addAudit('VENDOR_ORDER_CONFIRMED', `${existing.lpo?.lpoNumber || reqId}`, `Vendor confirmed order. Logistics pipeline initialized.`, actorName, 'Vendor Portal', null, updatedReq, 'Order confirmation');
+    return updatedReq;
+  }
+
+  // STAGE 8 & 9: Dual-Stream Invoice Verification by Procurement
+  verifyProcurementInvoice(reqId, reviewerName = 'Kunle Adeleke (Procurement Supervisor)') {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const updatedInvoice = existing.invoice ? {
+      ...existing.invoice,
+      status: 'PROCUREMENT_VERIFIED',
+      procurementVerifiedAt: nowStr,
+      procurementVerifiedBy: reviewerName
+    } : null;
+
+    const updatedReq = {
+      ...existing,
+      status: 'PROCUREMENT_VERIFIED', // Transitions to AP_PAYMENT_QUEUED with payment hold
+      invoice: updatedInvoice,
+      payment: {
+        status: 'HOLD_PENDING_RECEIPT',
+        amount: existing.estimatedCost,
+        paymentRef: `PAY-REF-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`,
+        queuedAt: nowStr,
+        notes: 'Mandatory 2-way payment hold: awaiting physical dock receiving confirmation before payout execution.'
+      },
+      approvalHistory: [
+        ...(existing.approvalHistory || []),
+        {
+          step: 'PROCUREMENT_AUDIT_REVIEW',
+          actor: reviewerName,
+          role: 'ROLE_SUP_PROCUREMENT',
+          decision: 'SUBMIT_TO_AP',
+          timestamp: nowStr,
+          notes: '3-way match verified (LPO, contracted price, invoice qty). Queued for Accounts Payable with payment release hold.'
+        }
+      ]
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r)
+    }));
+
+    this.addAudit('PROCUREMENT_INVOICE_VERIFIED', `${existing.invoice?.invoiceNumber || reqId}`, `Invoice verified and queued to AP with mandatory receiving hold`, reviewerName, 'Vendor Procurement', existing, updatedReq, 'Procurement audit validation');
+    return updatedReq;
+  }
+
+  // STAGE 11: Vendor Delivery Lifecycle Milestone Stepper (7 Stages)
+  updateDeliveryMilestone(reqId, milestone, agentName = 'Logistics Partner', notes = '') {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const currentHistory = existing.delivery?.history || [];
+    const updatedDelivery = {
+      milestone,
+      updatedBy: agentName,
+      updatedAt: nowStr,
+      history: [
+        ...currentHistory,
+        { status: milestone, time: timeStr, note: notes || `Milestone reached: ${milestone}` }
+      ]
+    };
+
+    // If milestone is 'Goods Delivered', flag for dock receiving
+    let nextStatus = existing.status;
+    if (milestone === 'Goods Delivered') {
+      nextStatus = 'GOODS_DELIVERED';
+    }
+
+    const updatedReq = {
+      ...existing,
+      status: nextStatus,
+      delivery: updatedDelivery,
+      approvalHistory: [
+        ...(existing.approvalHistory || []),
+        {
+          step: 'DELIVERY_FULFILLMENT',
+          actor: agentName,
+          role: 'VENDOR_LOGISTICS',
+          decision: milestone,
+          timestamp: nowStr,
+          notes: notes || `Transit milestone: ${milestone}`
+        }
+      ]
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r)
+    }));
+
+    this.addAudit('DELIVERY_MILESTONE_UPDATED', `${existing.lpo?.lpoNumber || reqId} → ${milestone}`, notes || `Logistics progress updated to ${milestone}`, agentName, 'Vendor Logistics', null, updatedReq, 'Delivery tracking update');
+    return updatedReq;
+  }
+
+  // STAGE 12: Physical Dock Receiving & Inspection Confirmation
+  confirmPhysicalStoreReceipt(reqId, receiptData = {}) {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const inspectorName = receiptData.inspectorName || 'Amara Nwosu (Head of Housekeeping)';
+    const inspectorRole = receiptData.inspectorRole || 'ROLE_SUP_HOUSEKEEPING';
+    const waybillNumber = receiptData.waybillNumber || `WB-${existing.preferredVendorCode}-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`;
+    const itemsAcceptedQuantity = Number(receiptData.itemsAcceptedQuantity) || existing.reorderQuantity;
+    const conditionStatus = receiptData.conditionStatus || 'PASSED';
+    const dockNotes = receiptData.dockNotes || 'All delivered goods physically inspected and verified in pristine condition at Hotel Capitol loading dock.';
+
+    const receivingRecord = {
+      inspectorName,
+      inspectorRole,
+      waybillNumber,
+      itemsAcceptedQuantity,
+      conditionStatus,
+      dockNotes,
+      confirmedAt: nowStr
+    };
+
+    // RELEASE THE AP PAYMENT HOLD!
+    const updatedPayment = existing.payment ? {
+      ...existing.payment,
+      status: 'READY_FOR_RELEASE',
+      notes: `Physical receiving confirmed by ${inspectorName} (Waybill: ${waybillNumber}). Payout release unlocked.`
+    } : {
+      status: 'READY_FOR_RELEASE',
+      amount: existing.estimatedCost,
+      paymentRef: `PAY-REF-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`,
+      notes: `Physical receiving confirmed. Payout release unlocked.`
+    };
+
+    const updatedReq = {
+      ...existing,
+      status: 'RECEIPT_CONFIRMED',
+      receiving: receivingRecord,
+      payment: updatedPayment,
+      approvalHistory: [
+        ...(existing.approvalHistory || []),
+        {
+          step: 'PHYSICAL_RECEIPT_CONFIRMATION',
+          actor: inspectorName,
+          role: inspectorRole,
+          decision: 'CONFIRM_RECEIPT',
+          timestamp: nowStr,
+          notes: `Inspection PASSED (${itemsAcceptedQuantity} units accepted). Waybill: ${waybillNumber}. Accounts Payable payment release unlocked.`
+        }
+      ]
+    };
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r)
+    }));
+
+    this.addAudit('PHYSICAL_RECEIPT_CONFIRMED', `${waybillNumber} (${existing.itemName})`, `Physical inspection passed: ${itemsAcceptedQuantity} units accepted by ${inspectorName}`, inspectorName, 'Stores & Receiving', existing, updatedReq, dockNotes);
+    return updatedReq;
+  }
+
+  // STAGE 13 & 14: Simulated AP Payment Release, Inventory Restock & PDF Closeout
+  releaseAPPayment(reqId, paymentData = {}) {
+    const existing = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!existing) throw new Error(`Requisition ${reqId} not found`);
+
+    // STRICT PRECONDITION ENFORCEMENT (Mandatory Two-Way Payment Release Hold)
+    if (!existing.receiving || existing.receiving.conditionStatus !== 'PASSED') {
+      throw new Error('Precondition Failed (412): Physical goods delivery has not been confirmed by Stores/Procurement. Accounts Payable payment release is strictly blocked.');
+    }
+
+    const nowStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const officerName = paymentData.officerName || 'Ngozi Okonjo (Chief Accountant)';
+    const paymentRef = paymentData.paymentRef || existing.payment?.paymentRef || `NIP-TXN-${new Date().getFullYear()}${String(Math.floor(Math.random()*900000)+100000)}`;
+    const paymentChannel = paymentData.paymentChannel || 'NIBSS Instant Payment (Zenith Bank Corporate Direct)';
+
+    const finalPayment = {
+      paymentRef,
+      amount: existing.estimatedCost,
+      status: 'RELEASED',
+      releasedAt: nowStr,
+      officerName,
+      paymentChannel
+    };
+
+    const pdfDocId = `AUD-PDF-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`;
+    const auditPdf = {
+      generatedAt: nowStr,
+      pdfDocId,
+      downloadUrl: `#audit-pdf-cert-${reqId}`,
+      closeoutStatus: 'CLOSED'
+    };
+
+    const updatedReq = {
+      ...existing,
+      status: 'AUDIT_CLOSED',
+      payment: finalPayment,
+      auditPdf,
+      approvalHistory: [
+        ...(existing.approvalHistory || []),
+        {
+          step: 'AP_PAYMENT_RELEASE',
+          actor: officerName,
+          role: 'ROLE_SUP_ACCOUNTANT',
+          decision: 'RELEASE_PAYMENT',
+          timestamp: nowStr,
+          notes: `Simulated disbursement of ₦${existing.estimatedCost.toLocaleString()} released via ${paymentChannel}. Ref: ${paymentRef}.`
+        },
+        {
+          step: 'CLOSEOUT_AUDIT_PDF_GENERATION',
+          actor: 'System AI Audit Engine',
+          role: 'AI_AGENT',
+          decision: 'TRANSACTION_CLOSED',
+          timestamp: nowStr,
+          notes: `Official Certificate of Procurement Audit Closeout generated (${pdfDocId}). Inventory stock balance updated.`
+        }
+      ]
+    };
+
+    // Auto-update inventory quantity back to target capacity
+    const updatedInventory = (this.state.inventory || []).map(inv => {
+      if (inv.id === existing.itemId) {
+        const newQty = Math.min(inv.maxCapacity, inv.quantity + existing.reorderQuantity);
+        return {
+          ...inv,
+          quantity: newQty,
+          status: 'NORMAL'
+        };
+      }
+      return inv;
+    });
+
+    this.setState(s => ({
+      ...s,
+      procurementRequisitions: (s.procurementRequisitions || []).map(r => r.id === reqId ? updatedReq : r),
+      inventory: updatedInventory,
+      accountPayments: [
+        {
+          id: 'PAY-' + Date.now().toString().slice(-4),
+          paymentRef,
+          supplierCode: existing.preferredVendorCode,
+          supplierName: existing.preferredVendorName,
+          invoiceRef: existing.invoice?.invoiceNumber || existing.id,
+          receiptRef: `RCPT-${existing.preferredVendorCode}-${Date.now().toString().slice(-4)}`,
+          amount: existing.estimatedCost,
+          status: 'CONFIRMED_PAID',
+          paidAt: nowStr,
+          paymentMethod: paymentChannel,
+          officerName,
+          notes: `End-to-end autonomous procurement workflow completed for ${existing.itemName}`
+        },
+        ...(s.accountPayments || [])
+      ]
+    }));
+
+    this.addAudit('PAYMENT_RELEASED_AUDIT_CLOSED', `${paymentRef} (₦${existing.estimatedCost.toLocaleString()})`, `Payment disbursed to ${existing.preferredVendorName}. Inventory restocked and audit trail closed.`, officerName, 'Finance & Accounts', existing, updatedReq, 'Simulated financial settlement');
+    return updatedReq;
+  }
+
+  // STAGE 14: Simulated PDF Audit Closeout Certificate Generator
+  generateSimulatedAuditPDF(reqId) {
+    const req = (this.state.procurementRequisitions || []).find(r => r.id === reqId);
+    if (!req) return null;
+
+    const certHtml = `
+      <div style="font-family: Georgia, serif; max-width: 800px; margin: auto; padding: 32px; background: #070d18; color: #f8fafc; border: 2px solid #d4af37; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+        
+        <!-- SIMULATION BANNER -->
+        <div style="background: rgba(212,175,55,0.15); border: 1px dashed rgba(212,175,55,0.6); padding: 6px 12px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-size: 11px; font-weight: bold; letter-spacing: 2px; color: #d4af37; text-transform: uppercase;">
+          🛡️ SIMULATION / DEMONSTRATION RECORD — NOT A REAL FINANCIAL OR BANKING DOCUMENT
+        </div>
+
+        <div style="border-bottom: 2px solid rgba(212,175,55,0.4); padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #d4af37; font-weight: bold;">HOTEL CAPITOL — 6 ANIMASHAUN CLOSE, IKEJA, LAGOS</div>
+            <h1 style="font-size: 22px; margin: 4px 0; color: #ffffff;">CERTIFICATE OF PROCUREMENT AUDIT CLOSEOUT</h1>
+            <div style="font-size: 12px; color: #94a3b8;">Autonomous AI Stock Monitoring & Two-Way Settlement Audit Trail</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: monospace; font-size: 14px; font-weight: bold; color: #d4af37;">${req.auditPdf?.pdfDocId || 'AUD-PDF-2026'}</div>
+            <div style="font-size: 11px; color: #10b981; font-weight: bold;">● AUDIT CLOSED & VERIFIED</div>
+          </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <h3 style="font-size: 13px; color: #d4af37; text-transform: uppercase; margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">1. Requisition & Item Specification</h3>
+          <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+            <tr><td style="color: #94a3b8; padding: 4px 0; width: 35%;">Requisition ID:</td><td style="font-weight: bold; font-family: monospace;">${req.id}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Item Name / SKU:</td><td style="font-weight: bold;">${req.itemName} (${req.sku})</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Department:</td><td>${req.departmentName} (${req.departmentId})</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Reorder Quantity:</td><td>${req.reorderQuantity} units</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Contracted Unit Price:</td><td style="color: #d4af37;">₦${(req.unitPrice || 0).toLocaleString()}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Total Procurement Value:</td><td style="font-size: 14px; font-weight: bold; color: #d4af37;">₦${(req.estimatedCost || 0).toLocaleString()}</td></tr>
+          </table>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <h3 style="font-size: 13px; color: #d4af37; text-transform: uppercase; margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">2. Managerial Approval & Financial Authority</h3>
+          <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+            <tr><td style="color: #94a3b8; padding: 4px 0; width: 35%;">Approval Authority:</td><td style="font-weight: bold;">${req.assignedApproverTitle} (Tier ${req.tierLevel})</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Approval Started:</td><td>${req.approvalStartedAt}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">SLA Compliance:</td><td style="color: #10b981;">✓ Approved within ${req.slaHours}h SLA window</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">LPO Generated:</td><td style="font-family: monospace; color: #d4af37;">${req.lpo?.lpoNumber || 'N/A'}</td></tr>
+          </table>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <h3 style="font-size: 13px; color: #d4af37; text-transform: uppercase; margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">3. Physical Receiving & Accounts Settlement</h3>
+          <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+            <tr><td style="color: #94a3b8; padding: 4px 0; width: 35%;">Supplier:</td><td style="font-weight: bold;">${req.preferredVendorName} (${req.preferredVendorCode})</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Vendor Invoice Ref:</td><td style="font-family: monospace;">${req.invoice?.invoiceNumber || 'N/A'}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Waybill Number:</td><td style="font-family: monospace;">${req.receiving?.waybillNumber || 'N/A'}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Stores Inspector:</td><td>${req.receiving?.inspectorName || 'Stores Receiving Clerk'}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Inspection Status:</td><td style="color: #10b981; font-weight: bold;">✓ ${req.receiving?.conditionStatus || 'PASSED'} (${req.receiving?.itemsAcceptedQuantity || req.reorderQuantity} units verified)</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Synthetic Bank Reference:</td><td style="font-family: monospace; color: #d4af37; font-weight: bold;">${req.payment?.paymentRef || 'N/A'}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Disbursement Method:</td><td>${req.payment?.paymentChannel || 'Simulated NIBSS Corporate Transfer'}</td></tr>
+            <tr><td style="color: #94a3b8; padding: 4px 0;">Disbursement Officer:</td><td>${req.payment?.officerName || 'Chief Accountant'}</td></tr>
+          </table>
+        </div>
+
+        <div style="border-top: 1px dashed rgba(212,175,55,0.4); padding-top: 16px; margin-top: 24px; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8;">
+          <div>Simulation Signature: <strong style="color: #ffffff; font-family: monospace;">SHA256-SIM-HC-${req.id}-${Date.now().toString().slice(-6)}</strong></div>
+          <div style="color: #d4af37;">Hotel Capitol ERP Simulation Engine · Lagos, Nigeria</div>
+        </div>
+      </div>
+    `;
+
+    return {
+      docId: req.auditPdf?.pdfDocId || 'AUD-PDF-2026',
+      reqId: req.id,
+      htmlMarkup: certHtml
+    };
   }
 
   updatePricingConfig(newConfig) {

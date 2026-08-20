@@ -1,0 +1,108 @@
+// ============================================================================
+// HOTEL CAPITOL — VENDOR MANAGEMENT SYSTEM (VMS) PRISMA SCHEMA
+// Schema: database/prisma/schema.prisma
+// ============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum SupplyCapability {
+  TIER_1_HIGH_VOLUME
+  TIER_2_SME
+  LOCAL_ONLY
+}
+
+enum SupplierStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+enum PriceUpdateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ProductCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryName String   @unique @map("category_name") @db.VarChar(255)
+  description String?  @db.Text
+
+  suppliers   SupplierCategory[]
+
+  @@map("product_categories")
+}
+
+model Supplier {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyName         String           @map("company_name") @db.VarChar(255)
+  contactEmail        String           @unique @map("contact_email") @db.VarChar(255)
+  whatsappNumber      String           @map("whatsapp_number") @db.VarChar(50)
+  supplyCapability    SupplyCapability @map("supply_capability")
+  status              SupplierStatus   @default(PENDING)
+  isNewlyOnboarded    Boolean          @default(true) @map("is_newly_onboarded")
+  passwordHash        String           @map("password_hash") @db.VarChar(255)
+  forcePasswordChange Boolean          @default(true) @map("force_password_change")
+  approvedBy          String?          @map("approved_by") @db.Uuid
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  categories          SupplierCategory[]
+  products            SupplierProduct[]
+
+  @@index([status])
+  @@index([contactEmail])
+  @@map("suppliers")
+}
+
+model SupplierCategory {
+  supplierId String          @map("supplier_id") @db.Uuid
+  categoryId String          @map("category_id") @db.Uuid
+
+  supplier   Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  category   ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([supplierId, categoryId])
+  @@index([supplierId])
+  @@index([categoryId])
+  @@map("supplier_categories")
+}
+
+model SupplierProduct {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String               @map("supplier_id") @db.Uuid
+  sku          String               @db.VarChar(100)
+  productName  String               @map("product_name") @db.VarChar(255)
+  currentPrice Decimal              @map("current_price") @db.Decimal(12, 2)
+  isActive     Boolean              @default(true) @map("is_active")
+
+  supplier     Supplier             @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  priceUpdates PriceUpdateRequest[]
+
+  @@index([supplierId])
+  @@index([sku])
+  @@map("supplier_products")
+}
+
+model PriceUpdateRequest {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierProductId String            @map("supplier_product_id") @db.Uuid
+  proposedPrice     Decimal           @map("proposed_price") @db.Decimal(12, 2)
+  justification     String?           @db.Text
+  status            PriceUpdateStatus @default(PENDING)
+  reviewedBy        String?           @map("reviewed_by") @db.Uuid
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  supplierProduct   SupplierProduct   @relation(fields: [supplierProductId], references: [id], onDelete: Cascade)
+
+  @@index([supplierProductId])
+  @@index([status])
+  @@map("price_update_requests")
+}

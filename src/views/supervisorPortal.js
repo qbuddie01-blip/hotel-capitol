@@ -79,7 +79,7 @@ export function initSupervisorPortal() {
 
 export function renderSupervisorPortal() {
   const state = store.getState();
-  const supervisor = state.staffMembers.find(s => s.id === 'STF-05') || store.getActiveStaff();
+  const supervisor = state.staffMembers.find(s => s.id === 'STF-04') || state.staffMembers.find(s => s.role.toLowerCase().includes('supervisor')) || store.getActiveStaff();
   const pendingRequests = state.serviceRequests.filter(r => r.status !== 'COMPLETED');
   const activeOrders = state.orders.filter(o => o.status !== 'DELIVERED');
   const pendingSwaps = state.shiftSwapRequests.filter(sw => sw.status === 'PENDING_APPROVAL');
